@@ -44,6 +44,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
  */
 export async function getPostSlugs(): Promise<string[]> {
   const supabase = createStaticClient();
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('posts')
