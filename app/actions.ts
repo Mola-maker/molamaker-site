@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { guestbookSchema, contactSchema } from '@/lib/validation';
 import { checkRate, RATE_GUESTBOOK, RATE_CONTACT } from '@/lib/rate-limit';
+import { isDuplicate } from '@/lib/dedup';
 import { insertEntry } from '@/lib/data/guestbook';
 import { insertContact } from '@/lib/data/contacts';
 
@@ -43,6 +44,10 @@ export async function signGuestbook(formData: FormData) {
   const rate = checkRate(`gb:${ip}`, RATE_GUESTBOOK.limit, RATE_GUESTBOOK.windowMs);
   if (!rate.allowed) {
     return { error: 'Too many requests. Try again later.' };
+  }
+
+  if (isDuplicate(`gb:${ip}`, parsed.data.message)) {
+    return { error: 'Duplicate message.' };
   }
 
   const result = await insertEntry(parsed.data.name, parsed.data.message);
@@ -85,6 +90,10 @@ export async function sendContact(formData: FormData) {
   const rate = checkRate(`ct:${ip}`, RATE_CONTACT.limit, RATE_CONTACT.windowMs);
   if (!rate.allowed) {
     return { error: 'Too many messages. Wait a moment.' };
+  }
+
+  if (isDuplicate(`ct:${ip}`, parsed.data.message)) {
+    return { error: 'Duplicate message.' };
   }
 
   const result = await insertContact(parsed.data);
