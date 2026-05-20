@@ -1,8 +1,23 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { pageViewSchema } from '@/lib/validation';
 import { checkRate, RATE_VIEWS } from '@/lib/rate-limit';
+import { insertPageView } from '@/lib/data/page-views';
 
+/**
+ * POST /api/views — record a page view.
+ *
+ * Request body: JSON with a 'path' field (string, 1-500 chars,
+ * must start with '/' and not contain '..').
+ *
+ * Responses:
+ * - 200 { ok: true } — view recorded
+ * - 400 { ok: false } — invalid request body
+ * - 429 { ok: false } with Retry-After header — rate limited
+ * - 500 { ok: false } — internal error
+ *
+ * Rate limit: per-IP token bucket (see RATE_VIEWS).
+ * Called by middleware as a fire-and-forget fetch; no auth required.
+ */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -23,14 +38,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from('page_views')
-      .insert({ path: parsed.data.path });
-    if (error) {
-      console.error('page_views insert error:', error.message);
-      return NextResponse.json({ ok: false }, { status: 500 });
-    }
+    await insertPageView(parsed.data.path);
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -1,10 +1,11 @@
 'use server';
 
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { guestbookSchema, contactSchema } from '@/lib/validation';
 import { checkRate, RATE_GUESTBOOK, RATE_CONTACT } from '@/lib/rate-limit';
+import { insertEntry } from '@/lib/data/guestbook';
+import { insertContact } from '@/lib/data/contacts';
 
 async function clientIp() {
   const h = await headers();
@@ -15,6 +16,20 @@ async function clientIp() {
   );
 }
 
+/**
+ * Server Action: sign the guestbook.
+ *
+ * FormData fields:
+ * - name  — 1-40 chars, trimmed, sanitized
+ * - message — 1-240 chars, trimmed, safe-text only, sanitized
+ *
+ * Return: ApiResult
+ * - { ok: true } on success (revalidates / ISR cache)
+ * - { error: string } on validation / rate-limit / DB failure
+ *
+ * Rate limit: per-IP token bucket (see RATE_GUESTBOOK).
+ * Scope: Server Component / Server Action only.
+ */
 export async function signGuestbook(formData: FormData) {
   const parsed = guestbookSchema.safeParse({
     name: formData.get('name'),
@@ -30,19 +45,31 @@ export async function signGuestbook(formData: FormData) {
     return { error: 'Too many requests. Try again later.' };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('guestbook')
-    .insert(parsed.data);
-  if (error) {
-    console.error('guestbook insert error:', error.message);
-    return { error: 'Could not sign guestbook. Try again.' };
+  const result = await insertEntry(parsed.data.name, parsed.data.message);
+  if (!result.ok) {
+    return { error: result.error };
   }
 
   revalidatePath('/');
   return { ok: true };
 }
 
+/**
+ * Server Action: send a contact message.
+ *
+ * FormData fields:
+ * - name    — 0-80 chars, trimmed, sanitized (optional)
+ * - email   — valid email or empty string, max 200 chars
+ * - subject — 0-200 chars, trimmed, sanitized
+ * - message — 1-5000 chars, trimmed, safe-text only, sanitized
+ *
+ * Return: ApiResult
+ * - { ok: true } on success
+ * - { error: string } on validation / rate-limit / DB failure
+ *
+ * Rate limit: per-IP token bucket (see RATE_CONTACT).
+ * Scope: Server Component / Server Action only.
+ */
 export async function sendContact(formData: FormData) {
   const parsed = contactSchema.safeParse({
     name: formData.get('name'),
@@ -60,13 +87,9 @@ export async function sendContact(formData: FormData) {
     return { error: 'Too many messages. Wait a moment.' };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('contacts')
-    .insert(parsed.data);
-  if (error) {
-    console.error('contact insert error:', error.message);
-    return { error: 'Could not send message. Try again later.' };
+  const result = await insertContact(parsed.data);
+  if (!result.ok) {
+    return { error: result.error };
   }
 
   return { ok: true };

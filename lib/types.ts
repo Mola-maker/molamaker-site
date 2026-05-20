@@ -25,7 +25,7 @@ export type Project = {
 
 export type ContactPayload = {
   name: string;
-  email: string;
+  email: string | null;
   subject: string;
   message: string;
 };

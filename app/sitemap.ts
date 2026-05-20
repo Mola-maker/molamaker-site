@@ -1,17 +1,14 @@
 import type { MetadataRoute } from 'next';
-import { createStaticClient } from '@/lib/supabase/static';
+import { getPostSlugs } from '@/lib/data/posts';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker.com';
-  const supabase = createStaticClient();
 
-  const { data: posts } = await supabase
-    .from('posts')
-    .select('slug, published_at');
+  const slugs = await getPostSlugs();
 
-  const blogEntries: MetadataRoute.Sitemap = (posts ?? []).map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.published_at),
+  const blogEntries: MetadataRoute.Sitemap = slugs.map((slug) => ({
+    url: `${baseUrl}/blog/${slug}`,
+    lastModified: new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   }));

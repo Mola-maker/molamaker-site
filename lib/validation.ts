@@ -14,6 +14,12 @@ const sanitize = (s: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;');
 
+/**
+ * Guestbook entry validation.
+ *
+ * - name: 1-40 chars, trimmed, HTML-sanitized
+ * - message: 1-240 chars, trimmed, safe-text regex + HTML-sanitized
+ */
 export const guestbookSchema = z.object({
   name: z
     .string()
@@ -30,6 +36,14 @@ export const guestbookSchema = z.object({
     .transform(sanitize),
 });
 
+/**
+ * Contact form validation.
+ *
+ * - name: 0-80 chars, trimmed, HTML-sanitized (optional)
+ * - email: valid email or empty (coerced to null), max 200 chars
+ * - subject: 0-200 chars, trimmed, HTML-sanitized (optional)
+ * - message: 1-5000 chars, trimmed, safe-text regex + HTML-sanitized
+ */
 export const contactSchema = z.object({
   name: z
     .string()
@@ -57,6 +71,11 @@ export const contactSchema = z.object({
     .transform(sanitize),
 });
 
+/**
+ * Page view payload validation.
+ *
+ * - path: 1-500 chars, must start with '/' and not contain '..'
+ */
 export const pageViewSchema = z.object({
   path: z
     .string()

@@ -16,6 +16,21 @@ function maybeCleanup() {
   }
 }
 
+/**
+ * Token-bucket rate limiter (in-memory, per-process).
+ *
+ * Each bucket starts full ('limit' tokens) and refills linearly over
+ * 'windowMs'. One token is consumed per allowed request. Buckets are
+ * cleaned up after 10 minutes of inactivity.
+ *
+ * @param key      — unique bucket identifier (e.g. "gb:192.168.1.1")
+ * @param limit    — maximum tokens (burst capacity)
+ * @param windowMs — refill window in milliseconds
+ * @returns
+ *   allowed   — whether the request should proceed
+ *   remaining — tokens left after this request
+ *   resetMs   — estimated milliseconds until a token refills
+ */
 export function checkRate(
   key: string,
   limit: number,
@@ -51,6 +66,9 @@ export function checkRate(
   };
 }
 
+/** 5 guestbook entries per 60 seconds per IP. */
 export const RATE_GUESTBOOK = { limit: 5, windowMs: 60_000 };
+/** 3 contact messages per 60 seconds per IP. */
 export const RATE_CONTACT = { limit: 3, windowMs: 60_000 };
+/** 60 page-view pings per 60 seconds per IP. */
 export const RATE_VIEWS = { limit: 60, windowMs: 60_000 };

@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
-import { createStaticClient } from '@/lib/supabase/static';
+import { getPostBySlug, getPostSlugs, incrementPostView } from '@/lib/data/posts';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Nav from '@/components/nav';
@@ -8,12 +7,8 @@ import Footer from '@/components/footer';
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const supabase = createStaticClient();
-  const { data: posts } = await supabase
-    .from('posts')
-    .select('slug');
-
-  return (posts ?? []).map((post) => ({ slug: post.slug }));
+  const slugs = await getPostSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -22,12 +17,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
-  const { data: post } = await supabase
-    .from('posts')
-    .select('title, excerpt')
-    .eq('slug', slug)
-    .single();
+  const post = await getPostBySlug(slug);
 
   if (!post) return { title: 'Not Found' };
 
@@ -43,23 +33,9 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
 
-  // increment view count atomically
-  const { error: rpcError } = await supabase.rpc('increment_view', { post_slug: slug });
-  if (rpcError) {
-    console.error('Failed to increment view count:', rpcError.message);
-  }
-
-  const { data: post, error: postError } = await supabase
-    .from('posts')
-    .select('title, published_at, read_time, view_count, excerpt, content')
-    .eq('slug', slug)
-    .single();
-
-  if (postError) {
-    console.error('Failed to fetch post:', postError.message);
-  }
+  await incrementPostView(slug);
+  const post = await getPostBySlug(slug);
 
   if (!post) notFound();
 
