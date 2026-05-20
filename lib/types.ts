@@ -4,6 +4,7 @@ export type Post = {
   published_at: string;
   read_time: number;
   view_count: number;
+  published?: boolean;
   excerpt?: string | null;
   content?: string | null;
 };

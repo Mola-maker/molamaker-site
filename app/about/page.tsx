@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 import { SITE_CONFIG } from '@/lib/constants';
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'About — molamaker' };
 export default function AboutPage() {
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <section>
           <div className="label">01 — About</div>

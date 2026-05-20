@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getPosts } from '@/lib/data/posts';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 
 export const revalidate = 60;
@@ -15,7 +15,7 @@ export default async function BlogPage() {
 
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <section>
           <div className="label">03 — Journal</div>

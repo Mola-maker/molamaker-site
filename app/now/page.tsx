@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 
 export const metadata: Metadata = { title: 'Now — molamaker' };
@@ -13,7 +13,7 @@ const updated = new Date().toLocaleDateString('en-US', {
 export default function NowPage() {
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <section>
           <div className="label">Now</div>

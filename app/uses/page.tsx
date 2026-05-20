@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 
 export const metadata: Metadata = { title: 'Uses — molamaker' };
@@ -37,7 +37,7 @@ function UseSection({ title, items }: { title: string; items: string[] }) {
 export default function UsesPage() {
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <section>
           <div className="label">Uses</div>

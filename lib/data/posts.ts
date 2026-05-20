@@ -8,6 +8,7 @@ export async function getPosts(limit?: number): Promise<Post[]> {
   let query = supabase
     .from('posts')
     .select('slug, title, published_at, read_time, view_count')
+    .eq('published', true)
     .order('published_at', { ascending: false });
 
   if (limit != null && limit > 0) {
@@ -28,6 +29,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from('posts')
     .select('slug, title, published_at, read_time, view_count, excerpt, content')
+    .eq('published', true)
     .eq('slug', slug)
     .single();
 
@@ -48,7 +50,8 @@ export async function getPostSlugs(): Promise<string[]> {
 
   const { data, error } = await supabase
     .from('posts')
-    .select('slug');
+    .select('slug')
+    .eq('published', true);
 
   if (error) {
     console.error('Failed to fetch post slugs:', error.message);

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getEntries } from '@/lib/data/guestbook';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 import Guestbook from '@/components/guestbook';
 
@@ -13,7 +13,7 @@ export default async function GuestbookPage() {
 
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <Guestbook entries={entries} />
       </main>

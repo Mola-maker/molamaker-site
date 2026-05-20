@@ -24,6 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker-site.vercel.app'),
   title: 'molamaker — portfolio & journal',
   description: 'Building at the edge of systems and intelligence.',
   openGraph: {

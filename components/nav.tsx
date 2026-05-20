@@ -14,7 +14,7 @@ const LINKS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-export default function Nav() {
+export default function Nav({ isOwner = false }: { isOwner?: boolean }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -22,6 +22,10 @@ export default function Nav() {
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
+
+  const links = isOwner
+    ? [...LINKS, { href: '/admin', label: 'Admin' }]
+    : LINKS;
 
   return (
     <>
@@ -32,7 +36,7 @@ export default function Nav() {
             molamaker<span className="dot">.</span>
           </Link>
           <div className="nav-links">
-            {LINKS.map((l) => (
+            {links.map((l) => (
               <Link key={l.href} href={l.href}>{l.label}</Link>
             ))}
           </div>
@@ -45,7 +49,7 @@ export default function Nav() {
         <div className="mobile-menu">
           <button className="mobile-close" onClick={() => setOpen(false)} aria-label="Close">×</button>
           <div className="mobile-links">
-            {LINKS.map((l) => (
+            {links.map((l) => (
               <Link key={l.href} href={l.href} className="mobile-link" onClick={() => setOpen(false)}>{l.label}</Link>
             ))}
           </div>

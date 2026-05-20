@@ -165,3 +165,23 @@ comment on table pages is 'Editable content pages (Now, Uses, etc.)';
 comment on column pages.slug is 'URL-safe page identifier (e.g. ''now'', ''uses'')';
 comment on column pages.content is 'Page body content (plain text or markdown)';
 comment on column pages.updated_at is 'Last modification timestamp';
+
+-- ============================================================
+-- Migration: auth + drafts
+-- ============================================================
+
+alter table posts add column if not exists published boolean default false;
+update posts set published = true;
+
+drop policy if exists "read posts" on posts;
+drop policy if exists "read published posts" on posts;
+create policy "read published posts" on posts for select
+  using (published = true);
+
+drop policy if exists "owner can read all posts" on posts;
+create policy "owner can read all posts" on posts for select
+  to authenticated using (true);
+
+drop policy if exists "owner can write posts" on posts;
+create policy "owner can write posts" on posts for all
+  to authenticated using (true) with check (true);

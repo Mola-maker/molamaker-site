@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { Project } from '@/lib/types';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 
 export const metadata: Metadata = { title: 'Work — molamaker' };
@@ -38,7 +38,7 @@ const projects: Project[] = [
 export default function WorkPage() {
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <section>
           <div className="label">02 — Selected Work</div>

@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { getPosts } from '@/lib/data/posts';
 import { getEntries } from '@/lib/data/guestbook';
 import { getTotalViews } from '@/lib/data/page-views';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Hero from '@/components/hero';
 import Footer from '@/components/footer';
 import { HeroSkeleton, WritingSkeleton, GuestbookSkeleton } from '@/components/skeletons';
@@ -65,7 +65,7 @@ async function GuestbookTeaser() {
 export default function Home() {
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <Suspense fallback={<HeroSkeleton />}>
           <HeroAsync />

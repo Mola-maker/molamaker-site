@@ -1,7 +1,7 @@
 import { getPostBySlug, getPostSlugs, incrementPostView } from '@/lib/data/posts';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import Nav from '@/components/nav';
+import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 
 export const revalidate = 60;
@@ -41,7 +41,7 @@ export default async function PostPage({
 
   return (
     <>
-      <Nav />
+      <NavWrapper />
       <main>
         <article style={{ padding: '80px 0', maxWidth: '68ch', margin: '0 auto' }}>
           <div className="label">
