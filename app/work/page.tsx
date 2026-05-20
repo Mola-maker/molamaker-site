@@ -67,7 +67,7 @@ export default function WorkPage() {
 
         <p style={{
           textAlign: 'center',
-          padding: '48px 0',
+          padding: '48px 0 12px',
           fontFamily: 'var(--font-mono)',
           fontSize: 13,
           color: 'var(--ink-soft)'
@@ -79,6 +79,21 @@ export default function WorkPage() {
             style={{ color: 'var(--accent)', textDecoration: 'none' }}
           >
             More on GitHub &rarr;
+          </a>
+        </p>
+
+        <p style={{
+          textAlign: 'center',
+          paddingBottom: 48,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 13,
+          color: 'var(--ink-soft)'
+        }}>
+          <a
+            href="/projects"
+            style={{ color: 'var(--accent)', textDecoration: 'none' }}
+          >
+            See all repos &rarr;
           </a>
         </p>
       </main>

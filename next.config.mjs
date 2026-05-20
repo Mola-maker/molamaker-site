@@ -14,12 +14,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-inline' https://giscus.app",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https:",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://*.supabase.co",
-              "frame-src 'none'",
+              "connect-src 'self' https://*.supabase.co https://api.github.com",
+              "frame-src https://giscus.app",
               "object-src 'none'",
               "base-uri 'self'"
             ].join('; ')

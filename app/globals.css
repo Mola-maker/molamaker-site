@@ -585,3 +585,62 @@ footer a:hover { color: var(--accent); }
   margin-top: 20px;
   align-items: center;
 }
+
+/* buy me a coffee */
+.coffee-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px; font-weight: 500;
+  text-decoration: none;
+  border-radius: 3px;
+  transition: all .2s;
+}
+.coffee-btn-sm {
+  padding: 6px 14px;
+  border: 1px solid var(--rule);
+  color: var(--ink-2); background: transparent;
+}
+.coffee-btn-sm:hover {
+  border-color: var(--accent);
+  color: var(--accent); background: var(--accent-soft);
+}
+.coffee-btn-lg {
+  padding: 14px 28px; font-size: 16px;
+  background: var(--accent); color: white;
+  border: none;
+}
+.coffee-btn-lg:hover {
+  background: var(--accent-deep); transform: scale(1.02);
+}
+.coffee-emoji { font-size: 1.1em; }
+
+/* annotation sidebar */
+.annotation-sidebar {
+  position: fixed; top: 80px; right: 0; bottom: 0;
+  width: 280px; padding: 24px 20px;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--rule);
+  overflow-y: auto; z-index: 30;
+}
+@media (max-width: 1023px) {
+  .annotation-sidebar { display: none; }
+}
+.annotation-card {
+  position: relative;
+  background: var(--bg); border: 1px solid var(--rule);
+  border-radius: 3px; padding: 12px; margin-bottom: 10px;
+  font-size: 13px;
+}
+.annotation-text {
+  color: var(--ink-soft); font-style: italic; margin-bottom: 6px;
+  line-height: 1.4; word-break: break-word;
+}
+.annotation-note {
+  color: var(--ink-2); line-height: 1.4; word-break: break-word;
+}
+.annotation-delete {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-soft); font-size: 16px; line-height: 1;
+}
+.annotation-delete:hover { color: var(--accent); }

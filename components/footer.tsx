@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SupportButton from '@/components/support-button';
 
 export default function Footer() {
   return (
@@ -25,6 +26,7 @@ export default function Footer() {
         © {new Date().getFullYear()} molamaker · made with{' '}
         <span className="accent">♥</span> and too much coffee ·{' '}
         <a href="https://github.com/Mola-maker" target="_blank" rel="noopener noreferrer">github</a>{' '}
+        · <SupportButton size="sm" />{' '}
         · <span className="accent">●</span> live
       </div>
     </footer>

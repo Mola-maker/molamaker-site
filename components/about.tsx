@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { SITE_CONFIG } from '@/lib/constants';
+import SupportButton from '@/components/support-button';
 
 export default function About() {
   return (
@@ -26,6 +27,10 @@ export default function About() {
               target="_blank"
               rel="noopener noreferrer"
             >GitHub</a>.
+          </p>
+          <p>
+            If anything here was useful to you,{' '}
+            <SupportButton size="sm" />
           </p>
         </div>
         <div className="portrait-stack">

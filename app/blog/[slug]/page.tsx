@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
+import Comments from '@/components/comments';
+import AnnotationSidebarWrapper from '@/components/annotation-sidebar-wrapper';
 
 export const revalidate = 60;
 
@@ -67,14 +69,16 @@ export default async function PostPage({
           }}>
             {post.content || '(Body coming soon. Edit this post in the Supabase dashboard.)'}
           </div>
+          <Comments />
           <p style={{ marginTop: 60 }}>
-            <a href="/#writing" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+            <a href="/blog" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
               ← Back to writing
             </a>
           </p>
         </article>
       </main>
       <Footer />
+      <AnnotationSidebarWrapper />
     </>
   );
 }
