@@ -363,3 +363,75 @@ footer .accent { color: var(--accent); }
 footer a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px dotted var(--rule); }
 footer a:hover { color: var(--accent); }
 .notfound-link:hover { background: var(--accent) !important; }
+
+/* hamburger menu */
+.hamburger {
+  display: none;
+  background: none; border: none;
+  font-size: 24px; cursor: pointer;
+  color: var(--ink-2); padding: 4px;
+  line-height: 1;
+}
+.mobile-menu {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.mobile-close {
+  position: absolute; top: 20px; right: 28px;
+  background: none; border: none;
+  font-size: 32px; cursor: pointer;
+  color: var(--ink-2);
+}
+.mobile-links {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 24px;
+}
+.mobile-link {
+  font-family: var(--font-serif);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 500; font-style: italic;
+  color: var(--ink); text-decoration: none;
+  transition: color .2s;
+}
+.mobile-link:hover { color: var(--accent); }
+
+@media (max-width: 700px) {
+  .nav-links { display: none; }
+  .hamburger { display: block; }
+}
+
+/* footer sitemap */
+.footer-sitemap {
+  display: flex; gap: 64px; justify-content: center;
+  margin-bottom: 24px; padding-bottom: 24px;
+  border-bottom: 1px solid var(--rule);
+}
+.footer-group {
+  display: flex; flex-direction: column; gap: 8px;
+  text-align: left;
+}
+.footer-group-title {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.1em;
+  color: var(--ink-soft); text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.footer-group a {
+  color: var(--ink-2); text-decoration: none;
+  font-size: 14px; transition: color .2s;
+}
+.footer-group a:hover { color: var(--accent); }
+.footer-bottom {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.05em;
+}
+.footer-bottom .accent { color: var(--accent); }
+.footer-bottom a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px dotted var(--rule); }
+.footer-bottom a:hover { color: var(--accent); }
+
+@media (max-width: 500px) {
+  .footer-sitemap { gap: 32px; flex-wrap: wrap; }
+}

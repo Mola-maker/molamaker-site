@@ -6,10 +6,3 @@ export const SITE_CONFIG = {
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker.com',
 } as const;
 
-export const SECTION_IDS = {
-  about: 'about',
-  work: 'work',
-  writing: 'writing',
-  guestbook: 'guestbook',
-  contact: 'contact',
-} as const;
