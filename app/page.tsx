@@ -29,15 +29,27 @@ export default async function Home() {
       .select('*', { count: 'exact', head: true })
   ]);
 
+  if (postsRes.error) {
+    console.error('Failed to fetch posts:', postsRes.error.message);
+  }
+
+  if (entriesRes.error) {
+    console.error('Failed to fetch guestbook entries:', entriesRes.error.message);
+  }
+
+  if (viewsRes.error) {
+    console.error('Failed to fetch page_views count:', viewsRes.error.message);
+  }
+
   return (
     <>
       <Nav />
       <main>
-        <Hero visitorCount={viewsRes.count ?? 1247} />
+        <Hero visitorCount={viewsRes.error ? 1247 : (viewsRes.count ?? 1247)} />
         <About />
         <Work />
-        <Writing posts={postsRes.data ?? []} />
-        <Guestbook entries={entriesRes.data ?? []} />
+        <Writing posts={postsRes.error ? [] : (postsRes.data ?? [])} />
+        <Guestbook entries={entriesRes.error ? [] : (entriesRes.data ?? [])} />
         <Contact />
       </main>
       <Footer />

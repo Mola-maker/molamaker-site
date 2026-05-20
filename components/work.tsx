@@ -1,10 +1,4 @@
-type Project = {
-  repo: string;
-  year: string;
-  desc: string;
-  tags: string[];
-  stars?: number;
-};
+import type { Project } from '@/lib/types';
 
 const projects: Project[] = [
   {

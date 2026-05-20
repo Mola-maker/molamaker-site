@@ -1,10 +1,4 @@
-type Post = {
-  slug: string;
-  title: string;
-  published_at: string;
-  read_time: number;
-  view_count: number;
-};
+import type { Post } from '@/lib/types';
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });

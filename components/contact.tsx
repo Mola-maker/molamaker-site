@@ -1,36 +1,33 @@
 'use client';
-import { useState, useTransition } from 'react';
+import { useState, useActionState, useRef } from 'react';
 import { sendContact } from '@/app/actions';
 
+type ActionState = { error?: string; ok?: boolean } | null;
+
 export default function Contact() {
-  const [state, setState] = useState({
-    name: '', email: '', subject: '', message: ''
-  });
   const [ok, setOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
-  function set<K extends keyof typeof state>(k: K, v: string) {
-    setState((s) => ({ ...s, [k]: v }));
-  }
+  const [, formAction, isPending] = useActionState<ActionState, FormData>(
+    async (_prev: ActionState, formData: FormData) => {
+      setError(null);
+      const msgVal = (formData.get('message') as string)?.trim();
+      if (!msgVal) return null;
 
-  async function submit() {
-    if (!state.message.trim()) return;
-    setError(null);
-    const fd = new FormData();
-    Object.entries(state).forEach(([k, v]) => fd.set(k, v));
-
-    startTransition(async () => {
-      const res = await sendContact(fd);
+      const res = await sendContact(formData);
       if (res?.error) {
         setError(res.error);
-        return;
+        return res;
       }
+
       setOk(true);
-      setState({ name: '', email: '', subject: '', message: '' });
+      formRef.current?.reset();
       setTimeout(() => setOk(false), 5000);
-    });
-  }
+      return res;
+    },
+    null
+  );
 
   return (
     <section id="contact">
@@ -40,43 +37,40 @@ export default function Contact() {
         For longer things, anything private, or just to say hi. I read
         everything, reply to most.
       </p>
-      <div className="contact-form">
+      <form ref={formRef} action={formAction} className="contact-form">
         <div className="row">
           <input
             type="text"
+            name="name"
             placeholder="Name"
-            value={state.name}
-            onChange={(e) => set('name', e.target.value)}
           />
           <input
             type="email"
+            name="email"
             placeholder="Email"
-            value={state.email}
-            onChange={(e) => set('email', e.target.value)}
           />
         </div>
         <input
           type="text"
+          name="subject"
           placeholder="Subject"
-          value={state.subject}
-          onChange={(e) => set('subject', e.target.value)}
         />
         <textarea
+          name="message"
           placeholder="What's on your mind?"
-          value={state.message}
-          onChange={(e) => set('message', e.target.value)}
+          required
         />
         <button
           className="send"
-          onClick={submit}
-          disabled={pending || !state.message.trim()}
+          type="submit"
+          disabled={isPending}
           style={{ justifySelf: 'start' }}
         >
-          {pending ? 'Sending…' : 'Send message →'}
+          {isPending ? 'Sending…' : 'Send message →'}
         </button>
         {ok && <div className="form-ok">Thanks — your message landed. I&apos;ll get back to you soon.</div>}
         {error && <div className="form-err">{error}</div>}
-      </div>
+      </form>
     </section>
   );
 }
