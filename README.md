@@ -71,7 +71,7 @@ supabase/schema.sql    # tables + RLS + RPC + seed
 ## Editing content
 
 - **Blog posts** → Supabase Dashboard → Table Editor → `posts` (add rows; the
-  `content` column can be Markdown or plain text).
+  `content` column is plain text — Markdown rendering is not yet supported).
 - **Projects** → `components/work.tsx`, edit the `projects` array.
 - **Bio / portrait** → `components/about.tsx` and `components/nav.tsx`
   (the avatar is pulled from your GitHub by URL).

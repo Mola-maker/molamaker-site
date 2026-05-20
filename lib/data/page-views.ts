@@ -5,7 +5,7 @@ export async function getTotalViews(): Promise<number> {
 
   const { count, error } = await supabase
     .from('page_views')
-    .select('*', { count: 'exact', head: true });
+    .select('id', { count: 'exact', head: true });
 
   if (error) {
     console.error('Failed to fetch page_views count:', error.message);

@@ -1,21 +1,27 @@
+import Image from 'next/image';
+import { SITE_CONFIG, SECTION_IDS } from '@/lib/constants';
+
 export default function Nav() {
   return (
     <nav className="top">
       <div className="nav-inner">
         <div className="brand">
-          <img
+          <Image
             className="brand-mini"
-            src="https://avatars.githubusercontent.com/u/229602071?v=4"
+            src={SITE_CONFIG.avatarUrl}
             alt="mola"
+            width={28}
+            height={28}
+            unoptimized
           />
           molamaker<span className="dot">.</span>
         </div>
         <div className="nav-links">
-          <a href="#about">About</a>
-          <a href="#work">Work</a>
-          <a href="#writing">Writing</a>
-          <a href="#guestbook">Guestbook</a>
-          <a href="#contact">Contact</a>
+          <a href={`#${SECTION_IDS.about}`}>About</a>
+          <a href={`#${SECTION_IDS.work}`}>Work</a>
+          <a href={`#${SECTION_IDS.writing}`}>Writing</a>
+          <a href={`#${SECTION_IDS.guestbook}`}>Guestbook</a>
+          <a href={`#${SECTION_IDS.contact}`}>Contact</a>
         </div>
       </div>
     </nav>

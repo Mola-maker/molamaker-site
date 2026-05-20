@@ -1,16 +1,4 @@
-'use client';
-import { useEffect, useState } from 'react';
-
 export default function Hero({ visitorCount }: { visitorCount: number }) {
-  const [live, setLive] = useState(3);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setLive((n) => Math.max(1, n + (Math.random() > 0.5 ? 1 : -1)));
-    }, 4000);
-    return () => clearInterval(id);
-  }, []);
-
   return (
     <section className="hero" id="top">
       <div className="label">Portfolio &amp; Journal · est. 2026</div>
@@ -23,7 +11,6 @@ export default function Hero({ visitorCount }: { visitorCount: number }) {
         and reasoning about agentic systems. This is where I keep notes.
       </p>
       <div className="hero-meta">
-        <span><span className="pulse" /><strong>{live}</strong> reading now</span>
         <span>visitor <strong>#{visitorCount.toLocaleString()}</strong></span>
         <span>currently learning <strong>CUDA</strong></span>
         <span>based <strong>somewhere quiet</strong></span>

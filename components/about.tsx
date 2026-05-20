@@ -1,3 +1,6 @@
+import Image from 'next/image';
+import { SITE_CONFIG } from '@/lib/constants';
+
 export default function About() {
   return (
     <section id="about">
@@ -27,9 +30,11 @@ export default function About() {
         </div>
         <div className="portrait-stack">
           <div className="portrait">
-            <img
-              src="https://avatars.githubusercontent.com/u/229602071?v=4"
+            <Image
+              src={SITE_CONFIG.avatarUrl}
               alt="Portrait"
+              width={400}
+              height={400}
             />
             <div className="portrait-caption">
               <span>mola · 2026</span>

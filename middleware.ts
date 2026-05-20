@@ -1,36 +1,33 @@
 import { type NextRequest } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
 
 /**
  * Next.js Edge Middleware — runs on every matched route.
  *
- * Path filtering: skips /_next/*, /api/*, and files containing '.'
- * to avoid recording analytics for static assets and internal routes.
+ * Analytics pipeline: fire-and-forget POST /api/views with a 3s timeout.
+ * Paths starting with /_next, /api or containing '.' are excluded.
+ * Failure is logged but never blocks the response.
  *
- * Analytics pipeline: fire-and-forget POST /api/views with the
- * current pathname. Failure is silently ignored (no retry, no logging).
- *
- * Session refresh: delegates to updateSession which reads
- * Supabase auth cookies and refreshes the session if needed.
- *
- * Matcher config (exported 'config'): runs on all routes except
- * _next/static, _next/image, and favicon.ico.
+ * updateSession was removed — the site has no authenticated routes,
+ * so refreshing Supabase auth cookies on every request was unnecessary.
  */
 export async function middleware(request: NextRequest) {
-  // analytics ping (fire-and-forget)
   const path = request.nextUrl.pathname;
   if (
     !path.startsWith('/_next') &&
     !path.startsWith('/api') &&
     !path.includes('.')
   ) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
     fetch(new URL('/api/views', request.url), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ path })
-    }).catch(() => {});
+      body: JSON.stringify({ path }),
+      signal: controller.signal,
+    }).catch((err) => {
+      console.error('analytics ping failed:', err);
+    }).finally(() => clearTimeout(timeout));
   }
-  return updateSession(request);
 }
 
 export const config = {
