@@ -1,81 +1,82 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockRpc = vi.fn();
+const mockCreateServiceClient = vi.fn(() => ({ rpc: mockRpc }));
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: () => mockCreateServiceClient(),
+}));
+
 import { checkRate, RATE_GUESTBOOK } from '@/lib/rate-limit';
 
-// Use a unique key per test to avoid state bleed from the module-level Map
-let keyCounter = 0;
 function uniqueKey() {
-  return `test:${++keyCounter}:${Date.now()}`;
+  return `test:${Math.random().toString(36).slice(2)}`;
 }
 
 describe('checkRate', () => {
-  it('allows first request within the window', () => {
-    const result = checkRate(uniqueKey(), 5, 60_000);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns allowed=true when RPC succeeds under limit', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { allowed: true, remaining: 4, reset_ms: 0 },
+      error: null,
+    });
+
+    const result = await checkRate(uniqueKey(), 5, 60_000);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(4);
   });
 
-  it('allows requests up to the limit', () => {
-    const key = uniqueKey();
-    const limit = 3;
-    const window = 60_000;
+  it('returns allowed=false when RPC reports limit exceeded', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { allowed: false, remaining: 0, reset_ms: 30000 },
+      error: null,
+    });
 
-    for (let i = 0; i < limit; i++) {
-      const result = checkRate(key, limit, window);
-      expect(result.allowed).toBe(true);
-      expect(result.remaining).toBe(limit - i - 1);
-    }
+    const result = await checkRate(uniqueKey(), 5, 60_000);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+    expect(result.resetMs).toBe(30000);
   });
 
-  it('blocks requests that exceed the limit', () => {
-    const key = uniqueKey();
-    const limit = 2;
-    const window = 60_000;
+  it('fails open when RPC returns an error', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: new Error('connection failed'),
+    });
 
-    // Exhaust the tokens
-    checkRate(key, limit, window);
-    checkRate(key, limit, window);
-
-    // Next request should be blocked
-    const blocked = checkRate(key, limit, window);
-    expect(blocked.allowed).toBe(false);
-    expect(blocked.remaining).toBe(0);
-  });
-
-  it('refills tokens after the window elapses', () => {
-    // Use fake timers so we can control Date.now()
-    vi.useFakeTimers();
-    const now = Date.now();
-
-    const key = uniqueKey();
-    const limit = 3;
-    const window = 1000; // 1 second window
-
-    // Exhaust tokens
-    checkRate(key, limit, window);
-    checkRate(key, limit, window);
-    checkRate(key, limit, window);
-
-    // Should be blocked immediately
-    expect(checkRate(key, limit, window).allowed).toBe(false);
-
-    // Advance time past the window for full refill
-    vi.advanceTimersByTime(window + 100);
-
-    // Now requests should be allowed again
-    const result = checkRate(key, limit, window);
+    const result = await checkRate(uniqueKey(), 5, 60_000);
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(limit - 1);
-
-    vi.useRealTimers();
+    expect(result.remaining).toBe(4);
   });
 
-  it('returns a positive resetMs', () => {
-    const result = checkRate(uniqueKey(), 5, 60_000);
-    expect(result.resetMs).toBeGreaterThan(0);
+  it('fails open when RPC throws', async () => {
+    mockRpc.mockRejectedValueOnce(new Error('timeout'));
+
+    const result = await checkRate(uniqueKey(), 5, 60_000);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(4);
   });
 
   it('uses RATE_GUESTBOOK constants correctly', () => {
     expect(RATE_GUESTBOOK.limit).toBe(5);
     expect(RATE_GUESTBOOK.windowMs).toBe(60_000);
+  });
+
+  it('passes correct bucket_key, max_count, and window_ms to RPC', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { allowed: true, remaining: 2, reset_ms: 0 },
+      error: null,
+    });
+
+    await checkRate('test-key', 10, 30000);
+
+    expect(mockRpc).toHaveBeenCalledWith('check_rate', {
+      bucket_key: 'test-key',
+      max_count: 10,
+      window_ms: 30000,
+    });
   });
 });

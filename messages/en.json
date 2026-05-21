@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "about": "About",
+    "work": "Work",
+    "projects": "Projects",
+    "blog": "Blog",
+    "now": "Now",
+    "uses": "Uses",
+    "guestbook": "Guestbook",
+    "contact": "Contact",
+    "resources": "Resources",
+    "chat": "Chat",
+    "admin": "Admin"
+  },
+  "footer": {
+    "read": "Read",
+    "about": "About",
+    "talk": "Talk",
+    "madeWith": "made with",
+    "andTooMuchCoffee": "and too much coffee",
+    "live": "live"
+  },
+  "home": {
+    "recentWriting": "Recent writing",
+    "fromTheJournal": "From the journal.",
+    "readTheJournal": "Read the journal →",
+    "guestbook": "Guestbook",
+    "leaveATrace": "Leave a trace.",
+    "signTheGuestbook": "Sign the guestbook →",
+    "minRead": "min read"
+  },
+  "comments": {
+    "title": "Comments"
+  },
+  "support": {
+    "buyMeACoffee": "Buy me a coffee",
+    "alreadySupporter": "Already a supporter ✓"
+  },
+  "resources": {
+    "label": "Resources",
+    "title": "Supporter resources.",
+    "loginPrompt": "Sign in to access supporter resources.",
+    "signIn": "Sign in →",
+    "supporterPrompt": "These resources are available to supporters. Buy me a coffee to get access.",
+    "learnMore": "Learn more →",
+    "verified": "✓ You're a verified supporter.",
+    "comingSoon": "Resources will appear here. Check back soon."
+  },
+  "bot": {
+    "checking": "Checking…",
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "chat": {
+    "label": "AstrBot",
+    "title": "Talk to the bot.",
+    "lead": "Ask me anything. I'm connected via QQ and always listening.",
+    "checking": "Checking bot status...",
+    "online": "Bot online",
+    "offline": "Bot offline — try again later",
+    "empty": "Start a conversation.",
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "disabled": "Bot is offline — check back soon.",
+    "noReply": "(no reply)",
+    "error": "Bot didn't respond — try again.",
+    "thinking": "Thinking…",
+    "you": "You",
+    "bot": "Bot"
+  },
+  "localeSwitcher": {
+    "label": "Language",
+    "en": "EN",
+    "zh": "中文"
+  }
+}

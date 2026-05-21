@@ -33,11 +33,30 @@ export function getAllPosts(): BlogPost[] {
   return posts;
 }
 
+/** Read a single markdown file by slug — avoids reading all files. */
 export function getPostBySlug(slug: string): BlogPost | null {
-  const posts = getAllPosts();
-  return posts.find((p) => p.slug === slug) ?? null;
+  if (slug.includes('..') || slug.includes('/')) return null;
+  const filePath = path.join(CONTENT_DIR, `${slug}.md`);
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const { data, content } = matter(raw);
+    return {
+      slug,
+      title: data.title ?? slug,
+      date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+      excerpt: data.excerpt ?? '',
+      read_time: data.read_time ?? Math.ceil(content.split(/\s+/).length / 200),
+      content,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function getPostSlugs(): string[] {
-  return getAllPosts().map((p) => p.slug);
+  if (!fs.existsSync(CONTENT_DIR)) return [];
+  return fs.readdirSync(CONTENT_DIR)
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => f.replace(/\.md$/, ''));
 }

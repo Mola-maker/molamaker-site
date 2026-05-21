@@ -1,69 +1,39 @@
-const buckets = new Map<
-  string,
-  { tokens: number; lastRefill: number }
->();
-
-const CLEANUP_INTERVAL = 5 * 60 * 1000;
-let lastCleanup = Date.now();
-
-function maybeCleanup() {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
-  lastCleanup = now;
-  const expiry = now - 10 * 60 * 1000;
-  for (const [k, v] of buckets) {
-    if (v.lastRefill < expiry) buckets.delete(k);
-  }
-}
+import { createServiceClient } from '@/lib/supabase/service';
 
 /**
- * Token-bucket rate limiter (in-memory, per-process).
+ * Postgres-backed sliding-window rate limiter.
  *
- * Each bucket starts full ('limit' tokens) and refills linearly over
- * 'windowMs'. One token is consumed per allowed request. Buckets are
- * cleaned up after 10 minutes of inactivity.
- *
- * @param key      — unique bucket identifier (e.g. "gb:192.168.1.1")
- * @param limit    — maximum tokens (burst capacity)
- * @param windowMs — refill window in milliseconds
- * @returns
- *   allowed   — whether the request should proceed
- *   remaining — tokens left after this request
- *   resetMs   — estimated milliseconds until a token refills
+ * Calls the `check_rate` RPC function (see supabase/migrations) which
+ * atomically counts entries in the current window and inserts a new row
+ * if under the limit. State lives in Supabase, so this works correctly
+ * on Vercel serverless, PM2 cluster mode, and multi-container deploys.
  */
-export function checkRate(
+
+export async function checkRate(
   key: string,
   limit: number,
-  windowMs: number
-): { allowed: boolean; remaining: number; resetMs: number } {
-  maybeCleanup();
-  const now = Date.now();
-  let bucket = buckets.get(key);
+  windowMs: number,
+): Promise<{ allowed: boolean; remaining: number; resetMs: number }> {
+  try {
+    const supabase = createServiceClient();
+    const { data, error } = await supabase.rpc('check_rate', {
+      bucket_key: key,
+      max_count: limit,
+      window_ms: windowMs,
+    });
 
-  if (!bucket) {
-    bucket = { tokens: limit, lastRefill: now };
-    buckets.set(key, bucket);
-  }
+    if (error || !data) {
+      return { allowed: true, remaining: limit - 1, resetMs: 0 };
+    }
 
-  const elapsed = now - bucket.lastRefill;
-  const refill = (elapsed / windowMs) * limit;
-  bucket.tokens = Math.min(limit, bucket.tokens + refill);
-  bucket.lastRefill = now;
-
-  if (bucket.tokens >= 1) {
-    bucket.tokens -= 1;
     return {
-      allowed: true,
-      remaining: Math.floor(bucket.tokens),
-      resetMs: Math.ceil(windowMs - (elapsed % windowMs)),
+      allowed: Boolean(data.allowed),
+      remaining: Number(data.remaining),
+      resetMs: Number(data.reset_ms),
     };
+  } catch {
+    return { allowed: true, remaining: limit - 1, resetMs: 0 };
   }
-
-  return {
-    allowed: false,
-    remaining: 0,
-    resetMs: Math.ceil(windowMs - (elapsed % windowMs)),
-  };
 }
 
 /** 5 guestbook entries per 60 seconds per IP. */
@@ -72,3 +42,5 @@ export const RATE_GUESTBOOK = { limit: 5, windowMs: 60_000 };
 export const RATE_CONTACT = { limit: 3, windowMs: 60_000 };
 /** 60 page-view pings per 60 seconds per IP. */
 export const RATE_VIEWS = { limit: 60, windowMs: 60_000 };
+/** 20 chat messages per 60 seconds per key (IP or sessionId). */
+export const RATE_CHAT = { limit: 20, windowMs: 60_000 };

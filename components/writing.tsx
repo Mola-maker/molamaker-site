@@ -1,7 +1,6 @@
+import { Link } from '@/i18n/routing';
+import { fmtDate } from '@/lib/date';
 import type { Post } from '@/lib/types';
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
 
 export default function Writing({ posts }: { posts: Post[] }) {
   return (
@@ -16,13 +15,13 @@ export default function Writing({ posts }: { posts: Post[] }) {
           </p>
         )}
         {posts.map((p) => (
-          <a key={p.slug} href={`/blog/${p.slug}`} className="post">
+          <Link key={p.slug} href={`/blog/${p.slug}`} className="post">
             <div className="post-date">{fmtDate(p.published_at)}</div>
             <div className="post-title">{p.title}</div>
             <div className="post-meta">
               {p.read_time} min · {p.view_count.toLocaleString()} views
             </div>
-          </a>
+          </Link>
         ))}
       </div>
     </section>

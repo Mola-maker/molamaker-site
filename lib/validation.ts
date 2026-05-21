@@ -86,6 +86,48 @@ export const pageViewSchema = z.object({
     }),
 });
 
+const SESSION_ID_RE = /^[A-Za-z0-9_-]+$/;
+
+export const chatMessageSchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(1, 'Message is required')
+    .max(2000, 'Message must be 2000 characters or fewer')
+    .pipe(safeText)
+    .transform(sanitize),
+  sessionId: z
+    .string()
+    .min(16, 'Session ID must be 16–32 characters')
+    .max(32, 'Session ID must be 16–32 characters')
+    .regex(SESSION_ID_RE, 'Invalid session ID'),
+});
+
+export const chatHistoryQuerySchema = z.object({
+  sessionId: z
+    .string()
+    .min(16)
+    .max(32)
+    .regex(SESSION_ID_RE, 'Invalid session ID'),
+});
+
+const astrbotReplySchema = z.object({
+  reply: z.string().max(4000),
+});
+
+const astrbotMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string().max(4000),
+  ts: z.string(),
+});
+
+const astrbotHistorySchema = z.object({
+  messages: z.array(astrbotMessageSchema).default([]),
+});
+
+export { astrbotReplySchema, astrbotHistorySchema };
+
 export type GuestbookInput = z.infer<typeof guestbookSchema>;
 export type ContactInput = z.infer<typeof contactSchema>;
 export type PageViewInput = z.infer<typeof pageViewSchema>;
+export type ChatMessageInput = z.infer<typeof chatMessageSchema>;

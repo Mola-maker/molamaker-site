@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "about": "关于",
+    "work": "作品",
+    "projects": "项目",
+    "blog": "博客",
+    "now": "近况",
+    "uses": "工具",
+    "guestbook": "留言簿",
+    "contact": "联系",
+    "resources": "资源",
+    "chat": "聊天",
+    "admin": "管理"
+  },
+  "footer": {
+    "read": "阅读",
+    "about": "关于",
+    "talk": "交流",
+    "madeWith": "用心",
+    "andTooMuchCoffee": "和咖啡制成",
+    "live": "在线"
+  },
+  "home": {
+    "recentWriting": "近期文章",
+    "fromTheJournal": "来自日志。",
+    "readTheJournal": "阅读日志 →",
+    "guestbook": "留言簿",
+    "leaveATrace": "留下足迹。",
+    "signTheGuestbook": "签署留言簿 →",
+    "minRead": "分钟阅读"
+  },
+  "comments": {
+    "title": "评论"
+  },
+  "support": {
+    "buyMeACoffee": "请我喝杯咖啡",
+    "alreadySupporter": "已是支持者 ✓"
+  },
+  "resources": {
+    "label": "资源",
+    "title": "支持者资源。",
+    "loginPrompt": "请登录以访问支持者资源。",
+    "signIn": "登录 →",
+    "supporterPrompt": "这些资源仅供支持者访问。请我喝杯咖啡以获取权限。",
+    "learnMore": "了解更多 →",
+    "verified": "✓ 你已是认证支持者。",
+    "comingSoon": "资源即将上线，敬请期待。"
+  },
+  "bot": {
+    "checking": "检查中…",
+    "online": "在线",
+    "offline": "离线"
+  },
+  "chat": {
+    "label": "AstrBot",
+    "title": "与机器人对话。",
+    "lead": "随时问我任何问题。我已通过 QQ 连接并时刻聆听。",
+    "checking": "正在检查机器人状态...",
+    "online": "机器人在线",
+    "offline": "机器人离线 — 请稍后再试",
+    "empty": "开始对话。",
+    "placeholder": "输入消息...",
+    "send": "发送",
+    "disabled": "机器人已离线 — 请稍后再来。",
+    "noReply": "（无回复）",
+    "error": "机器人无响应 — 请重试。",
+    "thinking": "思考中…",
+    "you": "你",
+    "bot": "机器人"
+  },
+  "localeSwitcher": {
+    "label": "语言",
+    "en": "EN",
+    "zh": "中文"
+  }
+}

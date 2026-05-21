@@ -1,21 +1,12 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { guestbookSchema, contactSchema } from '@/lib/validation';
 import { checkRate, RATE_GUESTBOOK, RATE_CONTACT } from '@/lib/rate-limit';
 import { isDuplicate } from '@/lib/dedup';
 import { insertEntry } from '@/lib/data/guestbook';
 import { insertContact } from '@/lib/data/contacts';
-
-async function clientIp() {
-  const h = await headers();
-  return (
-    h.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    h.get('x-real-ip') ||
-    '127.0.0.1'
-  );
-}
+import { clientIp } from '@/lib/client-ip';
 
 /**
  * Server Action: sign the guestbook.
@@ -41,7 +32,7 @@ export async function signGuestbook(formData: FormData) {
   }
 
   const ip = await clientIp();
-  const rate = checkRate(`gb:${ip}`, RATE_GUESTBOOK.limit, RATE_GUESTBOOK.windowMs);
+  const rate = await checkRate(`gb:${ip}`, RATE_GUESTBOOK.limit, RATE_GUESTBOOK.windowMs);
   if (!rate.allowed) {
     return { error: 'Too many requests. Try again later.' };
   }
@@ -55,7 +46,7 @@ export async function signGuestbook(formData: FormData) {
     return { error: result.error };
   }
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
   return { ok: true };
 }
 
@@ -87,7 +78,7 @@ export async function sendContact(formData: FormData) {
   }
 
   const ip = await clientIp();
-  const rate = checkRate(`ct:${ip}`, RATE_CONTACT.limit, RATE_CONTACT.windowMs);
+  const rate = await checkRate(`ct:${ip}`, RATE_CONTACT.limit, RATE_CONTACT.windowMs);
   if (!rate.allowed) {
     return { error: 'Too many messages. Wait a moment.' };
   }
