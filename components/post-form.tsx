@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { savePost } from '@/app/admin/actions';
+import { savePost } from '@/app/[locale]/admin/actions';
 import type { Post } from '@/lib/types';
 
 interface Props {

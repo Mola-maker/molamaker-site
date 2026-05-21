@@ -1,8 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 
 export default function Comments() {
   const ref = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
+  const t = useTranslations('comments');
   const repo = process.env.NEXT_PUBLIC_GISCUS_REPO;
   const repoId = process.env.NEXT_PUBLIC_GISCUS_REPO_ID;
   const categoryId = process.env.NEXT_PUBLIC_GISCUS_CATEGORY_ID;
@@ -19,17 +22,17 @@ export default function Comments() {
     script.setAttribute('data-reactions-enabled', '1');
     script.setAttribute('data-emit-metadata', '0');
     script.setAttribute('data-theme', 'preferred_color_scheme');
-    script.setAttribute('data-lang', 'en');
+    script.setAttribute('data-lang', locale === 'zh' ? 'zh-CN' : 'en');
     script.setAttribute('crossorigin', 'anonymous');
     script.async = true;
     ref.current.appendChild(script);
-  }, [repo, repoId, categoryId]);
+  }, [repo, repoId, categoryId, locale]);
 
   if (!repo || !repoId || !categoryId) return null;
 
   return (
     <section style={{ marginTop: 60, paddingTop: 40, borderTop: '1px solid var(--rule)' }}>
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, marginBottom: 24 }}>Comments</h2>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 24, marginBottom: 24 }}>{t('title')}</h2>
       <div ref={ref} />
     </section>
   );

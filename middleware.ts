@@ -1,17 +1,13 @@
 import { type NextRequest } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
 
-/**
- * Next.js Edge Middleware — runs on every matched route.
- *
- * Analytics pipeline: fire-and-forget POST /api/views with a 3s timeout.
- * Paths starting with /_next, /api or containing '.' are excluded.
- * Failure is logged but never blocks the response.
- *
- * updateSession was removed — the site has no authenticated routes,
- * so refreshing Supabase auth cookies on every request was unnecessary.
- */
-export async function middleware(request: NextRequest) {
+const intlMiddleware = createMiddleware(routing);
+
+export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
+  // Analytics ping (fire-and-forget)
   if (
     !path.startsWith('/_next') &&
     !path.startsWith('/api') &&
@@ -25,11 +21,15 @@ export async function middleware(request: NextRequest) {
       body: JSON.stringify({ path }),
       signal: controller.signal,
     }).catch((err) => {
-      console.error('analytics ping failed:', err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('analytics ping failed:', err);
+      }
     }).finally(() => clearTimeout(timeout));
   }
+
+  return intlMiddleware(request);
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
 };

@@ -1,21 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/routing';
 import { SITE_CONFIG } from '@/lib/constants';
-
-const LINKS = [
-  { href: '/about', label: 'About' },
-  { href: '/work', label: 'Work' },
-  { href: '/projects', label: 'Projects' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/now', label: 'Now' },
-  { href: '/uses', label: 'Uses' },
-  { href: '/guestbook', label: 'Guestbook' },
-  { href: '/contact', label: 'Contact' },
-];
+import LocaleSwitcher from './locale-switcher';
 
 export default function Nav({ isOwner = false }: { isOwner?: boolean }) {
+  const t = useTranslations('nav');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -24,9 +16,11 @@ export default function Nav({ isOwner = false }: { isOwner?: boolean }) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const links = isOwner
-    ? [...LINKS, { href: '/admin', label: 'Admin' }]
-    : LINKS;
+  const routeKeys = ['about', 'work', 'projects', 'blog', 'resources', 'chat', 'now', 'uses', 'guestbook', 'contact'] as const;
+  const links = routeKeys.map((key) => ({ href: `/${key}`, label: t(key) }));
+  const allLinks = isOwner
+    ? [...links, { href: '/admin', label: t('admin') }]
+    : links;
 
   return (
     <>
@@ -37,9 +31,10 @@ export default function Nav({ isOwner = false }: { isOwner?: boolean }) {
             molamaker<span className="dot">.</span>
           </Link>
           <div className="nav-links">
-            {links.map((l) => (
+            {allLinks.map((l) => (
               <Link key={l.href} href={l.href}>{l.label}</Link>
             ))}
+            <LocaleSwitcher />
           </div>
           <button className="hamburger" onClick={() => setOpen(!open)} aria-label="Menu">
             {open ? '×' : '☰'}
@@ -50,7 +45,7 @@ export default function Nav({ isOwner = false }: { isOwner?: boolean }) {
         <div className="mobile-menu">
           <button className="mobile-close" onClick={() => setOpen(false)} aria-label="Close">×</button>
           <div className="mobile-links">
-            {links.map((l) => (
+            {allLinks.map((l) => (
               <Link key={l.href} href={l.href} className="mobile-link" onClick={() => setOpen(false)}>{l.label}</Link>
             ))}
           </div>

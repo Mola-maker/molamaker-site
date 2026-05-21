@@ -1,22 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 
 export default function Konami() {
   const [triggered, setTriggered] = useState(false);
-  let idx = 0;
+  const idxRef = useRef(0);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === SEQUENCE[idx].toLowerCase()) {
-        idx++;
-        if (idx === SEQUENCE.length) {
+      if (e.key.toLowerCase() === SEQUENCE[idxRef.current].toLowerCase()) {
+        idxRef.current++;
+        if (idxRef.current === SEQUENCE.length) {
           setTriggered(true);
-          idx = 0;
+          idxRef.current = 0;
         }
       } else {
-        idx = 0;
+        idxRef.current = 0;
       }
     };
     document.addEventListener('keydown', handler);

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 
 export default function NotFound() {
   return (
@@ -69,8 +70,9 @@ export default function NotFound() {
         The thing you were looking for was never here, has moved, or was never written.
       </p>
 
-      <a
+      <Link
         href="/"
+        className="notfound-link"
         style={{
           fontSize: 14,
           fontWeight: 500,
@@ -84,7 +86,7 @@ export default function NotFound() {
         }}
       >
         Back home
-      </a>
+      </Link>
     </div>
   );
 }

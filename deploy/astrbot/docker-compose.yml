@@ -1,0 +1,64 @@
+# =============================================================================
+# molabot — AstrBot + NapCat QQ bridge for molamaker-site
+# Location: /opt/molabot/docker-compose.yml (ECS)
+#
+# Image pinning: after first `docker compose pull`, run:
+#   docker image inspect mlikiowa/napcat-docker:latest --format '{{.RepoDigests}}'
+#   docker image inspect soulter/astrbot:latest --format '{{.RepoDigests}}'
+# Then replace :latest below with the sha256 digests like:
+#   image: mlikiowa/napcat-docker@sha256:abc123...
+# =============================================================================
+# DO NOT expose ports 3001, 6185, or 2375 to 0.0.0.0.
+# Aliyun SG must only allow 80/443/22 from world.
+# =============================================================================
+
+services:
+  napcat:
+    image: mlikiowa/napcat-docker:latest
+    container_name: molabot-napcat
+    restart: unless-stopped
+    volumes:
+      - napcat-data:/app/.config/QQ
+    environment:
+      - ACCOUNT=${NAPCO_QQ}
+      - WSR_HOST=0.0.0.0
+      - WSR_PORT=3001
+    networks:
+      - molabot-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  astrbot:
+    image: soulter/astrbot:latest
+    container_name: molabot-astrbot
+    restart: unless-stopped
+    depends_on:
+      - napcat
+    ports:
+      - "127.0.0.1:6185:6185"
+    volumes:
+      - astrbot-data:/AstrBot/data
+    environment:
+      - ASTRBOT_NapCat_WS=ws://napcat:3001
+      - ASTRBOT_API_KEY=${ASTRBOT_API_KEY}
+    networks:
+      - molabot-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+volumes:
+  napcat-data:
+    driver: local
+  astrbot-data:
+    driver: local
+
+networks:
+  molabot-net:
+    driver: bridge
+    internal: false

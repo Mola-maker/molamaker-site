@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { requireAdmin } from '@/lib/auth';
+import { getTranslations } from 'next-intl/server';
+import { Link } from '@/i18n/routing';
 import { SignOutButton } from './sign-out';
 
 export default async function AdminLayout({
@@ -8,22 +8,16 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || user.email !== process.env.OWNER_EMAIL) {
-    redirect('/login');
-  }
+  const user = await requireAdmin();
+  const t = await getTranslations('nav');
 
   return (
     <>
       <nav className="admin-nav">
         <div className="admin-nav-inner">
           <div className="admin-nav-links">
-            <Link href="/admin">Posts</Link>
-            <Link href="/admin/new">New Post</Link>
+            <Link href="/admin">{t('admin')}</Link>
+            <Link href="/admin/new">+</Link>
             <span style={{ color: 'var(--ink-soft)', fontSize: 12, marginLeft: 8 }}>
               {user.email}
             </span>

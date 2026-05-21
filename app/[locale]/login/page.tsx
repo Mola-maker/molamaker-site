@@ -12,7 +12,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     const supabase = createClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? location.origin;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (!siteUrl) {
+      setError('Site URL not configured. Contact the site owner.');
+      return;
+    }
     const { error: sendError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${siteUrl}/auth/callback` },

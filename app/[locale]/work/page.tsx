@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { Project } from '@/lib/types';
 import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
+import { Link } from '@/i18n/routing';
 
 export const metadata: Metadata = { title: 'Work — molamaker' };
 
@@ -89,12 +90,12 @@ export default function WorkPage() {
           fontSize: 13,
           color: 'var(--ink-soft)'
         }}>
-          <a
+          <Link
             href="/projects"
             style={{ color: 'var(--accent)', textDecoration: 'none' }}
           >
             See all repos &rarr;
-          </a>
+          </Link>
         </p>
       </main>
       <Footer />

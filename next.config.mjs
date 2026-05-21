@@ -1,3 +1,7 @@
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -15,9 +19,9 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://giscus.app",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.loli.net",
               "img-src 'self' data: https:",
-              "font-src 'self' https://fonts.gstatic.com",
+              "font-src 'self' https://fonts.gstatic.com https://gstatic.loli.net",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com",
               "frame-src https://giscus.app",
               "object-src 'none'",
@@ -49,4 +53,4 @@ const nextConfig = {
     ];
   }
 };
-export default nextConfig;
+export default withNextIntl(nextConfig);

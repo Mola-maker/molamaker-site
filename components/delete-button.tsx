@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { deletePost } from '@/app/admin/actions';
+import { deletePost } from '@/app/[locale]/admin/actions';
 
 export function DeleteButton({ slug, title }: { slug: string; title: string }) {
   const router = useRouter();
