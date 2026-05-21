@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
     }
 
-    return NextResponse.json({
-      reply: validated.data.reply,
-      sessionId,
-    });
+    return NextResponse.json(
+      { reply: validated.data.reply, sessionId },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
   } catch (err) {
     logError('chat/send', 'Request to AstrBot failed', err);
     return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });

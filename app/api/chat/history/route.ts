@@ -52,7 +52,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ messages: [] }, { status: 502 });
     }
 
-    return NextResponse.json({ messages: validated.data.messages });
+    return NextResponse.json(
+      { messages: validated.data.messages },
+      { headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=30' } },
+    );
   } catch (err) {
     logError('chat/history', 'Request to AstrBot failed', err);
     return NextResponse.json({ messages: [] }, { status: 502 });

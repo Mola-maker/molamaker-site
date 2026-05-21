@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic';
 import { getPostBySlug, getPostSlugs } from '@/lib/content';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -5,10 +6,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
-import Comments from '@/components/comments';
 import AnnotationSidebarWrapper from '@/components/annotation-sidebar-wrapper';
 import ViewCounter from '@/components/view-counter';
 import { Link } from '@/i18n/routing';
+
+const Comments = dynamic(() => import('@/components/comments'), { ssr: false });
 
 export async function generateStaticParams() {
   const slugs = getPostSlugs();
