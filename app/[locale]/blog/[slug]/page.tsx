@@ -1,4 +1,3 @@
-import dynamic from 'next/dynamic';
 import { getPostBySlug, getPostSlugs } from '@/lib/content';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -8,9 +7,8 @@ import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 import AnnotationSidebarWrapper from '@/components/annotation-sidebar-wrapper';
 import ViewCounter from '@/components/view-counter';
+import CommentsLoader from '@/components/comments-loader';
 import { Link } from '@/i18n/routing';
-
-const Comments = dynamic(() => import('@/components/comments'), { ssr: false });
 
 export async function generateStaticParams() {
   const slugs = getPostSlugs();
@@ -72,7 +70,7 @@ export default async function PostPage({
             </ReactMarkdown>
           </div>
           <ViewCounter slug={slug} />
-          <Comments />
+          <CommentsLoader />
           <p style={{ marginTop: 60 }}>
             <Link href="/blog" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
               ← Back to writing
