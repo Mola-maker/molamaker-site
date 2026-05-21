@@ -13,6 +13,8 @@ interface Message {
   ts: string;
 }
 
+const MAX_MESSAGES = 200;
+
 function getOrCreateSessionId(): string {
   if (typeof window === 'undefined') return '';
   let sid = sessionStorage.getItem('molabot:sid');
@@ -29,8 +31,10 @@ export default function ChatRoom() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [botOnline, setBotOnline] = useState<boolean | null>(null);
+  const [botLatency, setBotLatency] = useState<number | null>(null);
   const [sessionId] = useState(() => getOrCreateSessionId());
   const msgCounter = useRef(0);
+  const inputRef = useRef(input);
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -41,7 +45,12 @@ export default function ChatRoom() {
     function poll() {
       fetch('/api/bot/status')
         .then((r) => r.json())
-        .then((d) => { if (!cancelled) setBotOnline(d.online); })
+        .then((d) => {
+          if (!cancelled) {
+            setBotOnline(d.online);
+            setBotLatency(d.latencyMs);
+          }
+        })
         .catch(() => { if (!cancelled) setBotOnline(false); });
     }
     poll();
@@ -81,28 +90,36 @@ export default function ChatRoom() {
   }, []);
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    const value = e.target.value;
+    inputRef.current = value;
+    setInput(value);
     const ta = e.target;
     ta.style.height = 'auto';
     ta.style.height = `${Math.min(ta.scrollHeight, 6 * 24)}px`;
   }, []);
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    if (!text || loading || botOnline === false) return;
-
-    setInput('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-
-    const userMsg: Message = {
-      id: `u-${++msgCounter.current}`,
-      role: 'user',
+  const addMessage = useCallback((role: 'user' | 'bot', text: string) => {
+    const msg: Message = {
+      id: `${role === 'user' ? 'u' : 'b'}-${++msgCounter.current}`,
+      role,
       text,
       ts: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => {
+      const next = [...prev, msg];
+      return next.length > MAX_MESSAGES ? next.slice(-MAX_MESSAGES) : next;
+    });
+  }, []);
+
+  const send = useCallback(async () => {
+    const text = inputRef.current.trim();
+    if (!text || loading || botOnline === false) return;
+
+    inputRef.current = '';
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+    addMessage('user', text);
     setLoading(true);
 
     try {
@@ -112,41 +129,12 @@ export default function ChatRoom() {
         body: JSON.stringify({ message: text, sessionId }),
       });
       const data = await res.json();
-
-      if (res.ok && data.reply) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `b-${++msgCounter.current}`,
-            role: 'bot',
-            text: data.reply,
-            ts: new Date().toISOString(),
-          },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `b-${++msgCounter.current}`,
-            role: 'bot',
-            text: t('error'),
-            ts: new Date().toISOString(),
-          },
-        ]);
-      }
+      addMessage('bot', res.ok && data.reply ? data.reply : t('error'));
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `b-${++msgCounter.current}`,
-          role: 'bot',
-          text: t('error'),
-          ts: new Date().toISOString(),
-        },
-      ]);
+      addMessage('bot', t('error'));
     }
     setLoading(false);
-  }, [input, loading, botOnline, sessionId, t]);
+  }, [loading, botOnline, sessionId, t, addMessage]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -164,7 +152,7 @@ export default function ChatRoom() {
     <div className="chat-panel">
       <div className="chat-header">
         <span className="chat-header-label">{t('bot')}</span>
-        <BotStatusBadge />
+        <BotStatusBadge online={botOnline} latencyMs={botLatency} />
       </div>
 
       <div
@@ -186,10 +174,7 @@ export default function ChatRoom() {
 
       <form
         className="chat-input-row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
-        }}
+        onSubmit={(e) => { e.preventDefault(); send(); }}
       >
         <textarea
           ref={textareaRef}

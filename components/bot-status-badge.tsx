@@ -8,31 +8,34 @@ interface BotStatus {
   latencyMs: number | null;
 }
 
-export default function BotStatusBadge() {
+interface Props {
+  online?: boolean | null;
+  latencyMs?: number | null;
+}
+
+export default function BotStatusBadge({ online: onlineProp, latencyMs: latencyProp }: Props) {
   const t = useTranslations('bot');
-  const [status, setStatus] = useState<BotStatus | null>(null);
+  const [status, setStatus] = useState<BotStatus | null>(
+    onlineProp !== undefined ? { online: onlineProp ?? false, latencyMs: latencyProp ?? null } : null,
+  );
 
   useEffect(() => {
-    let cancelled = false;
+    if (onlineProp !== undefined) {
+      setStatus({ online: onlineProp ?? false, latencyMs: latencyProp ?? null });
+      return;
+    }
 
+    let cancelled = false;
     function poll() {
       fetch('/api/bot/status')
         .then((r) => r.json())
-        .then((d) => {
-          if (!cancelled) setStatus({ online: d.online, latencyMs: d.latencyMs });
-        })
-        .catch(() => {
-          if (!cancelled) setStatus({ online: false, latencyMs: null });
-        });
+        .then((d) => { if (!cancelled) setStatus({ online: d.online, latencyMs: d.latencyMs }); })
+        .catch(() => { if (!cancelled) setStatus({ online: false, latencyMs: null }); });
     }
-
     poll();
     const id = setInterval(poll, 60_000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [onlineProp, latencyProp]);
 
   const label =
     status === null

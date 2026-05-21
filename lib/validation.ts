@@ -2,9 +2,15 @@ import { z } from 'zod';
 
 const SAFE_TEXT_RE = /^[\p{L}\p{N}\s\-_.,!?@#&()'"\/:+*;=\[\]{}<>|~`$%^]+$/u;
 
+const CHAT_SAFE_TEXT_RE = /^[\p{L}\p{N}\p{Emoji}\s\-_.,!?@#&()'"\/:+*;=\[\]{}<>|~`$%^一-鿿㐀-䶿]+$/u;
+
 const safeText = z
   .string()
   .regex(SAFE_TEXT_RE, 'Contains characters that are not allowed');
+
+const chatSafeText = z
+  .string()
+  .regex(CHAT_SAFE_TEXT_RE, 'Contains characters that are not allowed');
 
 const sanitize = (s: string) =>
   s
@@ -94,7 +100,7 @@ export const chatMessageSchema = z.object({
     .trim()
     .min(1, 'Message is required')
     .max(2000, 'Message must be 2000 characters or fewer')
-    .pipe(safeText)
+    .pipe(chatSafeText)
     .transform(sanitize),
   sessionId: z
     .string()

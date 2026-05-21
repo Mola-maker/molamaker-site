@@ -1,7 +1,7 @@
 import { getAllPosts } from '@/lib/content';
 
 export async function GET() {
-  const posts = getAllPosts().slice(0, 20);
+  const posts = (await getAllPosts()).slice(0, 20);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker-site.vercel.app';
 
   const items = posts
