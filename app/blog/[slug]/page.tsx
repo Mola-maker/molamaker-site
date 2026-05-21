@@ -1,15 +1,16 @@
-import { getPostBySlug, getPostSlugs, incrementPostView } from '@/lib/data/posts';
+import { getPostBySlug, getPostSlugs } from '@/lib/content';
+import { incrementPostView } from '@/lib/data/posts';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
 import Comments from '@/components/comments';
 import AnnotationSidebarWrapper from '@/components/annotation-sidebar-wrapper';
 
-export const revalidate = 60;
-
 export async function generateStaticParams() {
-  const slugs = await getPostSlugs();
+  const slugs = getPostSlugs();
   return slugs.map((slug) => ({ slug }));
 }
 
@@ -19,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const post = getPostBySlug(slug);
 
   if (!post) return { title: 'Not Found' };
 
@@ -29,7 +30,7 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: post.excerpt ?? undefined,
-      images: [`/og?title=${encodeURIComponent(post.title)}&date=${encodeURIComponent(new Date(post.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}`],
+      images: [`/og?title=${encodeURIComponent(post.title)}&date=${encodeURIComponent(new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}`],
     },
   };
 }
@@ -42,7 +43,7 @@ export default async function PostPage({
   const { slug } = await params;
 
   await incrementPostView(slug);
-  const post = await getPostBySlug(slug);
+  const post = getPostBySlug(slug);
 
   if (!post) notFound();
 
@@ -52,13 +53,11 @@ export default async function PostPage({
       <main>
         <article style={{ padding: '80px 0', maxWidth: '68ch', margin: '0 auto' }}>
           <div className="label">
-            {new Date(post.published_at).toLocaleDateString('en-US', {
+            {new Date(post.date).toLocaleDateString('en-US', {
               month: 'long', day: 'numeric', year: 'numeric'
             })}
             {' · '}
             {post.read_time} min read
-            {' · '}
-            {post.view_count.toLocaleString()} views
           </div>
           <h1 className="display" style={{ maxWidth: 'none' }}>{post.title}</h1>
           {post.excerpt && (
@@ -66,13 +65,10 @@ export default async function PostPage({
               {post.excerpt}
             </p>
           )}
-          <div style={{
-            color: 'var(--ink-2)',
-            fontSize: 17,
-            lineHeight: 1.7,
-            whiteSpace: 'pre-wrap'
-          }}>
-            {post.content || '(Body coming soon. Edit this post in the Supabase dashboard.)'}
+          <div className="prose">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {post.content}
+            </ReactMarkdown>
           </div>
           <Comments />
           <p style={{ marginTop: 60 }}>

@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import { getPosts } from '@/lib/data/posts';
+import { getAllPosts } from '@/lib/content';
 import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
-
-export const revalidate = 60;
 
 export const metadata: Metadata = { title: 'Blog — molamaker' };
 
@@ -11,7 +9,7 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
 
 export default async function BlogPage() {
-  const posts = await getPosts();
+  const posts = getAllPosts();
 
   return (
     <>
@@ -23,18 +21,15 @@ export default async function BlogPage() {
 
           {posts.length === 0 && (
             <p style={{ color: 'var(--ink-soft)', fontSize: 15 }}>
-              No posts yet. Run the seed in <code>supabase/schema.sql</code> or
-              add some via the dashboard.
+              No posts yet. Add markdown files to <code>content/</code>.
             </p>
           )}
 
           {posts.map((p) => (
             <a key={p.slug} href={`/blog/${p.slug}`} className="post">
-              <div className="post-date">{fmtDate(p.published_at)}</div>
+              <div className="post-date">{fmtDate(p.date)}</div>
               <div className="post-title">{p.title}</div>
-              <div className="post-meta">
-                {p.read_time} min &middot; {p.view_count.toLocaleString()} views
-              </div>
+              <div className="post-meta">{p.read_time} min read</div>
             </a>
           ))}
         </section>

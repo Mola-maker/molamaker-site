@@ -1,7 +1,7 @@
-import { getPosts } from '@/lib/data/posts';
+import { getAllPosts } from '@/lib/content';
 
 export async function GET() {
-  const posts = await getPosts(20);
+  const posts = getAllPosts().slice(0, 20);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker-site.vercel.app';
 
   const items = posts
@@ -9,7 +9,7 @@ export async function GET() {
       <title><![CDATA[${p.title}]]></title>
       <link>${siteUrl}/blog/${p.slug}</link>
       <guid>${siteUrl}/blog/${p.slug}</guid>
-      <pubDate>${new Date(p.published_at).toUTCString()}</pubDate>
+      <pubDate>${new Date(p.date).toUTCString()}</pubDate>
       <description><![CDATA[${p.excerpt ?? ''}]]></description>
     </item>`)
     .join('');

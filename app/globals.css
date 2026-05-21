@@ -677,3 +677,19 @@ footer a:hover { color: var(--accent); }
   text-align: center; cursor: default;
   box-shadow: 0 16px 48px rgba(0,0,0,0.2);
 }
+
+/* markdown prose */
+.prose { color: var(--ink-2); font-size: 17px; line-height: 1.7; }
+.prose h2 { font-family: var(--font-serif); font-size: 28px; color: var(--ink); margin: 48px 0 16px; letter-spacing: -0.01em; }
+.prose h3 { font-family: var(--font-serif); font-size: 22px; color: var(--ink); margin: 36px 0 12px; }
+.prose p { margin-bottom: 20px; }
+.prose strong { color: var(--ink); font-weight: 600; }
+.prose code { font-family: var(--font-mono); font-size: 14px; background: var(--bg-deep); padding: 2px 6px; border-radius: 2px; color: var(--accent-deep); }
+.prose pre { background: var(--ink); color: var(--bg); padding: 20px 24px; border-radius: 4px; overflow-x: auto; margin: 24px 0; font-size: 14px; line-height: 1.5; }
+.prose pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+.prose ul, .prose ol { margin: 0 0 20px 24px; }
+.prose li { margin-bottom: 8px; }
+.prose blockquote { border-left: 3px solid var(--accent); padding: 4px 0 4px 20px; margin: 24px 0; color: var(--ink-soft); font-style: italic; }
+.prose a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed var(--accent-soft); }
+.prose a:hover { border-bottom-style: solid; }
+.prose hr { border: none; border-top: 1px solid var(--rule); margin: 40px 0; }

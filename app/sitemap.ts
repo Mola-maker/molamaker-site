@@ -1,10 +1,10 @@
 import type { MetadataRoute } from 'next';
-import { getPostSlugs } from '@/lib/data/posts';
+import { getPostSlugs } from '@/lib/content';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker.com';
 
-  const slugs = await getPostSlugs();
+  const slugs = getPostSlugs();
 
   const blogEntries: MetadataRoute.Sitemap = slugs.map((slug) => ({
     url: `${baseUrl}/blog/${slug}`,

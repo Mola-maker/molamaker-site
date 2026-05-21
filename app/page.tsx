@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { getPosts } from '@/lib/data/posts';
+import { getAllPosts } from '@/lib/content';
 import { getEntries } from '@/lib/data/guestbook';
 import { getTotalViews } from '@/lib/data/page-views';
 import NavWrapper from '@/components/nav-wrapper';
@@ -16,7 +16,7 @@ async function HeroAsync() {
 }
 
 async function FeaturedPosts() {
-  const posts = await getPosts(3);
+  const posts = getAllPosts().slice(0, 3);
   if (posts.length === 0) return null;
   return (
     <section>
@@ -25,9 +25,9 @@ async function FeaturedPosts() {
       <div>
         {posts.map((p) => (
           <Link key={p.slug} href={`/blog/${p.slug}`} className="post">
-            <div className="post-date">{new Date(p.published_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}</div>
+            <div className="post-date">{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}</div>
             <div className="post-title">{p.title}</div>
-            <div className="post-meta">{p.read_time} min · {p.view_count.toLocaleString()} views</div>
+            <div className="post-meta">{p.read_time} min read</div>
           </Link>
         ))}
       </div>
