@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import SupportButton from '@/components/support-button';
+import Webring from '@/components/webring';
 
 export default function Footer() {
   return (
     <footer>
+      <Webring />
       <div className="footer-sitemap">
         <div className="footer-group">
           <span className="footer-group-title">Read</span>

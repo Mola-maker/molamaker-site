@@ -1,6 +1,7 @@
 'use client';
-import { useState, useActionState, useRef } from 'react';
+import { useState, useActionState, useRef, useEffect } from 'react';
 import { signGuestbook } from '@/app/actions';
+import { createClient } from '@/lib/supabase/client';
 
 type Entry = {
   id: string;
@@ -23,6 +24,21 @@ function timeAgo(iso: string) {
 export default function Guestbook({ entries }: { entries: Entry[] }) {
   const [list, setList] = useState<Entry[]>(entries);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Ensure Realtime is enabled in Supabase Dashboard → Database → Replication → guestbook
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('guestbook-realtime')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'guestbook' },
+        (payload) => {
+          setList((prev) => [payload.new as Entry, ...prev]);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     async (_prev: ActionState, formData: FormData) => {

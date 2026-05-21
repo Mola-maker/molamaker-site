@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import NavWrapper from '@/components/nav-wrapper';
 import Footer from '@/components/footer';
+import PortraitTilt from '@/components/portrait-tilt';
+import SpotifyNowPlaying from '@/components/spotify-now-playing';
 import { SITE_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = { title: 'About — molamaker' };
@@ -41,17 +43,20 @@ export default function AboutPage() {
             </div>
             <div className="portrait-stack">
               <div className="portrait">
-                <Image
-                  src={SITE_CONFIG.avatarUrl}
-                  alt="Portrait"
-                  width={400}
-                  height={400}
-                />
+                <PortraitTilt>
+                  <Image
+                    src={SITE_CONFIG.avatarUrl}
+                    alt="Portrait"
+                    width={400}
+                    height={400}
+                  />
+                </PortraitTilt>
                 <div className="portrait-caption">
                   <span>mola &middot; 2026</span>
                   <span className="glyph">&#x13046;</span>
                 </div>
               </div>
+              <SpotifyNowPlaying />
               <aside className="sidecard">
                 <h3>Now</h3>
                 <ul>

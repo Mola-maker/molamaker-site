@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import CursorGlow from '@/components/cursor-glow';
+import ScrollReveal from '@/components/scroll-reveal';
+import Konami from '@/components/konami';
 import './globals.css';
 
 const fraunces = Fraunces({
@@ -41,7 +46,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
-      <body>{children}</body>
+      <head>
+        <link rel="alternate" type="application/rss+xml" title="molamaker journal" href="/rss.xml" />
+      </head>
+      <body>
+        <CursorGlow />
+        <ScrollReveal />
+        <Konami />
+        {children}
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }

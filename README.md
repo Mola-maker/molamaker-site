@@ -77,6 +77,41 @@ supabase/schema.sql    # tables + RLS + RPC + seed
   (the avatar is pulled from your GitHub by URL).
 - **Now sidecard** → `components/about.tsx`.
 
+## Database
+
+The project uses Supabase with RLS. Migrations live in `supabase/migrations/`.
+
+### Install Supabase CLI
+
+```powershell
+scoop install supabase  # Windows
+# or
+npm i -g supabase
+```
+
+### Local development
+
+```bash
+supabase init          # creates supabase/config.toml
+supabase link --project-ref <your-project-ref>
+supabase start         # starts local Postgres + all services
+supabase db reset      # resets local DB + runs all migrations
+```
+
+### Generating types
+
+```bash
+npm run db:types       # generates supabase/types/database.ts
+```
+
+### Deploying migrations
+
+```bash
+supabase db push       # pushes local migrations to linked project
+```
+
+For now, migrations are also run manually via Supabase SQL Editor.
+
 ## Notes
 
 - The home page revalidates every 30s (ISR); blog posts every 60s.

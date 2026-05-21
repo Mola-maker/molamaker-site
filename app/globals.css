@@ -436,6 +436,19 @@ footer a:hover { color: var(--accent); }
   .footer-sitemap { gap: 32px; flex-wrap: wrap; }
 }
 
+/* webring */
+.webring {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 16px 0; margin-bottom: 16px;
+  font-family: var(--font-mono); font-size: 12px;
+}
+.webring-link {
+  color: var(--ink-soft); text-decoration: none;
+  transition: color .2s;
+}
+.webring-link:hover { color: var(--accent); }
+.webring-name { color: var(--accent); font-weight: 500; }
+
 /* admin */
 .admin-nav {
   background: var(--ink);
@@ -644,3 +657,23 @@ footer a:hover { color: var(--accent); }
   color: var(--ink-soft); font-size: 16px; line-height: 1;
 }
 .annotation-delete:hover { color: var(--accent); }
+
+/* scroll reveal */
+.reveal { opacity: 0; transform: translateY(8px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* konami */
+.konami-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(42,37,32,0.85);
+  animation: fadeIn .5s ease;
+  cursor: pointer;
+}
+.konami-toast {
+  background: var(--bg-elev);
+  padding: 40px 48px; border-radius: 6px;
+  text-align: center; cursor: default;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+}
