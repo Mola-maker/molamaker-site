@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
+  if (!supabase) {
+    return NextResponse.redirect(`${origin}/${locale}/login?error=config_error`);
+  }
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user?.email) {

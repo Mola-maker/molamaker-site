@@ -12,6 +12,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     const supabase = createClient();
+    if (!supabase) {
+      setError('Authentication service is not configured. Contact the site owner.');
+      return;
+    }
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     if (!siteUrl) {
       setError('Site URL not configured. Contact the site owner.');

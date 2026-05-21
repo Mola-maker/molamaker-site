@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function getTotalViews(): Promise<number> {
   const supabase = await createClient();
+  if (!supabase) return 0;
 
   const { count, error } = await supabase
     .from('page_views')
@@ -17,6 +18,7 @@ export async function getTotalViews(): Promise<number> {
 
 export async function insertPageView(path: string): Promise<void> {
   const supabase = await createClient();
+  if (!supabase) return;
 
   const { error } = await supabase
     .from('page_views')

@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js';
 export async function getCurrentUser(): Promise<User | null> {
   try {
     const supabase = await createClient();
+    if (!supabase) return null;
     const { data: { user } } = await supabase.auth.getUser();
     return user ?? null;
   } catch {
@@ -34,6 +35,7 @@ export async function requireAdmin(): Promise<User> {
 export async function isSupporter(userId: string): Promise<boolean> {
   try {
     const supabase = await createClient();
+    if (!supabase) return false;
     const { data } = await supabase
       .from('supporters')
       .select('user_id')

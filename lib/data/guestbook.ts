@@ -3,6 +3,7 @@ import type { GuestbookEntry, ApiResult } from '@/lib/types';
 
 export async function getEntries(limit?: number): Promise<GuestbookEntry[]> {
   const supabase = await createClient();
+  if (!supabase) return [];
 
   let query = supabase
     .from('guestbook')
@@ -26,6 +27,7 @@ export async function insertEntry(
   message: string,
 ): Promise<ApiResult> {
   const supabase = await createClient();
+  if (!supabase) return { ok: false, error: 'Service temporarily unavailable.' };
 
   const { error } = await supabase
     .from('guestbook')

@@ -4,6 +4,7 @@ import type { Post } from '@/lib/types';
 
 export async function getPosts(limit?: number): Promise<Post[]> {
   const supabase = await createClient();
+  if (!supabase) return [];
 
   let query = supabase
     .from('posts')
@@ -25,6 +26,7 @@ export async function getPosts(limit?: number): Promise<Post[]> {
 
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   const supabase = await createClient();
+  if (!supabase) return null;
 
   const { data, error } = await supabase
     .from('posts')
@@ -62,6 +64,7 @@ export async function getPostSlugs(): Promise<string[]> {
 
 export async function incrementPostView(slug: string): Promise<void> {
   const supabase = await createClient();
+  if (!supabase) return;
 
   const { error } = await supabase.rpc('increment_view', { post_slug: slug });
   if (error) {

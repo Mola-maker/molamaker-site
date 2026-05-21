@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function getPage(slug: string): Promise<{ slug: string; content: string; updated_at: string } | null> {
   const supabase = await createClient();
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('pages')
     .select('slug, content, updated_at')
@@ -17,6 +18,7 @@ export async function getPage(slug: string): Promise<{ slug: string; content: st
 
 export async function updatePage(slug: string, content: string): Promise<void> {
   const supabase = await createClient();
+  if (!supabase) throw new Error('Supabase is not configured — cannot update page');
   const { error } = await supabase
     .from('pages')
     .upsert({ slug, content, updated_at: new Date().toISOString() });

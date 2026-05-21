@@ -9,6 +9,13 @@ export const revalidate = 0;
 export default async function AdminPage() {
   await requireAdmin();
   const supabase = await createClient();
+  if (!supabase) {
+    return (
+      <div style={{ padding: '60px 0' }}>
+        <div className="form-err">Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.</div>
+      </div>
+    );
+  }
 
   const { data: posts, error } = await supabase
     .from('posts')

@@ -28,6 +28,7 @@ export default function Guestbook({ entries }: { entries: Entry[] }) {
   // Ensure Realtime is enabled in Supabase Dashboard → Database → Replication → guestbook
   useEffect(() => {
     const supabase = createClient();
+    if (!supabase) return;
     const channel = supabase
       .channel('guestbook-realtime')
       .on('postgres_changes',

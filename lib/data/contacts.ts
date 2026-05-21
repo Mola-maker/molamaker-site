@@ -5,6 +5,7 @@ export async function insertContact(
   data: ContactPayload,
 ): Promise<ApiResult> {
   const supabase = await createClient();
+  if (!supabase) return { ok: false, error: 'Service temporarily unavailable.' };
 
   const { error } = await supabase
     .from('contacts')

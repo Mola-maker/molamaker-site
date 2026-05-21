@@ -34,6 +34,13 @@ export async function savePost(formData: FormData) {
 
   const { slug, title, excerpt, content, read_time: readTime, published } = parsed.data;
   const supabase = await createClient();
+  if (!supabase) {
+    redirect(
+      existingSlug
+        ? `/${locale}/admin/edit/${existingSlug}?error=config_error`
+        : `/${locale}/admin/new?error=config_error`,
+    );
+  }
 
   const postData = {
     slug,
@@ -72,6 +79,7 @@ export async function savePost(formData: FormData) {
 export async function deletePost(slug: string) {
   await requireAdmin();
   const supabase = await createClient();
+  if (!supabase) return { ok: false, error: 'Service temporarily unavailable.' };
   const { error } = await supabase.from('posts').delete().eq('slug', slug);
   if (error) {
     logError('admin/deletePost', 'Delete failed', error);

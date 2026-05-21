@@ -14,6 +14,7 @@ export default async function EditPostPage({
   await requireAdmin();
   const { slug } = await params;
   const supabase = await createClient();
+  if (!supabase) notFound();
 
   const { data, error } = await supabase
     .from('posts')
