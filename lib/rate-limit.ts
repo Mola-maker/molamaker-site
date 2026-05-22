@@ -22,14 +22,16 @@ export async function checkRate(
       window_ms: windowMs,
     });
 
-    if (error || !data) {
+    if (error || !data || (Array.isArray(data) && data.length === 0)) {
       return { allowed: true, remaining: limit - 1, resetMs: 0 };
     }
 
+    // PostgREST returns SETOF results as an array — unwrap the first row
+    const row = Array.isArray(data) ? data[0] : data;
     return {
-      allowed: Boolean(data.allowed),
-      remaining: Number(data.remaining),
-      resetMs: Number(data.reset_ms),
+      allowed: Boolean(row?.allowed),
+      remaining: Number(row?.remaining ?? 0),
+      resetMs: Number(row?.reset_ms ?? 0),
     };
   } catch {
     return { allowed: true, remaining: limit - 1, resetMs: 0 };

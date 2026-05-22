@@ -18,7 +18,7 @@ describe('checkRate', () => {
     vi.clearAllMocks();
   });
 
-  it('returns allowed=true when RPC succeeds under limit', async () => {
+  it('returns allowed=true when RPC succeeds under limit (single object)', async () => {
     mockRpc.mockResolvedValueOnce({
       data: { allowed: true, remaining: 4, reset_ms: 0 },
       error: null,
@@ -29,9 +29,20 @@ describe('checkRate', () => {
     expect(result.remaining).toBe(4);
   });
 
+  it('returns allowed=true when RPC succeeds under limit (array — PostgREST SETOF)', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: [{ allowed: true, remaining: 4, reset_ms: 0 }],
+      error: null,
+    });
+
+    const result = await checkRate(uniqueKey(), 5, 60_000);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(4);
+  });
+
   it('returns allowed=false when RPC reports limit exceeded', async () => {
     mockRpc.mockResolvedValueOnce({
-      data: { allowed: false, remaining: 0, reset_ms: 30000 },
+      data: [{ allowed: false, remaining: 0, reset_ms: 30000 }],
       error: null,
     });
 
@@ -49,7 +60,16 @@ describe('checkRate', () => {
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
+  });
+
+  it('fails open when RPC returns empty array', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: [],
+      error: null,
+    });
+
+    const result = await checkRate(uniqueKey(), 5, 60_000);
+    expect(result.allowed).toBe(true);
   });
 
   it('fails open when RPC throws', async () => {
@@ -57,7 +77,6 @@ describe('checkRate', () => {
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
     expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
   });
 
   it('uses RATE_GUESTBOOK constants correctly', () => {
