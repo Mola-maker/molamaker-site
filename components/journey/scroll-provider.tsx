@@ -61,7 +61,7 @@ export default function ScrollProvider({ children }: { children: React.ReactNode
 
     // Refresh ScrollTrigger positions after Lenis scroll
     const onScroll = () => {
-      ScrollTrigger.refresh();
+      ScrollTrigger.update();
     };
     lenis.on('scroll', onScroll);
 

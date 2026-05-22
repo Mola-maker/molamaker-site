@@ -16,7 +16,9 @@ export default function TrainWindow() {
   const fgRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  // Tri-state: null → not yet detected, true/false → detected.
+  // Prevents hydration mismatch (server always renders null state).
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -28,7 +30,12 @@ export default function TrainWindow() {
 
   useGSAP(
     () => {
-      if (reducedMotion || isMobile) return;
+      if (reducedMotion || isMobile !== false) return;
+
+      const layers = [bgRef.current, midRef.current, fgRef.current].filter(Boolean);
+
+      // Promote layers to GPU only during active scroll (not permanent CSS will-change)
+      gsap.set(layers, { willChange: 'transform' });
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -43,7 +50,7 @@ export default function TrainWindow() {
       tl.fromTo(midRef.current, { x: '0%' }, { x: '-45%', ease: 'none' }, 0);
       tl.fromTo(fgRef.current, { x: '0%' }, { x: '-110%', ease: 'none' }, 0);
 
-      // Caption fade sequence
+      // Caption: fade in between top 60%→30%, hold, fade out between bottom 60%→20%
       gsap.fromTo(
         captionRef.current,
         { opacity: 0, y: 20 },
@@ -87,46 +94,64 @@ export default function TrainWindow() {
           toggleActions: 'play pause resume pause',
         },
       });
+
+      // Clean up will-change after section exits
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: 'bottom bottom',
+        end: 'bottom bottom',
+        onLeave: () => gsap.set(layers, { willChange: 'auto' }),
+        onEnterBack: () => gsap.set(layers, { willChange: 'transform' }),
+      });
     },
     { scope: sectionRef, dependencies: [isMobile, reducedMotion] },
   );
 
-  const layers = isMobile ? (
-    <div
-      className="train-static-bg"
-      style={{ backgroundImage: 'url(/journey/train/background.svg)' }}
-    />
-  ) : (
-    <>
+  // Before client-side detection runs, render nothing (match server output).
+  // After detection: mobile → static bg, desktop → 3 parallax layers.
+  const layers =
+    isMobile === null ? null : isMobile ? (
       <div
-        ref={bgRef}
-        className="parallax-layer bg"
+        className="train-static-bg"
         style={{ backgroundImage: 'url(/journey/train/background.svg)' }}
       />
-      <div
-        ref={midRef}
-        className="parallax-layer mid"
-        style={{ backgroundImage: 'url(/journey/train/middle.svg)' }}
-      />
-      <div
-        ref={fgRef}
-        className="parallax-layer fg"
-        style={{ backgroundImage: 'url(/journey/train/foreground.svg)' }}
-      />
-    </>
-  );
+    ) : (
+      <>
+        <div
+          ref={bgRef}
+          className="parallax-layer parallax-layer--bg"
+          style={{ backgroundImage: 'url(/journey/train/background.svg)' }}
+        />
+        <div
+          ref={midRef}
+          className="parallax-layer parallax-layer--mid"
+          style={{ backgroundImage: 'url(/journey/train/middle.svg)' }}
+        />
+        <div
+          ref={fgRef}
+          className="parallax-layer parallax-layer--fg"
+          style={{ backgroundImage: 'url(/journey/train/foreground.svg)' }}
+        />
+      </>
+    );
 
   return (
-    <section className="train-section" ref={sectionRef}>
+    <section
+      className="train-section"
+      ref={sectionRef}
+      role="region"
+      aria-label="Train window parallax scene"
+    >
       <div className="train-window">
         <div className="train-viewport">{layers}</div>
-        <div className="train-frame" ref={frameRef}>
+        <div className="train-frame" ref={frameRef} aria-hidden="true">
           <svg
             viewBox="0 0 1200 680"
             preserveAspectRatio="xMidYMid meet"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className="train-frame-svg"
+            aria-hidden="true"
           >
             <rect x="40" y="30" width="1120" height="620" rx="24" stroke="#2a2520" strokeWidth="60" />
             <rect x="40" y="30" width="1120" height="620" rx="24" stroke="#3d3530" strokeWidth="12" />
@@ -141,7 +166,7 @@ export default function TrainWindow() {
             <rect x="1040" y="0" width="120" height="200" rx="8" fill="#2a2520" opacity="0.3" />
           </svg>
         </div>
-        <div className="train-vignette" />
+        <div className="train-vignette" aria-hidden="true" />
       </div>
 
       <div className="train-caption" ref={captionRef}>

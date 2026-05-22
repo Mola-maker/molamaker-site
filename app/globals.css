@@ -120,13 +120,32 @@ p.lead {
 /* hero */
 .hero { padding: 100px 0 80px; }
 .hero-meta {
-  display: flex; gap: 24px; flex-wrap: wrap;
-  margin-top: 40px; padding-top: 28px;
+  display: flex;
+  gap: clamp(12px, 3vw, 28px);
+  flex-wrap: wrap;
+  margin-top: clamp(24px, 5vh, 48px);
+  padding-top: 28px;
   border-top: 1px dashed var(--rule);
   font-family: var(--font-mono);
-  font-size: 12px; color: var(--ink-soft);
+  font-size: clamp(10px, 1.2vw, 12px);
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
 }
-.hero-meta span strong { color: var(--ink-2); font-weight: 500; }
+
+.hero-meta span {
+  opacity: 0.7;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.hero-meta span:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.hero-meta strong {
+  color: var(--ink);
+  font-weight: 500;
+}
 .pulse {
   display: inline-block; width: 6px; height: 6px;
   border-radius: 50%; background: var(--accent);
@@ -947,25 +966,33 @@ footer a:hover { color: var(--accent); }
   inset: 0;
   background-size: cover;
   background-position: center;
-  will-change: transform;
 }
 
-.parallax-layer.bg {
+.parallax-layer--bg {
   z-index: 1;
   width: 120%;
   left: -10%;
 }
 
-.parallax-layer.mid {
+.parallax-layer--mid {
   z-index: 2;
   width: 180%;
   left: -40%;
 }
 
-.parallax-layer.fg {
+.parallax-layer--fg {
   z-index: 3;
   width: 250%;
   left: -75%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parallax-layer,
+  .parallax-layer--bg,
+  .parallax-layer--mid,
+  .parallax-layer--fg {
+    transform: none !important;
+  }
 }
 
 .train-frame {
@@ -1029,32 +1056,6 @@ footer a:hover { color: var(--accent); }
 .hero .lead span {
   display: inline-block;
   transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.hero-meta {
-  display: flex;
-  gap: clamp(12px, 3vw, 28px);
-  flex-wrap: wrap;
-  margin-top: clamp(24px, 5vh, 48px);
-  font-family: var(--font-mono);
-  font-size: clamp(10px, 1.2vw, 12px);
-  color: var(--ink-soft);
-  letter-spacing: 0.08em;
-}
-
-.hero-meta span {
-  opacity: 0.7;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.hero-meta span:hover {
-  opacity: 1;
-  transform: translateY(-1px);
-}
-
-.hero-meta strong {
-  color: var(--ink);
-  font-weight: 500;
 }
 
 /* cursor-glow enhancement */

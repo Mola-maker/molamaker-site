@@ -10,10 +10,12 @@ import gsap from 'gsap';
  * - Enhanced hover states
  *
  * Respects prefers-reduced-motion — skips all animations.
+ *
+ * Class contract with Hero (components/hero.tsx):
+ *   .hero, .label, .display, .lead span, .hero-meta span
  */
 export default function HeroAnimation({ children }: { children: React.ReactNode }) {
   const heroRef = useRef<HTMLDivElement>(null);
-  const displayRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -55,7 +57,7 @@ export default function HeroAnimation({ children }: { children: React.ReactNode 
     return () => ctx.revert();
   }, []);
 
-  // Cursor-aware parallax on hero heading
+  // Cursor-aware parallax on hero heading — scoped to hero container via refs
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduced) return;
@@ -63,36 +65,48 @@ export default function HeroAnimation({ children }: { children: React.ReactNode 
     const hero = heroRef.current;
     if (!hero) return;
 
+    const displayEl = hero.querySelector<HTMLElement>('.hero .display');
+    const leadEl = hero.querySelector<HTMLElement>('.hero .lead');
+
     function onMove(e: MouseEvent) {
       const rect = hero!.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;
 
-      gsap.to('.hero .display', {
-        x: x * -12,
-        y: y * -8,
-        duration: 0.8,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      });
+      if (displayEl) {
+        gsap.to(displayEl, {
+          x: x * -12,
+          y: y * -8,
+          duration: 0.8,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      }
 
-      gsap.to('.hero .lead', {
-        x: x * -6,
-        y: y * -4,
-        duration: 0.8,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      });
+      if (leadEl) {
+        gsap.to(leadEl, {
+          x: x * -6,
+          y: y * -4,
+          duration: 0.8,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      }
     }
 
     function onLeave() {
-      gsap.to(['.hero .display', '.hero .lead'], {
-        x: 0,
-        y: 0,
-        duration: 1.2,
-        ease: 'power3.out',
-        overwrite: 'auto',
-      });
+      const targets: HTMLElement[] = [];
+      if (displayEl) targets.push(displayEl);
+      if (leadEl) targets.push(leadEl);
+      if (targets.length > 0) {
+        gsap.to(targets, {
+          x: 0,
+          y: 0,
+          duration: 1.2,
+          ease: 'power3.out',
+          overwrite: 'auto',
+        });
+      }
     }
 
     hero.addEventListener('mousemove', onMove, { passive: true });
