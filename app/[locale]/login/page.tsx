@@ -17,7 +17,13 @@ export default function LoginPage() {
       setError('Authentication service is not configured. Contact the site owner.');
       return;
     }
-    const siteUrl = SITE_CONFIG.siteUrl;
+    // Use runtime origin so the redirect always points to the actual
+    // deployed domain, even if NEXT_PUBLIC_SITE_URL was empty or wrong
+    // at build time. Falls back to SITE_CONFIG.siteUrl during SSR.
+    const siteUrl =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : SITE_CONFIG.siteUrl;
     const { error: sendError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${siteUrl}/auth/callback` },
