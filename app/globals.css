@@ -666,6 +666,22 @@ footer a:hover { color: var(--accent); }
 .reveal.visible { opacity: 1; transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
 
+/* hover-zoom (hero only) */
+@media (hover: hover) {
+  .hover-zoom {
+    display: inline-block;
+    transform-origin: 50% 60%;
+    transition: transform .35s cubic-bezier(.2, .8, .25, 1);
+  }
+  .hover-zoom:hover {
+    transform: scale(1.05);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-zoom { transition: none; }
+    .hover-zoom:hover { transform: none; }
+  }
+}
+
 /* konami */
 .konami-overlay {
   position: fixed; inset: 0; z-index: 9999;
@@ -841,4 +857,51 @@ footer a:hover { color: var(--accent); }
 @media (max-width: 640px) {
   .chat-messages { height: 360px; padding: 14px; }
   .chat-bubble { max-width: 88%; font-size: 14px; }
+}
+
+/* journey */
+.journey-section {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.journey-hero-title {
+  font-family: var(--font-serif);
+  font-size: clamp(3rem, 1rem + 7vw, 8rem);
+  font-style: italic;
+  text-align: center;
+}
+
+.journey-demo-text {
+  font-family: var(--font-serif);
+  font-size: clamp(4rem, 2rem + 8vw, 10rem);
+  font-style: italic;
+  text-align: center;
+}
+
+.journey-placeholder {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-align: center;
+  border: 1px dashed var(--rule);
+  padding: 32px 48px;
+  border-radius: 4px;
+}
+
+.journey-end-link {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color .2s;
+}
+
+.journey-end-link:hover {
+  color: var(--accent-deep);
 }

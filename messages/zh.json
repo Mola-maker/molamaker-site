@@ -72,5 +72,12 @@
     "label": "语言",
     "en": "EN",
     "zh": "中文"
+  },
+  "journey": {
+    "heroTitle": "旅程开始",
+    "scrollToBegin": "滚动开始",
+    "planetsPlaceholder": "行星 — 即将推出",
+    "finalPosePlaceholder": "最终姿态 — 即将推出",
+    "backHome": "返回首页"
   }
 }

@@ -72,5 +72,12 @@
     "label": "Language",
     "en": "EN",
     "zh": "中文"
+  },
+  "journey": {
+    "heroTitle": "the journey begins",
+    "scrollToBegin": "scroll to begin",
+    "planetsPlaceholder": "planets — coming soon",
+    "finalPosePlaceholder": "final pose — coming soon",
+    "backHome": "back home"
   }
 }

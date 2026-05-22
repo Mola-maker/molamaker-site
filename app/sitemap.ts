@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  const pages = ['about', 'work', 'projects', 'blog', 'chat', 'guestbook', 'contact', 'now', 'uses'];
+  const pages = ['about', 'work', 'projects', 'blog', 'chat', 'guestbook', 'contact', 'now', 'uses', 'journey'];
   const pageEntries: MetadataRoute.Sitemap = pages.map((p) => ({
     url: `${baseUrl}/${p}`,
     lastModified: new Date(),

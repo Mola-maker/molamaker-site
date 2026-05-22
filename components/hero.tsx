@@ -3,12 +3,14 @@ export default function Hero({ visitorCount }: { visitorCount: number }) {
     <section className="hero" id="top">
       <div className="label">Portfolio &amp; Journal · est. 2026</div>
       <h1 className="display">
-        Building at the <em>edge</em> of systems and intelligence.
+        <span className="hover-zoom">Building at the</span>{' '}
+        <em>edge</em>{' '}
+        <span className="hover-zoom">of systems and intelligence.</span>
       </h1>
       <p className="lead">
-        I&apos;m a developer working across CUDA, AI tooling, and the messy
-        seams where they meet. Currently learning to write fast GPU kernels
-        and reasoning about agentic systems. This is where I keep notes.
+        <span className="hover-zoom">I&apos;m a developer working across CUDA, AI tooling, and the messy seams where they meet.</span>{' '}
+        <span className="hover-zoom">Currently learning to write fast GPU kernels and reasoning about agentic systems.</span>{' '}
+        <span className="hover-zoom">This is where I keep notes.</span>
       </p>
       <div className="hero-meta">
         <span>visitor <strong>#{visitorCount.toLocaleString()}</strong></span>
