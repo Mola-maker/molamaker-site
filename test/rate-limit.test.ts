@@ -61,7 +61,7 @@ describe('checkRate', () => {
   });
 
   it('uses RATE_GUESTBOOK constants correctly', () => {
-    expect(RATE_GUESTBOOK.limit).toBe(5);
+    expect(RATE_GUESTBOOK.limit).toBe(20);
     expect(RATE_GUESTBOOK.windowMs).toBe(60_000);
   });
 
