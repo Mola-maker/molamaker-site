@@ -75,6 +75,7 @@
   },
   "journey": {
     "heroTitle": "旅程开始",
+    "trainCaption": "世界在车窗外流淌，比我能叫出名字的速度更快。",
     "scrollToBegin": "滚动开始",
     "planetsPlaceholder": "行星 — 即将推出",
     "finalPosePlaceholder": "最终姿态 — 即将推出",

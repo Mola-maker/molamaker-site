@@ -75,6 +75,7 @@
   },
   "journey": {
     "heroTitle": "the journey begins",
+    "trainCaption": "The world streaming by, faster than I can name it.",
     "scrollToBegin": "scroll to begin",
     "planetsPlaceholder": "planets — coming soon",
     "finalPosePlaceholder": "final pose — coming soon",

@@ -5,6 +5,7 @@ import { getEntries } from '@/lib/data/guestbook';
 import { getTotalViews } from '@/lib/data/page-views';
 import NavWrapper from '@/components/nav-wrapper';
 import Hero from '@/components/hero';
+import HeroAnimation from '@/components/hero-animation';
 import Footer from '@/components/footer';
 import { HeroSkeleton, WritingSkeleton, GuestbookSkeleton } from '@/components/skeletons';
 import { Link } from '@/i18n/routing';
@@ -13,7 +14,11 @@ export const revalidate = 30;
 
 async function HeroAsync() {
   const visitorCount = await getTotalViews();
-  return <Hero visitorCount={visitorCount || 1247} />;
+  return (
+    <HeroAnimation>
+      <Hero visitorCount={visitorCount || 1247} />
+    </HeroAnimation>
+  );
 }
 
 async function FeaturedPosts() {
