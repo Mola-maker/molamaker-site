@@ -36,8 +36,8 @@ export async function checkRate(
   }
 }
 
-/** 5 guestbook entries per 60 seconds per IP. */
-export const RATE_GUESTBOOK = { limit: 5, windowMs: 60_000 };
+/** 20 guestbook entries per 60 seconds per IP. */
+export const RATE_GUESTBOOK = { limit: 20, windowMs: 60_000 };
 /** 3 contact messages per 60 seconds per IP. */
 export const RATE_CONTACT = { limit: 3, windowMs: 60_000 };
 /** 60 page-view pings per 60 seconds per IP. */

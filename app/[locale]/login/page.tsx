@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { SITE_CONFIG } from '@/lib/constants';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,11 +17,7 @@ export default function LoginPage() {
       setError('Authentication service is not configured. Contact the site owner.');
       return;
     }
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    if (!siteUrl) {
-      setError('Site URL not configured. Contact the site owner.');
-      return;
-    }
+    const siteUrl = SITE_CONFIG.siteUrl;
     const { error: sendError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${siteUrl}/auth/callback` },
