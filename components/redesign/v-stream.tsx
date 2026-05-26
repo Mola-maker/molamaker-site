@@ -309,6 +309,7 @@ function SignalRow({ s, locale, open, onToggle, idx }: { s: Signal; locale: Loca
       {/* Miku decoration on song rows */}
       {s.kind === 'song' && (
         <span className="signal-miku" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/redesign/miku-dance.gif" alt="" />
         </span>
       )}

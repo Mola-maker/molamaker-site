@@ -218,6 +218,7 @@ export function AstrbotChat() {
             aria-label="Open AstrBot chat"
             title="Chat with AstrBot"
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/redesign/miku-dance.gif" alt="Miku" className="ab-bubble__gif" />
             <span className="ab-bubble__badge" aria-hidden="true">✦</span>
           </button>
@@ -230,6 +231,7 @@ export function AstrbotChat() {
         <div className="ab-panel" style={getPanelPos()}>
           <div className="ab-panel__header" onMouseDown={onMouseDown}>
             <div className="ab-panel__avatar">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/redesign/miku-dance.gif" alt="" />
             </div>
             <div className="ab-panel__title">
