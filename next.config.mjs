@@ -10,14 +10,13 @@ const nextConfig = {
     ]
   },
   async headers() {
-    // Next.js dev mode uses eval() for Fast Refresh / HMR. Without
-    // 'unsafe-eval' in script-src, the browser blocks main-app.js and
-    // React never hydrates — event handlers stay un-attached, so clicks
-    // do nothing while CSS-only animations (orbit, halos) still play.
+    // Next.js 15 App Router streams RSC payload via inline <script> tags
+    // (self.__next_f.push). Without 'unsafe-inline' the browser blocks them
+    // and the page is blank. 'unsafe-eval' is only needed in dev for HMR.
     const isDev = process.env.NODE_ENV !== 'production';
     const scriptSrc = isDev
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://giscus.app https://va.vercel-scripts.com"
-      : "script-src 'self' https://giscus.app https://va.vercel-scripts.com";
+      : "script-src 'self' 'unsafe-inline' https://giscus.app https://va.vercel-scripts.com";
     return [
       {
         source: '/(.*)',
