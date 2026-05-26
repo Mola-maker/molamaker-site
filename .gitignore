@@ -16,3 +16,8 @@ tsconfig.tsbuildinfo
 login.json
 photo/
 public/photo/
+.omc/
+.claude/
+ONBOARDING.md 
+SHARED_TASK_NOTES.md 
+qa.txt
