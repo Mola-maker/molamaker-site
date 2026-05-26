@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 import type { GuestbookEntry, ApiResult } from '@/lib/types';
 
 export async function getEntries(limit?: number): Promise<GuestbookEntry[]> {
@@ -16,7 +17,7 @@ export async function getEntries(limit?: number): Promise<GuestbookEntry[]> {
 
   const { data, error } = await query;
   if (error) {
-    console.error('Failed to fetch guestbook entries:', error.message);
+    logError('guestbook', 'Failed to fetch entries', error);
     return [];
   }
   return (data as GuestbookEntry[]) ?? [];
@@ -34,7 +35,7 @@ export async function insertEntry(
     .insert({ name, message });
 
   if (error) {
-    console.error('guestbook insert error:', error.message);
+    logError('guestbook', 'insert failed', error);
     return { ok: false, error: 'Could not sign guestbook. Try again.' };
   }
 

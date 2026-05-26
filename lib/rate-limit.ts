@@ -23,7 +23,7 @@ export async function checkRate(
     });
 
     if (error || !data || (Array.isArray(data) && data.length === 0)) {
-      return { allowed: true, remaining: limit - 1, resetMs: 0 };
+      return { allowed: false, remaining: 0, resetMs: 60_000 };
     }
 
     // PostgREST returns SETOF results as an array — unwrap the first row
@@ -34,7 +34,7 @@ export async function checkRate(
       resetMs: Number(row?.reset_ms ?? 0),
     };
   } catch {
-    return { allowed: true, remaining: limit - 1, resetMs: 0 };
+    return { allowed: false, remaining: 0, resetMs: 60_000 };
   }
 }
 

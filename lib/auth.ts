@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import type { User } from '@supabase/supabase-js';
+import { logError } from '@/lib/logger';
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
@@ -9,7 +10,8 @@ export async function getCurrentUser(): Promise<User | null> {
     if (!supabase) return null;
     const { data: { user } } = await supabase.auth.getUser();
     return user ?? null;
-  } catch {
+  } catch (err) {
+    logError('auth', 'getCurrentUser failed', err);
     return null;
   }
 }
@@ -25,7 +27,11 @@ export async function requireAuth(): Promise<User> {
 
 export async function requireAdmin(): Promise<User> {
   const user = await requireAuth();
-  if (user.email !== process.env.OWNER_EMAIL) {
+  const ownerEmail = process.env.OWNER_EMAIL;
+  if (!ownerEmail) {
+    throw new Error('OWNER_EMAIL environment variable is not set. Admin access is unavailable.');
+  }
+  if (user.email !== ownerEmail) {
     const locale = await getLocale();
     redirect(`/${locale}/login?error=unauthorized`);
   }
@@ -42,7 +48,8 @@ export async function isSupporter(userId: string): Promise<boolean> {
       .eq('user_id', userId)
       .maybeSingle();
     return !!data;
-  } catch {
+  } catch (err) {
+    logError('auth', 'isSupporter check failed', err);
     return false;
   }
 }

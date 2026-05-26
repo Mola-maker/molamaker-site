@@ -5,9 +5,9 @@ import { notFound } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { routing } from '@/i18n/routing';
-import CursorGlow from '@/components/cursor-glow';
-import ScrollReveal from '@/components/scroll-reveal';
 import Konami from '@/components/konami';
+// CursorGlow / ScrollReveal / ReturnToOpening removed — the redesign provides
+// its own Cursor, IntersectionObserver-based reveal, and Opening2 sequence.
 
 // Fonts: Fraunces / DM Sans / JetBrains Mono loaded from fonts.loli.net
 // (a CN-accessible mirror of Google Fonts). Avoids fonts.googleapis.com
@@ -17,6 +17,8 @@ import Konami from '@/components/konami';
 // the Google font as primary and system fallbacks behind it.
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker-site.vercel.app'),
@@ -49,13 +51,12 @@ export default async function LocaleLayout({
         <link rel="preconnect" href="https://gstatic.loli.net" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://fonts.loli.net/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+          href="https://fonts.loli.net/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,600&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         />
       </head>
       <body>
+        <a className="skip-link" href="#main-content">Skip to content</a>
         <NextIntlClientProvider messages={messages}>
-          <CursorGlow />
-          <ScrollReveal />
           <Konami />
           {children}
         </NextIntlClientProvider>

@@ -3,6 +3,7 @@ import { pageViewSchema } from '@/lib/validation';
 import { checkRate, RATE_VIEWS } from '@/lib/rate-limit';
 import { insertPageView } from '@/lib/data/page-views';
 import { clientIp } from '@/lib/client-ip';
+import { logError } from '@/lib/logger';
 
 /**
  * POST /api/views — record a page view.
@@ -39,7 +40,8 @@ export async function POST(req: Request) {
     await insertPageView(parsed.data.path);
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    logError('views', 'Failed to record page view', err);
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

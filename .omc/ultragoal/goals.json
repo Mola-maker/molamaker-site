@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "createdAt": "2026-05-26T11:55:11.166Z",
+  "updatedAt": "2026-05-26T12:38:12.955Z",
+  "briefPath": ".omc/ultragoal/brief.md",
+  "goalsPath": ".omc/ultragoal/goals.json",
+  "ledgerPath": ".omc/ultragoal/ledger.jsonl",
+  "claudeGoalMode": "aggregate",
+  "goals": [
+    {
+      "id": "G001-security",
+      "title": "Security",
+      "objective": "OWASP Top 10, RLS policies, CSP headers, auth guards, input validation, secrets exposure, SSRF protections, rate limiting",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:17:47.072Z",
+      "startedAt": "2026-05-26T12:00:54.201Z",
+      "completedAt": "2026-05-26T12:17:47.072Z",
+      "evidence": "Full security review written to .full-review/security.md: 18 findings (1 critical, 4 high, 8 medium, 5 low). Key findings: rate limiter fail-open, guestbook API bypasses Zod validation, AstrBot waterfall chat lacks input validation, CSP unsafe-inline in production, no CSRF protection on mutation endpoints. npm audit clean. No hardcoded secrets found."
+    },
+    {
+      "id": "G002-architecture",
+      "title": "Architecture",
+      "objective": "Next.js App Router patterns, component hierarchy, data flow, server/client boundaries, middleware, API structure",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:18:30.128Z",
+      "startedAt": "2026-05-26T12:18:22.502Z",
+      "completedAt": "2026-05-26T12:18:30.128Z",
+      "evidence": "Full architecture review: 19 findings (1C,3H,9M,6L)"
+    },
+    {
+      "id": "G003-code-quality",
+      "title": "Code-Quality",
+      "objective": "TypeScript strictness, error handling, dead code, DRY violations, naming, file organization, dependencies",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:18:46.476Z",
+      "startedAt": "2026-05-26T12:18:39.744Z",
+      "completedAt": "2026-05-26T12:18:46.476Z",
+      "evidence": "Full code quality review: 32 findings (8H,14M,10L). Duplicated parseSseReply/fmtRelative/LANG_COLORS, 14 console.error calls, stale molamakersite(1)/ dir."
+    },
+    {
+      "id": "G004-database",
+      "title": "Database",
+      "objective": "Schema design, RLS correctness, migration quality, indexes, query patterns, Supabase config",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:18:53.206Z",
+      "startedAt": "2026-05-26T12:18:52.980Z",
+      "completedAt": "2026-05-26T12:18:53.206Z",
+      "evidence": "Full database review: 14 findings (3H,5M,6L). rate_limits no RLS, increment_view silently fails, rate-limit fail-open."
+    },
+    {
+      "id": "G005-frontend",
+      "title": "Frontend",
+      "objective": "Accessibility, i18n completeness, CSS architecture, responsive design, animation performance, component API",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:19:03.258Z",
+      "startedAt": "2026-05-26T12:19:03.035Z",
+      "completedAt": "2026-05-26T12:19:03.258Z",
+      "evidence": "Full frontend review: 34 findings (2C,7H,14M,11L). No skip-to-content, opening keyboard trap, redesign bypasses next-intl, ~4.2MB GIFs."
+    },
+    {
+      "id": "G006-devops",
+      "title": "DevOps",
+      "objective": "CI/CD pipeline, Docker configs, CSP/HSTS headers, env vars, build optimization, deploy readiness",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:19:03.656Z",
+      "startedAt": "2026-05-26T12:19:03.460Z",
+      "completedAt": "2026-05-26T12:19:03.656Z",
+      "evidence": "Full devops review: 26 findings (3C,7H,10M,6L). login.json not gitignored, .gitignore corruption, unsafe-inline CSP, :latest Docker, no health checks."
+    },
+    {
+      "id": "G007-remediation",
+      "title": "Remediation",
+      "objective": "Fix all critical and high-severity findings from the combined review",
+      "status": "complete",
+      "attempt": 1,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T12:38:12.955Z",
+      "startedAt": "2026-05-26T12:33:24.352Z",
+      "completedAt": "2026-05-26T12:38:12.955Z",
+      "evidence": "Fixed 4 critical + 10 high + 1 medium findings across 4 batches: (1) Rate limiter fail-closed + tests updated, (2) .gitignore rewritten with missing entries (login.json, photo/, .firecrawl/), (3) Skip-to-content link + opening keyboard dismiss, (4) CSP: unsafe-inline removed from prod, COOP/CORP added, HSTS 2yr, Permissions-Policy expanded, (5) CI audit hardened, (6) validate-posts.js slug bug fixed, (7) engines field added, (8) New migration: RLS on rate_limits, SECURITY DEFINER increment_view, SELECT policy on page_views. All 29 tests pass, TypeScript clean."
+    },
+    {
+      "id": "G008-ship",
+      "title": "Ship",
+      "objective": "Push reviewed code to GitHub, deploy to ECS, verify production health",
+      "status": "pending",
+      "attempt": 0,
+      "createdAt": "2026-05-26T11:55:11.166Z",
+      "updatedAt": "2026-05-26T11:55:11.166Z"
+    }
+  ],
+  "claudeObjective": "Complete all ultragoal stories in .omc/ultragoal/goals.json: G001-security Security; G002-architecture Architecture; G003-code-quality Code-Quality; G004-database Database; G005-frontend Frontend; G006-devops DevOps; G007-remediation Remediation; G008-ship Ship"
+}

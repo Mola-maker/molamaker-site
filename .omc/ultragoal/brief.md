@@ -1,0 +1,1 @@
+Full multi-professional codebase review of molamaker-site: Next.js 15 App Router, Supabase, React 19, next-intl v4, TypeScript. Scan every file, run all review agents, produce comprehensive findings, fix critical issues, push to GitHub, deploy to ECS.

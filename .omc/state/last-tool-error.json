@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"/tmp/ffmpeg/ffmpeg-8.1.1-essentials_build/bin/ffmpeg.exe -i \\\"E:\\\\Portaitsweb\\\\molamaker-site\\\\public\\\\photo\\\\2677973855\\\\miku.mp4\\\" 2>&1 | findstr /I \\\"duration bitrate\\\"\",\"description\":\"...",
+  "error": "Exit code 1\nFINDSTR: �޷��� duration bitrate",
+  "timestamp": "2026-05-26T15:16:04.569Z",
+  "retry_count": 1
+}

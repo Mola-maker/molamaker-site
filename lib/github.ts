@@ -1,3 +1,5 @@
+import { logError } from '@/lib/logger';
+
 export type Repo = {
   name: string;
   full_name: string;
@@ -45,7 +47,7 @@ export async function fetchRepos(username: string): Promise<Repo[]> {
       }
     );
     if (!res.ok) {
-      console.error('GitHub API error:', res.status);
+      logError('github', 'GitHub API error', { status: res.status });
       return [];
     }
     const repos: Repo[] = await res.json();
@@ -60,7 +62,7 @@ export async function fetchRepos(username: string): Promise<Repo[]> {
         return new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime();
       });
   } catch (e) {
-    console.error('Failed to fetch repos:', e);
+    logError('github', 'Failed to fetch repos', e);
     return [];
   }
 }
@@ -79,7 +81,7 @@ export async function fetchUserStats(username: string): Promise<UserStats | null
     if (!res.ok) return null;
     return res.json();
   } catch (e) {
-    console.error('Failed to fetch user stats:', e);
+    logError('github', 'Failed to fetch user stats', e);
     return null;
   }
 }

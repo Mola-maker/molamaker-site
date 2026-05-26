@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 
 export async function getPage(slug: string): Promise<{ slug: string; content: string; updated_at: string } | null> {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export async function getPage(slug: string): Promise<{ slug: string; content: st
     .single();
 
   if (error) {
-    console.error('Failed to fetch page:', error.message);
+    logError('pages', 'Failed to fetch page', error);
     return null;
   }
   return data;
@@ -24,7 +25,7 @@ export async function updatePage(slug: string, content: string): Promise<void> {
     .upsert({ slug, content, updated_at: new Date().toISOString() });
 
   if (error) {
-    console.error('Failed to update page:', error.message);
+    logError('pages', 'Failed to update page', error);
     throw new Error('Could not update page');
   }
 }

@@ -52,31 +52,34 @@ describe('checkRate', () => {
     expect(result.resetMs).toBe(30000);
   });
 
-  it('fails open when RPC returns an error', async () => {
+  it('fails closed when RPC returns an error', async () => {
     mockRpc.mockResolvedValueOnce({
       data: null,
       error: new Error('connection failed'),
     });
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
   });
 
-  it('fails open when RPC returns empty array', async () => {
+  it('fails closed when RPC returns empty array', async () => {
     mockRpc.mockResolvedValueOnce({
       data: [],
       error: null,
     });
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
   });
 
-  it('fails open when RPC throws', async () => {
+  it('fails closed when RPC throws', async () => {
     mockRpc.mockRejectedValueOnce(new Error('timeout'));
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
   });
 
   it('uses RATE_GUESTBOOK constants correctly', () => {

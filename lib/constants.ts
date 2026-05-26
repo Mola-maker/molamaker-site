@@ -1,3 +1,5 @@
+export const ACCENT_PALETTE = ['#C96442', '#7C8ABF', '#5FAD79', '#B07DB0', '#C9A245'] as const;
+
 export const SITE_CONFIG = {
   avatarUrl:
     process.env.NEXT_PUBLIC_AVATAR_URL ??

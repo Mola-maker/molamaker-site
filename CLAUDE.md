@@ -1,5 +1,15 @@
 # molamaker-site — Claude Code project guide
+## Capsule: General Code Review
 
+@~/.claude/CLAUDE.md
+
+## Domain
+ECC (elliptic-curve crypto), gstack, OMC, full-stack review.
+
+## Conventions
+- Always run `cargo audit` / `npm audit` before declaring a review complete.
+- Output reviews in the project's REVIEW.md format (see ./templates/).
+- ...
 ## Stack
 Next.js 15 (App Router), React 19, Supabase, next-intl v4, TypeScript
 

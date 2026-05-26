@@ -20,11 +20,15 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
  * @returns a NextResponse with refreshed auth cookies set
  */
 export async function updateSession(request: NextRequest) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    SUPABASE_URL!,
-    SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() { return request.cookies.getAll(); },

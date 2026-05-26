@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 import type { ContactPayload, ApiResult } from '@/lib/types';
 
 export async function insertContact(
@@ -12,7 +13,7 @@ export async function insertContact(
     .insert(data);
 
   if (error) {
-    console.error('contact insert error:', error.message);
+    logError('contacts', 'insert failed', error);
     return { ok: false, error: 'Could not send message. Try again later.' };
   }
 

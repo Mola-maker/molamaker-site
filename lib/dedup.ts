@@ -1,6 +1,7 @@
 const recent = new Map<string, number>();
 
 const DEDUP_WINDOW = 60_000;
+const MAX_CACHE_SIZE = 1_000;
 
 let lastCleanup = Date.now();
 const CLEANUP_INTERVAL = 60_000;
@@ -18,7 +19,7 @@ export function isDuplicate(key: string, content: string): boolean {
   if (last && now - last < DEDUP_WINDOW) return true;
   recent.set(h, now);
 
-  if (recent.size > 1000 || now - lastCleanup > CLEANUP_INTERVAL) {
+  if (recent.size > MAX_CACHE_SIZE || now - lastCleanup > CLEANUP_INTERVAL) {
     lastCleanup = now;
     for (const [k, v] of recent) {
       if (now - v > DEDUP_WINDOW * 2) recent.delete(k);

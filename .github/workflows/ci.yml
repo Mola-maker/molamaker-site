@@ -23,5 +23,4 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run build
       - run: npm test
-      - run: npm audit --audit-level=moderate
-        continue-on-error: true
+      - run: npm audit --audit-level=high

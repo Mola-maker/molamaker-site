@@ -92,5 +92,6 @@ export async function sendContact(formData: FormData) {
     return { error: result.error };
   }
 
+  // No revalidatePath — contact messages have no public listing page
   return { ok: true };
 }

@@ -1,15 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { chatMessageSchema, astrbotReplySchema } from '@/lib/validation';
+import { chatMessageSchema } from '@/lib/validation';
 import { checkRate, RATE_CHAT } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
-import { hashIp } from '@/lib/hmac-ip';
 import { logError } from '@/lib/logger';
+import { parseSseReply } from '@/lib/sse-parser';
+import { validateOrigin } from '@/lib/origin';
+
+const ASTRBOT_URL = process.env.ASTRBOT_INTERNAL_URL;
+const ASTRBOT_KEY = process.env.ASTRBOT_API_KEY;
 
 export async function POST(request: NextRequest) {
-  const apiUrl = process.env.ASTRBOT_INTERNAL_URL;
-  const apiKey = process.env.ASTRBOT_API_KEY;
+  const origin = validateOrigin(request);
+  if (origin) return origin;
 
-  if (!apiUrl || !apiKey) {
+  if (!ASTRBOT_URL || !ASTRBOT_KEY) {
     return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
   }
 
@@ -33,59 +37,51 @@ export async function POST(request: NextRequest) {
 
   const ip = await clientIp();
 
-  const ipLimit = await checkRate(`chat:ip:${ip}`, RATE_CHAT.limit, RATE_CHAT.windowMs);
-  if (!ipLimit.allowed) {
+  const rate = await checkRate(`chat:${ip}:${sessionId}`, RATE_CHAT.limit, RATE_CHAT.windowMs);
+  if (!rate.allowed) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 
-  const sidLimit = await checkRate(`chat:sid:${sessionId}`, RATE_CHAT.limit, RATE_CHAT.windowMs);
-  if (!sidLimit.allowed) {
-    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
-  }
-
-  let userId: string;
   try {
-    userId = hashIp(ip);
-  } catch (err) {
-    logError('chat/send', 'HMAC_IP_SECRET missing', err);
-    return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    const res = await fetch(`${apiUrl}/api/chat`, {
+    const res = await fetch(`${ASTRBOT_URL}/api/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
+        'Authorization': `Bearer ${ASTRBOT_KEY}`,
       },
       body: JSON.stringify({
-        content: message,
+        message,
+        username: 'brand-chat',
         session_id: sessionId,
-        user_id: userId,
+        enable_streaming: false,
       }),
-      signal: controller.signal,
+      signal: AbortSignal.timeout(30_000),
     });
-
-    clearTimeout(timeout);
 
     if (!res.ok) {
       logError('chat/send', 'AstrBot returned non-ok', { status: res.status });
       return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
     }
 
-    const data: unknown = await res.json();
-    const validated = astrbotReplySchema.safeParse(data);
+    const body = await res.text();
 
-    if (!validated.success) {
-      logError('chat/send', 'AstrBot response failed validation');
+    // AstrBot sometimes returns a JSON error envelope with HTTP 200
+    try {
+      const j = JSON.parse(body) as Record<string, unknown>;
+      if (j.status === 'error') {
+        logError('chat/send', 'AstrBot error envelope', j);
+        return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
+      }
+    } catch { /* not JSON — treat as SSE stream */ }
+
+    const reply = parseSseReply(body);
+    if (!reply) {
+      logError('chat/send', 'Empty reply from AstrBot');
       return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
     }
 
     return NextResponse.json(
-      { reply: validated.data.reply, sessionId },
+      { reply, sessionId },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } },
     );
   } catch (err) {

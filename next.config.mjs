@@ -10,6 +10,14 @@ const nextConfig = {
     ]
   },
   async headers() {
+    // Next.js dev mode uses eval() for Fast Refresh / HMR. Without
+    // 'unsafe-eval' in script-src, the browser blocks main-app.js and
+    // React never hydrates — event handlers stay un-attached, so clicks
+    // do nothing while CSS-only animations (orbit, halos) still play.
+    const isDev = process.env.NODE_ENV !== 'production';
+    const scriptSrc = isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://giscus.app https://va.vercel-scripts.com"
+      : "script-src 'self' https://giscus.app https://va.vercel-scripts.com";
     return [
       {
         source: '/(.*)',
@@ -18,11 +26,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://giscus.app",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.loli.net",
               "img-src 'self' data: https:",
               "font-src 'self' https://fonts.gstatic.com https://gstatic.loli.net",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com https://va.vercel-scripts.com",
               "frame-src https://giscus.app",
               "object-src 'none'",
               "base-uri 'self'"
@@ -30,7 +38,7 @@ const nextConfig = {
           },
           {
             key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains; preload'
+            value: 'max-age=63072000; includeSubDomains; preload'
           },
           {
             key: 'X-Content-Type-Options',
@@ -46,7 +54,15 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
+            value: 'camera=(), microphone=(), geolocation=(), accelerometer=(), autoplay=(), clipboard-write=(), display-capture=(), payment=()'
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin'
+          },
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'same-origin'
           }
         ]
       }

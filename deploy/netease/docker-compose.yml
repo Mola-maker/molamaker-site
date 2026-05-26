@@ -1,0 +1,24 @@
+# =============================================================================
+# NeteaseCloudMusicApi — local Docker service for music.163.com API proxy
+# Location: deploy/netease/docker-compose.yml
+#
+# Start:  docker compose -f deploy/netease/docker-compose.yml up -d
+# Stop:   docker compose -f deploy/netease/docker-compose.yml down
+#
+# The API runs at http://127.0.0.1:3100 — set NETEASE_API_URL in .env.local
+# =============================================================================
+
+services:
+  netease-api:
+    image: binaryify/netease_cloud_music_api:latest
+    container_name: molamaker-netease
+    restart: unless-stopped
+    # Bind to localhost only — do not expose to 0.0.0.0
+    ports:
+      - "127.0.0.1:3100:3000"
+    # No custom env needed — image runs on port 3000 by default
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"

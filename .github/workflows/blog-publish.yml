@@ -1,0 +1,34 @@
+name: Blog Publish
+
+# Runs validation whenever content/*.md changes are pushed to main.
+# Vercel auto-deploys on any push to main — this workflow just ensures
+# your markdown files are well-formed before the deploy goes live.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'content/**'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  validate-posts:
+    name: Validate blog posts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check frontmatter
+        run: node scripts/validate-posts.js
+
+      - name: Type-check
+        run: npx tsc --noEmit

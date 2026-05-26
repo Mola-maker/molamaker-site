@@ -1,5 +1,23 @@
 {
-   "env": {
-    "ECC_GATEGUARD": "off"
+  "env": {
+    "ECC_GATEGUARD": "off",
+    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force,pre:bash:gateguard-fact-force,post:bash:cost-warning,post:edit:cost-warning,post:edit:loop-warning,post:read:cost-warning,post:grep:cost-warning,task-reminder"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Id, ProcessName, StartTime)",
+      "mcp__plugin_ecc_playwright__browser_navigate",
+      "Bash(where chrome *)",
+      "Bash(where google-chrome *)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Read(//c/Program Files \\(x86\\)/Google/Chrome/Application/**)",
+      "Bash(curl -s http://localhost:3000/en)",
+      "Bash(taskkill //F //IM \"node.exe\")"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "oh-my-claudecode@omc": true
   }
 }

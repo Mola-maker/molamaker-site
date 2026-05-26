@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 
 export async function getTotalViews(): Promise<number> {
   const supabase = await createClient();
@@ -9,7 +10,7 @@ export async function getTotalViews(): Promise<number> {
     .select('id', { count: 'exact', head: true });
 
   if (error) {
-    console.error('Failed to fetch page_views count:', error.message);
+    logError('page-views', 'Failed to fetch count', error);
     return 0;
   }
 
@@ -25,6 +26,6 @@ export async function insertPageView(path: string): Promise<void> {
     .insert({ path });
 
   if (error) {
-    console.error('page_views insert error:', error.message);
+    logError('page-views', 'insert failed', error);
   }
 }

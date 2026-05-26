@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { createStaticClient } from '@/lib/supabase/static';
+import { logError } from '@/lib/logger';
 import type { Post } from '@/lib/types';
 
 export async function getPosts(limit?: number): Promise<Post[]> {
@@ -18,7 +19,7 @@ export async function getPosts(limit?: number): Promise<Post[]> {
 
   const { data, error } = await query;
   if (error) {
-    console.error('Failed to fetch posts:', error.message);
+    logError('posts', 'Failed to fetch posts', error);
     return [];
   }
   return (data as Post[]) ?? [];
@@ -36,16 +37,12 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     .single();
 
   if (error) {
-    console.error('Failed to fetch post:', error.message);
+    logError('posts', 'Failed to fetch post', error);
     return null;
   }
   return (data as Post) ?? null;
 }
 
-/**
- * Returns all post slugs. Uses the static client so it works in
- * build-time contexts (sitemap, generateStaticParams).
- */
 export async function getPostSlugs(): Promise<string[]> {
   const supabase = createStaticClient();
   if (!supabase) return [];
@@ -56,7 +53,7 @@ export async function getPostSlugs(): Promise<string[]> {
     .eq('published', true);
 
   if (error) {
-    console.error('Failed to fetch post slugs:', error.message);
+    logError('posts', 'Failed to fetch slugs', error);
     return [];
   }
   return (data ?? []).map((p: { slug: string }) => p.slug);
@@ -68,6 +65,6 @@ export async function incrementPostView(slug: string): Promise<void> {
 
   const { error } = await supabase.rpc('increment_view', { post_slug: slug });
   if (error) {
-    console.error('Failed to increment view count:', error.message);
+    logError('posts', 'Failed to increment view', error);
   }
 }

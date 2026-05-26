@@ -9,7 +9,10 @@ export default function Konami() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === SEQUENCE[idxRef.current].toLowerCase()) {
+      if (typeof e.key !== 'string') return;
+      const expected = SEQUENCE[idxRef.current];
+      if (expected && e.key.toLowerCase() === expected.toLowerCase()) {
+        if (e.key.startsWith('Arrow')) e.preventDefault();
         idxRef.current++;
         if (idxRef.current === SEQUENCE.length) {
           setTriggered(true);

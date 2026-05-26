@@ -13,14 +13,3 @@ export const PostSchema = z.object({
   view_count: z.number().int().min(0).default(0),
 });
 
-export const GuestbookEntrySchema = z.object({
-  name: z.string().trim().min(1).max(40),
-  message: z.string().trim().min(1).max(240),
-});
-
-export const ContactMessageSchema = z.object({
-  name: z.string().max(80).optional().default(''),
-  email: z.string().email().max(200).optional().or(z.literal('')),
-  subject: z.string().max(200).optional().default(''),
-  message: z.string().trim().min(1).max(5000),
-});

@@ -1,3 +1,19 @@
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--accent, #8B2A1A);
+  color: #fff;
+  border-radius: 0 0 4px 4px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 0;
+}
+
 :root {
   --bg: #F5F1EB;
   --bg-elev: #FAF7F1;
@@ -12,6 +28,13 @@
   --font-serif: 'Fraunces', Georgia, 'Songti SC', 'STSong', 'Times New Roman', serif;
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Consolas, 'Courier New', monospace;
+  /* Editorial timing scale (docs/redesign-v2-tech §1.3) */
+  --t-fast: 240ms;
+  --t-base: 600ms;
+  --t-slow: 1200ms;
+  --t-cine: 1800ms;
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-expo: cubic-bezier(0.65, 0, 0.35, 1);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -146,6 +169,25 @@ p.lead {
   color: var(--ink);
   font-weight: 500;
 }
+.replay-intro-btn {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  border-bottom: 1px dotted var(--rule);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color 0.25s, border-color 0.25s;
+}
+.replay-intro-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+}
+
 .pulse {
   display: inline-block; width: 6px; height: 6px;
   border-radius: 50%; background: var(--accent);
@@ -1100,4 +1142,113 @@ html.lenis body {
   .lenis.lenis-smooth {
     scroll-behavior: auto !important;
   }
+}
+
+/* OPENING SCENE v4 */
+.opening-overlay{position:fixed;inset:0;z-index:10000;background:#F4EFE6;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:none}
+.opening-bg-wrap{position:absolute;inset:-40px;z-index:0;pointer-events:none;overflow:hidden}
+.opening-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.17;filter:saturate(0.5) contrast(0.9) brightness(1.4);pointer-events:none}
+.opening-bg-shade{position:absolute;inset:0;background:radial-gradient(60% 45% at 50% 42%,transparent 0%,rgba(244,239,230,0.55) 58%,rgba(244,239,230,0.92) 100%)}
+.opening-miku-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 38% 48% at 52% 46%,rgba(255,250,245,0.18) 0%,transparent 55%),radial-gradient(ellipse 22% 32% at 48% 48%,rgba(200,70,44,0.06) 0%,transparent 48%)}
+.opening-beam{position:absolute;top:0;left:50%;transform:translateX(-50%);width:55vw;height:100%;z-index:2;pointer-events:none;background:linear-gradient(rgba(201,100,66,0.06) 0%,rgba(201,100,66,0.02) 35%,rgba(201,100,66,0.005) 60%,transparent 80%);clip-path:polygon(20% 0%,80% 0%,75% 100%,25% 100%);animation:beamBreath 6s ease-in-out infinite}
+@keyframes beamBreath{0%,100%{opacity:0.35}50%{opacity:0.65}}
+.opening-fog{position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(55% 38% at 18% 75%,rgba(200,180,160,0.25) 0%,transparent 55%),radial-gradient(45% 32% at 82% 25%,rgba(200,180,160,0.2) 0%,transparent 50%)}
+.opening-spot{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(50% 60% at 50% 42%,rgba(201,100,66,0.04) 0%,transparent 62%)}
+.opening-vignette{position:absolute;inset:0;z-index:6;pointer-events:none;background:radial-gradient(72% 72% at 50% 46%,transparent 26%,rgba(244,239,230,0.38) 55%,rgba(244,239,230,0.68) 82%,rgba(244,239,230,0.94) 100%)}
+.opening-aura{position:fixed;width:180px;height:180px;border-radius:50%;pointer-events:none;z-index:9998;background:radial-gradient(circle,rgba(200,70,44,0.25) 0%,rgba(200,70,44,0.08) 50%,transparent 70%);border:1px solid rgba(200,70,44,0.3);box-shadow:0 0 60px rgba(200,70,44,0.15),0 0 120px rgba(200,70,44,0.06),inset 0 0 30px rgba(200,70,44,0.06);transition:transform .4s;will-change:left,top}
+.opening-spotlight{position:fixed;width:260px;height:260px;border-radius:50%;pointer-events:none;z-index:5;background:radial-gradient(circle,rgba(255,255,255,0.28) 0%,rgba(255,255,255,0.1) 38%,transparent 62%);mix-blend-mode:soft-light;will-change:left,top;transition:opacity .2s}
+.opening-inner{text-align:center;max-width:1100px;width:100%;padding:60px 40px;position:relative;z-index:10;overflow:hidden}
+.opening-mark{font-family:var(--font-serif);font-size:12px;font-style:italic;letter-spacing:.32em;color:var(--accent);text-transform:uppercase;margin-bottom:60px;display:flex;align-items:center;justify-content:center;gap:16px}
+.opening-mark::before,.opening-mark::after{content:'';display:inline-block;flex-shrink:0;height:1px;width:32px;opacity:.4;background:var(--accent)}
+.opening-title{font-family:'Fraunces',var(--font-serif);font-size:clamp(56px,13vw,150px);font-weight:300;letter-spacing:.05em;line-height:.9;color:transparent;-webkit-text-stroke:2.5px var(--ink);margin:0;text-align:center;overflow-wrap:break-word;word-break:keep-all;transition:opacity 0.55s var(--ease-out-expo, cubic-bezier(0.22,1,0.36,1)),-webkit-text-stroke-color 0.7s var(--ease-out-expo, cubic-bezier(0.22,1,0.36,1))}
+.opening-title em{font-family:'Fraunces',var(--font-serif);font-style:italic;font-weight:600;-webkit-text-stroke-color:var(--accent);-webkit-text-stroke-width:3px}
+.opening-sub{margin-top:36px;font-family:var(--font-serif);font-style:italic;font-size:clamp(14px,1.4vw,19px);font-weight:400;color:var(--ink-2);line-height:1.7;max-width:560px;margin-left:auto;margin-right:auto}
+.opening-enter{margin-top:56px;display:inline-flex;align-items:center;gap:14px;padding:18px 32px;background:transparent;color:var(--ink);border:1px solid var(--rule);border-radius:999px;font-family:var(--font-sans);font-size:12px;font-weight:400;letter-spacing:.32em;text-transform:uppercase;cursor:pointer!important;transition:border-color .35s,color .35s,padding .35s,box-shadow .35s}
+.opening-enter:hover{border-color:var(--accent);color:var(--accent);padding:18px 40px;box-shadow:0 0 32px rgba(200,70,44,0.18)}
+.opening-enter-arrow{display:inline-block;width:22px;height:1px;background:currentColor;transition:width .35s}
+.opening-enter:hover .opening-enter-arrow{width:40px}
+.opening-deco{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:44px}
+.opening-deco-l{height:1px;width:72px;opacity:.22;background:var(--accent)}
+.opening-deco-dot{width:3px;height:3px;border-radius:50%;background:var(--accent);opacity:.35}
+.opening-dissolve{position:absolute;inset:0;z-index:50;pointer-events:none;background:radial-gradient(circle at center,#F7F2E9 0%,#F4EFE6 70%,#EFEADD 100%);box-shadow:inset 0 0 120px 40px rgba(239,234,221,0.7)}
+.opening-orbit-ring{position:absolute;inset:0;pointer-events:none;z-index:5}
+.opening-orbit-word{position:absolute;left:50%;top:50%;transform-origin:0 0;font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;color:var(--ink-soft);white-space:nowrap;transform:rotate(var(--angle)) translateX(var(--radius));pointer-events:none}
+.opening-orbit-word-inner{display:inline-block;border:1px solid rgba(200,70,44,0.12);border-radius:999px;padding:4px 12px;opacity:.35;animation:orbitSpin var(--spin-duration,60s) linear infinite}
+@keyframes orbitSpin{to{transform:rotate(360deg)}}
+@media(max-height:750px){.opening-inner{padding:40px 40px 90px}.opening-mark{margin-bottom:32px}.opening-sub{margin-top:20px}}
+@media(max-width:768px){.opening-orbit-word{display:none}.opening-aura{width:100px;height:100px}.opening-spotlight{width:160px;height:160px}}
+@media(max-width:640px){.opening-inner{padding:44px 22px 120px}.opening-title{font-size:clamp(40px,10vw,62px)}.opening-sub{font-size:clamp(13px,3.8vw,16px)}.opening-enter{margin-top:24px;padding:14px 24px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.opening-beam,.opening-spot,.opening-orbit-word-inner{animation:none}}
+
+/* ── Return to Opening Button ── */
+.return-to-opening {
+  position: fixed; top: 20px; left: 20px; z-index: 9999;
+  font-family: 'Fraunces', var(--font-serif);
+  font-size: 13px; font-weight: 500; font-style: italic;
+  color: var(--accent); background: var(--bg);
+  border: 1px solid var(--accent); border-radius: 4px;
+  padding: 10px 20px;
+  box-shadow: 3px 3px 0 var(--accent);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.35s ease;
+}
+.return-to-opening:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--accent);
+  background: var(--bg-elev);
+}
+.return-to-opening:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--accent);
+}
+.return-to-opening.hidden {
+  opacity: 0; pointer-events: none;
+}
+
+/* ── Cream Fluid Canvas ── */
+.cream-fluid-canvas {
+  position: fixed; inset: 0; z-index: 40;
+  pointer-events: none;
+  transition: opacity 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* ── Replaying Phase Overrides ── */
+.opening-replaying .opening-enter,
+.opening-replaying .opening-orbit-ring,
+.opening-replaying .opening-aura,
+.opening-replaying .opening-spotlight {
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.55s var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* Mark / sub / deco stay mounted but invisible during the sim, then fade in
+   *with* the title so the area surrounding the font is never empty at reveal. */
+.opening-replaying .opening-deco,
+.opening-replaying .opening-mark,
+.opening-replaying .opening-sub {
+  opacity: 0;
+  animation: creamTextReveal 0.7s 2.2s var(--ease-out-expo, cubic-bezier(0.22, 1, 0.36, 1)) forwards;
+}
+
+.opening-replaying .opening-bg-video {
+  opacity: 0.8 !important;
+  filter: saturate(0.6) contrast(0.85) brightness(1.2) !important;
+  transition: opacity 0.6s ease, filter 0.6s ease;
+}
+.opening-replaying .opening-inner {
+  z-index: 60;
+  pointer-events: none;
+}
+.opening-replaying .opening-title {
+  opacity: 0;
+  animation: creamTextReveal 0.8s 1.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+@keyframes creamTextReveal {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .cream-fluid-canvas { display: none; }
+  .opening-replaying .opening-title { animation: none; opacity: 1; }
 }

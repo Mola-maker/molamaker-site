@@ -7,6 +7,9 @@ import { createClient } from '@supabase/supabase-js';
  */
 export function createStaticClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[supabase/static] Supabase env vars missing — features like sitemap and RSS will be empty.');
+    }
     return null;
   }
   return createClient(

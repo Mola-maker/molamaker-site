@@ -1,0 +1,275 @@
+/* ========================================================================
+   Button animation system — every interactive surface gets motion
+   ======================================================================== */
+
+.btn {
+  --btn-bg: var(--bg-elev);
+  --btn-fg: var(--ink);
+  --btn-border: var(--rule);
+  --btn-accent: var(--accent);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 220ms var(--ease-out-quart),
+              border-color 220ms var(--ease-out-quart),
+              transform 200ms var(--ease-out-quart);
+  will-change: transform;
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--btn-accent);
+  transform: translateY(101%);
+  transition: transform 360ms var(--ease-out-quart);
+  z-index: -1;
+}
+.btn:hover { color: var(--bg-elev); border-color: var(--btn-accent); }
+.btn:hover::before { transform: translateY(0); }
+.btn:active { transform: translateY(1px) scale(0.985); }
+
+/* Solid variant — inverse fill */
+.btn--solid {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--bg-elev);
+  --btn-border: var(--ink);
+}
+
+/* Ghost — outline only */
+.btn--ghost {
+  --btn-bg: transparent;
+}
+
+/* Push — text slides up, second copy slides in from below */
+.btn--push { padding-block: 14px; }
+.btn--push .label {
+  display: inline-grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  line-height: 1;
+}
+.btn--push .label > span {
+  display: block;
+  transition: transform 320ms var(--ease-out-quart);
+}
+.btn--push .label > span:nth-child(2) {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform: translateY(120%);
+}
+.btn--push:hover .label > span:nth-child(1) { transform: translateY(-120%); }
+.btn--push:hover .label > span:nth-child(2) { transform: translateY(0); }
+
+/* Arrow — arrow pushes out then re-enters */
+.btn--arrow .arrow {
+  display: inline-flex;
+  width: 16px; height: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.btn--arrow .arrow::before,
+.btn--arrow .arrow::after {
+  content: '→';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  transition: transform 360ms var(--ease-out-quart);
+}
+.btn--arrow .arrow::after { transform: translate(-120%, -50%); }
+.btn--arrow:hover .arrow::before { transform: translate(120%, -50%); }
+.btn--arrow:hover .arrow::after { transform: translate(0, -50%); }
+
+/* Ripple — a soft glow follows the cursor on hover */
+.btn--ripple { position: relative; }
+.btn--ripple::after {
+  content: '';
+  position: absolute;
+  left: var(--mx, 50%); top: var(--my, 50%);
+  width: 160px; height: 160px;
+  margin-left: -80px; margin-top: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 60%);
+  opacity: 0; pointer-events: none;
+  transition: opacity 240ms;
+  z-index: -1;
+}
+.btn--ripple:hover::after { opacity: 1; }
+
+/* Group — small chip with springy press */
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--bg-elev);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: transform 200ms var(--ease-out-quart), color 200ms, border-color 200ms, background 200ms;
+}
+.chip-btn:hover { color: var(--ink); border-color: var(--ink-soft); transform: translateY(-1px); }
+.chip-btn:active { transform: translateY(0) scale(0.96); }
+.chip-btn[aria-pressed="true"] {
+  background: var(--ink); color: var(--bg-elev); border-color: var(--ink);
+}
+.chip-btn[aria-pressed="true"] .swatch { background: var(--accent); }
+
+/* Generic press feedback for everything else */
+body.redesign-on button:active, body.redesign-on a:active { transform: scale(0.985); }
+
+/* ========================================================================
+   Shared Miku backdrop — surfaces on every variant's hero area.
+   Driven by --miku-bg and --miku-bg-opacity from Tweaks.
+   ======================================================================== */
+.miku-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  isolation: isolate;
+}
+.miku-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  background-image: var(--miku-bg, none);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--miku-bg-opacity, 0.14);
+  filter: saturate(0.85) blur(3px) brightness(1.04);
+  animation: backdropFloat 22s ease-in-out infinite alternate;
+}
+.miku-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 0%, var(--bg) 95%);
+}
+@keyframes backdropFloat {
+  0%   { transform: translate(0, 0) scale(1.04); }
+  100% { transform: translate(-2%, 1%) scale(1.08); }
+}
+
+/* Containers using a backdrop need positioned context; everything else floats above (z-index 5+) */
+.has-backdrop { position: relative; }
+.has-backdrop > *:not(.miku-backdrop) { position: relative; z-index: 5; }
+
+/* No-bg fallback when var is empty */
+.miku-backdrop[data-empty="1"]::before { display: none; }
+
+body[data-dyn="0"] .t-hover-glitch:hover > span,
+body[data-dyn="0"] .t-hover-wave:hover > span,
+body[data-dyn="0"] .t-hover-italic:hover > span,
+body[data-dyn="0"] .t-hover-heat:hover > span {
+  animation: none !important;
+  transform: none !important;
+  color: inherit !important;
+  font-style: inherit !important;
+  text-shadow: none !important;
+}
+body[data-dyn="0"] .t-hover-italic::after { transform: scaleX(0) !important; }
+
+/* TERMINAL: title chars do a glitch + RGB shift on hover */
+.t-hover-glitch {
+  display: inline-block;
+  position: relative;
+}
+.t-hover-glitch > span { display: inline-block; transition: transform 380ms var(--ease-out-quart); }
+.t-hover-glitch:hover > span {
+  animation: glitchChar 600ms steps(2) infinite;
+}
+.t-hover-glitch:hover > span:nth-child(odd)  { color: var(--accent); }
+.t-hover-glitch:hover > span:nth-child(even) { color: var(--signal-blue); }
+@keyframes glitchChar {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-1px, 1px); }
+  50%  { transform: translate(1px, -1px); }
+  75%  { transform: translate(-1px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* MAGAZINE: char-by-char wave that pushes letters up/down on hover */
+.t-hover-wave {
+  display: inline-block;
+}
+.t-hover-wave > span {
+  display: inline-block;
+  transition: transform 600ms var(--ease-out-expo), color 220ms;
+  transition-delay: calc(var(--i) * 24ms);
+}
+.t-hover-wave:hover > span {
+  transform: translateY(-10px) rotate(-3deg);
+  color: var(--accent);
+}
+.t-hover-wave:hover > span:nth-child(2n) {
+  transform: translateY(10px) rotate(3deg);
+}
+
+/* ATLAS: characters rotate gently into an italic + draw underline */
+.t-hover-italic {
+  display: inline-block;
+  position: relative;
+}
+.t-hover-italic > span {
+  display: inline-block;
+  transition: font-style 380ms, transform 380ms var(--ease-out-quart), color 380ms;
+  transition-delay: calc(var(--i) * 28ms);
+}
+.t-hover-italic:hover > span {
+  font-style: italic;
+  color: var(--accent);
+  transform: translateY(-2px) skewX(-6deg);
+}
+.t-hover-italic::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -6px;
+  width: 100%; height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 600ms var(--ease-out-expo);
+}
+.t-hover-italic:hover::after { transform: scaleX(1); }
+
+/* STREAM: heat-map — characters scale + glow rolling left→right */
+.t-hover-heat {
+  display: inline-block;
+}
+.t-hover-heat > span {
+  display: inline-block;
+  transition: transform 360ms var(--ease-out-quart),
+              text-shadow 360ms,
+              color 360ms;
+  transition-delay: calc(var(--i) * 18ms);
+}
+.t-hover-heat:hover > span {
+  transform: scale(1.18);
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(201,100,66,0.4);
+}
