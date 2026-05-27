@@ -21,11 +21,29 @@ export function VStream({ t, locale }: Props) {
 
   // Track the currently playing song from the music player
   const [nowPlaying, setNowPlaying] = useState<{ id: number; title: string; artist: string; playing: boolean } | null>(null);
+  const [nowPlayingDetail, setNowPlayingDetail] = useState<{
+    id: number; album: string; cover: string; duration: number;
+    lyrics: Array<{ time: number; text: string }>;
+  } | null>(null);
+  const detailFetchedId = useRef<number | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
       const { id, title, artist, playing } = (e as CustomEvent<{ id: number; title: string; artist: string; playing: boolean }>).detail;
       setNowPlaying({ id, title, artist, playing });
+      // Fetch full metadata only when the song changes
+      if (detailFetchedId.current !== id) {
+        detailFetchedId.current = id;
+        setNowPlayingDetail(null);
+        fetch(`/api/music/detail?id=${id}`)
+          .then((r) => r.json())
+          .then((json: { data?: { album: string; cover: string; duration: number; lyrics: Array<{ time: number; text: string }> } | null }) => {
+            if (json.data && detailFetchedId.current === id) {
+              setNowPlayingDetail({ id, ...json.data });
+            }
+          })
+          .catch(() => {});
+      }
     };
     window.addEventListener('mola:now-playing', handler);
     return () => window.removeEventListener('mola:now-playing', handler);
@@ -77,40 +95,39 @@ export function VStream({ t, locale }: Props) {
 
   const signals = liveSignals ?? d.signals;
 
-  // Inject a synthetic song card when the music player plays a song not in the stream data
+  // When the music player is active, replace all stream song cards with an enriched
+  // synthetic card. This prevents the personal_fm card from coexisting or
+  // reappearing on the 30-second refresh cycle.
   const items: Signal[] = useMemo(() => {
     let sigs: Signal[] = filter === 'all' ? signals : signals.filter((s) => s.kind === filter);
 
     if (nowPlaying && nowPlaying.playing) {
-      const exists = sigs.some((s) => {
-        if (s.kind !== 'song') return false;
-        const sid = String((s as Record<string, unknown>).id ?? '');
-        const neId = sid.startsWith('song-') ? sid.slice(5) : sid;
-        return Number(neId) === nowPlaying.id;
-      });
-      if (!exists) {
-        const synthetic: Signal = {
-          kind: 'song',
-          time: 'now',
-          title: nowPlaying.title,
-          artist: nowPlaying.artist,
-          album: '♪',
-          cover: '',
-          progress: 0,
-          length: '0:00',
-          position: '0:00',
-          bpm: 0,
-          key: '—',
-          mood: '—',
-          recent: [],
-        };
-        (synthetic as Record<string, unknown>).id = `song-${nowPlaying.id}`;
-        sigs = [synthetic, ...sigs];
-      }
+      // Remove all FM / stream song cards — user's selection takes full priority
+      sigs = sigs.filter((s) => s.kind !== 'song');
+
+      const fmtSecs = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+      const synthetic: Signal = {
+        kind: 'song',
+        time: 'now',
+        title: nowPlaying.title,
+        artist: nowPlaying.artist,
+        album:  nowPlayingDetail?.album   ?? '',
+        cover:  nowPlayingDetail?.cover   ?? '',
+        progress: 0,
+        length:   nowPlayingDetail?.duration ? fmtSecs(nowPlayingDetail.duration) : '0:00',
+        position: '0:00',
+        bpm: 0,
+        key: '—',
+        mood: '—',
+        lyricsPreview: nowPlayingDetail?.lyrics ?? [],
+        recent: [],
+      };
+      (synthetic as Record<string, unknown>).id = `song-${nowPlaying.id}`;
+      sigs = [synthetic, ...sigs];
     }
 
     return sigs;
-  }, [signals, filter, nowPlaying]);
+  }, [signals, filter, nowPlaying, nowPlayingDetail]);
 
   const signalKey = (s: Signal, i: number): string => {
     const id = (s as { id?: string | number }).id;

@@ -73,6 +73,7 @@ export type Signal =
       key: string;
       mood: string;
       recent: string[];
+      lyricsPreview?: Array<{ time: number; text: string }>;
     }
   | {
       kind: 'post';
