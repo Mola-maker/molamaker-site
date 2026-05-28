@@ -1,9 +1,36 @@
+/* ── Float dock — shared visual container for music + astrbot ── */
+.float-dock {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 7999;
+  width: 128px;
+  height: 68px;
+  border-radius: 34px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  pointer-events: none;
+}
+.float-dock::after {
+  content: '';
+  position: absolute;
+  right: 64px;
+  top: 16px;
+  bottom: 16px;
+  width: 1px;
+  background: var(--rule);
+}
+@media (max-width: 480px) {
+  .float-dock { right: 8px; bottom: 8px; }
+}
+
 /* AstrBot floating chat widget ─────────────────────────────── */
 
 .ab-widget {
   position: fixed;
-  right: 28px;
-  bottom: 28px;
+  right: 24px;
+  bottom: 24px;
   z-index: 8000;
   font-family: var(--font-mono);
   user-select: none;
@@ -12,7 +39,7 @@
 /* ── Floating bubble ─────────────────────────────────────────── */
 .ab-bubble {
   position: relative;
-  width: 60px; height: 60px;
+  width: 52px; height: 52px;
   border-radius: 50%;
   border: none;
   background: var(--accent);
@@ -70,7 +97,7 @@
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 @media (max-width: 480px) {
-  .ab-widget { right: 12px; bottom: 12px; }
+  .ab-widget { right: 16px; bottom: 16px; }
   .ab-panel  { width: calc(100vw - 16px); }
 }
 

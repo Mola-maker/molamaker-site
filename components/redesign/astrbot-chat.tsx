@@ -181,14 +181,14 @@ export function AstrbotChat() {
     if (typeof window === 'undefined') return {};
     const W = 340;
     const H = Math.min(480, window.innerHeight - 80);
-    const BUBBLE = 60;
+    const BUBBLE = 52;
     const GAP = 8;
     const EDGE = 8; // min margin from viewport edges
 
     // Bubble's visual viewport coordinates (CSS anchor + drag offset)
-    const bRight  = window.innerWidth  - 28 + pos.x;
+    const bRight  = window.innerWidth  - 24 + pos.x;
     const bLeft   = bRight - BUBBLE;
-    const bBottom = window.innerHeight - 28 + pos.y;
+    const bBottom = window.innerHeight - 24 + pos.y;
     const bTop    = bBottom - BUBBLE;
 
     // Horizontal: align panel's right edge with bubble's right edge, fall back to left-align

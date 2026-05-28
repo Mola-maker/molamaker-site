@@ -14,6 +14,7 @@ import '../redesign-styles/06-v-magazine.css';
 import '../redesign-styles/07-v-atlas.css';
 import '../redesign-styles/08-v-stream.css';
 import '../redesign-styles/09-astrbot.css';
+import '../redesign-styles/10-v-workplace.css';
 
 export const dynamic = 'force-dynamic';
 

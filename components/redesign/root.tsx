@@ -14,6 +14,7 @@ import { VTerminal } from './v-terminal';
 import { VMagazine } from './v-magazine';
 import { VAtlas } from './v-atlas';
 import { VStream } from './v-stream';
+import { VWorkplace } from './v-workplace';
 import { MusicPlayer } from './music-player';
 import { AstrbotChat } from './astrbot-chat';
 import {
@@ -29,7 +30,7 @@ import {
   useTweaks,
 } from './tweaks';
 
-type Variant = 'terminal' | 'magazine' | 'atlas' | 'stream';
+type Variant = 'terminal' | 'magazine' | 'atlas' | 'stream' | 'workplace';
 
 type Tweaks = {
   variant: Variant;
@@ -64,7 +65,7 @@ const TWEAK_DEFAULTS: Tweaks = {
 };
 
 function variantLabel(v: string) {
-  return ({ terminal: 'no. 01', magazine: 'no. 02', atlas: 'no. 03', stream: 'no. 04' } as Record<string, string>)[v] || v;
+  return ({ terminal: 'no. 01', magazine: 'no. 02', atlas: 'no. 03', stream: 'no. 04', workplace: 'no. 05' } as Record<string, string>)[v] || v;
 }
 
 type RootProps = { initialLocale: Locale };
@@ -172,6 +173,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
             posts={livePosts ?? undefined} guestbook={liveGuests ?? undefined} repos={liveRepos ?? undefined} />
         )}
         {variant === 'stream' && <VStream t={i18n} locale={locale} />}
+        {variant === 'workplace' && <VWorkplace />}
       </div>
 
       {transitionFor && <MikuTransition variant={transitionFor} label={variantLabel(transitionFor)} />}
@@ -192,6 +194,9 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
       <Footer t={i18n} />
 
       <VariantRail value={variant} onChange={changeVariant} />
+
+      {/* Visual pill that groups music + astrbot buttons into a unified dock */}
+      <div className="float-dock" aria-hidden />
 
       <MusicPlayer />
 

@@ -306,35 +306,34 @@
 
 .music-btn {
   position: fixed;
-  right: 24px;
-  bottom: 144px; /* sits above .ct-trigger (bottom: 88px + its ~44px height ≈ 132px) */
-  z-index: 71;
-  width: 44px;
-  height: 44px;
+  right: 84px; /* left slot in float-dock: dock right 16px + AstrBot 52px + gap 8px + own half = 84px */
+  bottom: 24px; /* aligned with AstrBot bubble in the dock */
+  z-index: 8001; /* above float-dock and ab-widget so it receives clicks */
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  border: 1px solid var(--rule);
-  background: var(--bg-elev);
+  border: none;
+  background: transparent;
   color: var(--ink);
-  font-size: 20px;
+  font-size: 22px;
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(40, 30, 20, 0.14);
-  transition: transform 240ms var(--ease-out-quart), border-color 200ms, box-shadow 240ms;
+  box-shadow: none;
+  transition: transform 240ms var(--ease-out-quart), color 200ms;
   padding: 0;
 }
 .music-btn:hover {
-  transform: translateY(-2px) scale(1.05);
-  border-color: var(--accent);
-  box-shadow: 0 8px 20px -6px rgba(201, 100, 66, 0.28);
+  transform: scale(1.12);
+  color: var(--accent);
 }
 .music-btn.is-playing {
-  border-color: var(--accent);
+  color: var(--accent);
   animation: musicPulse 2s ease-in-out infinite;
 }
 @keyframes musicPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.35); }
-  50%       { box-shadow: 0 0 0 8px rgba(201, 100, 66, 0); }
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.08); }
 }
 
 .music-btn__note {
@@ -351,18 +350,22 @@
   75%  { transform: rotate(12deg) scale(1.1); }
   100% { transform: rotate(0deg) scale(1); }
 }
+@media (max-width: 480px) {
+  .music-btn  { right: 68px; bottom: 16px; }
+  .music-panel { right: 8px; width: calc(100vw - 16px); }
+}
 
 /* Mini panel */
 .music-panel {
   position: fixed;
-  right: 24px;
-  bottom: 200px; /* above the music button */
-  z-index: 72;
-  width: 220px;
+  right: 16px; /* aligns with dock right edge */
+  bottom: 92px; /* 8px above the top of the float-dock (16+68+8) */
+  z-index: 8002;
+  width: 280px;
   background: var(--bg-elev);
   border: 1px solid var(--rule);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px -10px rgba(40, 30, 20, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px -10px rgba(40, 30, 20, 0.28), 0 2px 8px rgba(40,30,20,0.08);
   font-family: var(--font-mono);
   display: grid;
   gap: 0;

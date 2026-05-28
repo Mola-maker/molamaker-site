@@ -103,6 +103,7 @@ export function VariantRail({ value, onChange }: VariantRailProps) {
     { id: 'magazine', label: 'Magazine' },
     { id: 'atlas', label: 'Atlas' },
     { id: 'stream', label: 'Stream' },
+    { id: 'workplace', label: 'Workplace' },
   ];
   return (
     <div className="variant-rail" role="tablist" aria-label="Home page variant">
