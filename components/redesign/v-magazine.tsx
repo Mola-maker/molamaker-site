@@ -10,7 +10,9 @@ import { HoverText, useReveal } from './atoms';
 type Props = { t: I18nBlock; locale: Locale; posts?: Post[] };
 
 export function VMagazine({ t, locale, posts }: Props) {
-  const d = { ...molaData, posts: posts ?? molaData.posts };
+  // Fall back to bundled posts when the live list is missing OR empty —
+  // downstream code dereferences posts[0], which would crash on an empty array.
+  const d = { ...molaData, posts: posts && posts.length ? posts : molaData.posts };
   const h1Ref = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {

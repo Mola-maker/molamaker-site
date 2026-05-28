@@ -33,7 +33,13 @@ export async function POST(req: NextRequest) {
   }
 
   const ua = req.headers.get('user-agent') ?? '';
-  const secret = process.env.HMAC_IP_SECRET || 'molamaker-voter';
+  const secret = process.env.HMAC_IP_SECRET;
+  if (!secret) {
+    return NextResponse.json(
+      { error: { code: 'service_unavailable', message: 'Reactions unavailable' } },
+      { status: 503 },
+    );
+  }
   const voterKey = createHmac('sha256', secret).update(`${ip}:${ua.slice(0, 120)}`).digest('hex').slice(0, 32);
 
   const supabase = await createClient();
@@ -67,7 +73,7 @@ export async function POST(req: NextRequest) {
     totals[row.kind] = Number(row.total);
   }
 
-  return NextResponse.json({ data: { counts: totals, voted: kind } });
+  return NextResponse.json({ data: { counts: totals, voted: true } });
 }
 
 // GET /api/posts/react?slug=...

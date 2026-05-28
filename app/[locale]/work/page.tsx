@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Work — molamaker' };
 const projects: Project[] = [
   {
     repo: 'astrbot_plugin_whythemistake',
-    year: '2026 &middot; ACTIVE',
+    year: '2026 · ACTIVE',
     desc: "An AstrBot plugin that watches your terminal, catches errors as they happen, and suggests fixes before you've finished swearing.",
     tags: ['PYTHON', 'ASTRBOT', 'PLUGIN'],
     stars: 1
@@ -30,7 +30,7 @@ const projects: Project[] = [
   },
   {
     repo: 'AstrBot',
-    year: '2025 &middot; FORK',
+    year: '2025 · FORK',
     desc: 'Working fork of AstrBot — an agentic IM chatbot infrastructure integrating LLMs, plugins, and a dozen messaging platforms. Plenty of late nights here.',
     tags: ['PYTHON', 'LLM', 'BOT']
   }

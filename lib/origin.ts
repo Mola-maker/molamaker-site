@@ -16,11 +16,18 @@ export function validateOrigin(req: NextRequest): NextResponse | null {
     if (new URL(origin).host === host) return null;
   } catch { /* malformed origin URL */ }
 
-  // Allow configured site URL
-  if (origin.startsWith(SITE_CONFIG.siteUrl)) return null;
+  // Allow configured site URL (compare host exactly — a prefix match would let
+  // "https://molamaker.com.evil.com" pass).
+  try {
+    if (new URL(origin).host === new URL(SITE_CONFIG.siteUrl).host) return null;
+  } catch { /* malformed site URL */ }
 
   // Allow localhost in development
-  if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost')) return null;
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      if (new URL(origin).hostname === 'localhost') return null;
+    } catch { /* malformed origin URL */ }
+  }
 
   return NextResponse.json(
     { error: { code: 'csrf', message: 'Invalid origin' } },

@@ -31,6 +31,16 @@ export function MusicPlayer() {
   const panelRef = useRef<HTMLDivElement | null>(null);
   // Ref so audio event listeners always see the current song without stale closure
   const nowPlayingRef = useRef<NowPlaying | null>(null);
+  // Pending one-shot `canplay` listener — tracked so a rapid song switch can
+  // detach the previous one instead of leaking handlers that fire late.
+  const pendingCanPlayRef = useRef<(() => void) | null>(null);
+
+  const clearPendingCanPlay = useCallback(() => {
+    if (pendingCanPlayRef.current && audioRef.current) {
+      audioRef.current.removeEventListener('canplay', pendingCanPlayRef.current);
+    }
+    pendingCanPlayRef.current = null;
+  }, []);
 
   // Create audio element once
   useEffect(() => {
@@ -117,6 +127,7 @@ export function MusicPlayer() {
 
     const audio = audioRef.current!;
     audio.pause();
+    clearPendingCanPlay();
 
     // Update ref + UI immediately so the stream reflects the new song
     // even before audio starts buffering (3.8s+ proxy time)
@@ -134,7 +145,7 @@ export function MusicPlayer() {
 
     // Wait for buffered data before calling play(), or the promise rejects
     const startPlayback = () => {
-      audio.removeEventListener('canplay', startPlayback);
+      clearPendingCanPlay();
       audio.play().catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setError('Playback blocked — track may be restricted');
@@ -144,9 +155,10 @@ export function MusicPlayer() {
     if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
       startPlayback();
     } else {
+      pendingCanPlayRef.current = startPlayback;
       audio.addEventListener('canplay', startPlayback);
     }
-  }, []);
+  }, [clearPendingCanPlay]);
 
   // Listen for play requests dispatched from the stream SONG card
   useEffect(() => {
@@ -171,12 +183,13 @@ export function MusicPlayer() {
     if (audio.paused) {
       // If already buffered, play directly; otherwise wait for canplay
       const doPlay = () => {
-        audio.removeEventListener('canplay', doPlay);
+        clearPendingCanPlay();
         audio.play().catch((err: unknown) => { if (!(err instanceof DOMException && err.name === 'AbortError')) setError('Playback blocked'); });
       };
       if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
         doPlay();
       } else {
+        pendingCanPlayRef.current = doPlay;
         audio.addEventListener('canplay', doPlay);
       }
     } else {

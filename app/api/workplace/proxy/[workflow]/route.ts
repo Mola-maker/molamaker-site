@@ -53,8 +53,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ workflow: s
 
     return new NextResponse(upstream.body, { status: upstream.status, headers });
   } catch {
+    // Escape the workflow id before reflecting it into HTML to avoid XSS.
+    const safeId = workflow.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+    const safeEnv = safeId.toUpperCase().replace(/[^A-Z0-9]/g, '_');
     return new NextResponse(
-      `<html><body style="font-family:monospace;padding:24px;color:#8B816E;background:#FAF7F1">Workflow "${workflow}" is not reachable.<br/>Set <code>WORKPLACE_PROXY_${workflow.toUpperCase()}</code> to its URL, or start it on its default port.</body></html>`,
+      `<html><body style="font-family:monospace;padding:24px;color:#8B816E;background:#FAF7F1">Workflow "${safeId}" is not reachable.<br/>Set <code>WORKPLACE_PROXY_${safeEnv}</code> to its URL, or start it on its default port.</body></html>`,
       { status: 502, headers: { 'content-type': 'text/html' } }
     );
   }

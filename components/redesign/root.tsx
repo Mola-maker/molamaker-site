@@ -171,7 +171,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
 
   return (
     <>
-      {tweaks.opening && !opened && <Opening2 onDone={() => { sessionStorage.setItem('mola:opened', '1'); setOpened(true); }} />}
+      {tweaks.opening && !opened && <Opening2 onDone={() => { try { sessionStorage.setItem('mola:opened', '1'); } catch { /* storage disabled */ } setOpened(true); }} />}
       {tweaks.cursor && <Cursor />}
 
       <TopNav locale={locale} onLocale={changeLocale} t={i18n} />

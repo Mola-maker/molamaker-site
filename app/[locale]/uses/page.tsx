@@ -65,7 +65,7 @@ export default function UsesPage() {
               title="Hardware"
               items={[
                 'ThinkPad — reliable, upgradeable, and the keyboard is unmatched',
-                'A Linux phone I probably shouldn&apos;t daily-drive but do'
+                'A Linux phone I probably shouldn’t daily-drive but do'
               ]}
             />
             <UseSection
@@ -81,7 +81,7 @@ export default function UsesPage() {
               title="Books on the desk"
               items={[
                 'Programming Massively Parallel Processors, 4th ed.',
-                'Something by Tufte — probably <em>Envisioning Information</em>'
+                'Something by Tufte — probably Envisioning Information'
               ]}
             />
           </div>
