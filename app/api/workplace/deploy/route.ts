@@ -7,6 +7,7 @@ import { join } from 'path';
 import { getWPSession } from '@/lib/workplace/session';
 import { messageBus } from '@/lib/workplace/bus';
 import { isRepoAllowed } from '@/lib/workplace/allowlist';
+import { recordProject, writeAudit } from '@/lib/workplace/db';
 
 export const runtime = 'nodejs';
 
@@ -40,6 +41,17 @@ export async function POST(req: NextRequest) {
   const deployName = name ?? repoUrl.split('/').at(-1) ?? 'workflow';
 
   messageBus.publish({ workflow: 'deploy', text: `Cloning ${repoUrl} → port ${port}`, level: 'info' });
+
+  // Record the project + who created it (Goal: accountability per creator).
+  await recordProject({
+    name: deployName, githubRepo: repoUrl, port,
+    creatorId: session.userId, creatorName: session.name, creatorIp: session.ip,
+    status: 'starting',
+  });
+  await writeAudit({
+    action: 'deploy', userId: session.userId, userName: session.name, ip: session.ip,
+    detail: { name: deployName, repo: repoUrl, port },
+  });
 
   // Fire-and-forget: clone + install + start
   (async () => {

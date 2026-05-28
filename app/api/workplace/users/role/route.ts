@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWPSession } from '@/lib/workplace/session';
-import { setUserRole, writeAudit, type WPRole } from '@/lib/workplace/db';
+import { setUserRole, writeAudit, countOwners, getUserRole, type WPRole } from '@/lib/workplace/db';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +16,18 @@ export async function POST(req: NextRequest) {
   if (!body.userId || !body.role || !VALID.includes(body.role as WPRole)) {
     return NextResponse.json({ error: 'userId and valid role required' }, { status: 400 });
   }
+
+  // Lockout guard: never demote the last remaining owner.
+  if (body.role !== 'owner') {
+    const currentRole = await getUserRole(body.userId);
+    if (currentRole === 'owner') {
+      const owners = await countOwners();
+      if (owners !== null && owners <= 1) {
+        return NextResponse.json({ error: 'cannot demote the last owner' }, { status: 409 });
+      }
+    }
+  }
+
   const ok = await setUserRole(body.userId, body.role as WPRole);
   if (!ok) return NextResponse.json({ error: 'update failed (no DB?)' }, { status: 500 });
   await writeAudit({ action: 'role_change', userId: session.userId, userName: session.name, ip: session.ip, detail: { changedUser: body.userId, newRole: body.role } });

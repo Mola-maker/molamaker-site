@@ -863,3 +863,165 @@
   .wp-team__contact { display: none; }
   .wp-team__select { max-width: 110px; }
 }
+
+/* ========================================================================
+   Activity feed — audit-log timeline (newest first)
+   ======================================================================== */
+.wp-activity {
+  margin-top: 28px;
+  margin-bottom: 40px;
+}
+.wp-activity__count {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+}
+
+/* Timeline shell */
+.wp-activity__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.wp-activity__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 90px;
+  gap: 12px;
+  align-items: start;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  transition: background 120ms;
+}
+.wp-activity__row:last-child { border-bottom: none; }
+.wp-activity__row:hover { background: var(--bg); }
+
+/* Action badge/glyph — tinted per action type */
+.wp-activity__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--bg);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wp-activity__badge--login {
+  color: var(--signal-green);
+  border-color: var(--signal-green);
+}
+.wp-activity__badge--logout {
+  color: var(--ink-faint);
+  border-color: var(--rule-soft);
+}
+.wp-activity__badge--deploy {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.wp-activity__badge--role {
+  color: var(--signal-amber);
+  border-color: var(--signal-amber);
+}
+.wp-activity__badge--workflow {
+  color: var(--accent);
+  border-color: var(--rule);
+  background: var(--accent-soft);
+}
+.wp-activity__badge--claude {
+  color: var(--ink-soft);
+  border-color: var(--rule);
+}
+.wp-activity__badge--default {
+  color: var(--ink-soft);
+  border-color: var(--rule);
+}
+
+/* Main column — actor + description, then IP underneath */
+.wp-activity__main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.wp-activity__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.4;
+}
+.wp-activity__actor {
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.wp-activity__desc {
+  color: var(--ink-soft);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-activity__ip {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-activity__time {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+.wp-activity__time time { color: inherit; }
+
+/* Loading skeleton lines */
+.wp-activity__loading {
+  display: grid;
+  gap: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.wp-activity__skeleton-line { height: 14px; }
+.wp-activity__skeleton-line:nth-child(2) { width: 85%; }
+.wp-activity__skeleton-line:nth-child(3) { width: 70%; }
+
+/* Responsive — reuse existing 720 / 375 breakpoints */
+@media (max-width: 720px) {
+  .wp-activity__row {
+    grid-template-columns: 40px minmax(0, 1fr) 72px;
+    gap: 10px;
+  }
+}
+@media (max-width: 375px) {
+  .wp-activity__row {
+    grid-template-columns: 36px minmax(0, 1fr) 56px;
+    gap: 8px;
+  }
+  /* Collapse the IP line gracefully — keep name + description + time. */
+  .wp-activity__ip { display: none; }
+}

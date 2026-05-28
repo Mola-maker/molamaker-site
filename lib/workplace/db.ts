@@ -88,6 +88,41 @@ export async function setUserRole(id: string, role: WPRole): Promise<boolean> {
   } catch { return false; }
 }
 
+// Current role for one user — used by the last-owner lockout guard.
+export async function getUserRole(id: string): Promise<WPRole | null> {
+  const c = client();
+  if (!c) return null;
+  try {
+    const { data } = await c.from('workplace_users').select('role').eq('id', id).maybeSingle();
+    return (data?.role as WPRole) ?? null;
+  } catch { return null; }
+}
+
+// Count current owners — used to block demoting the last owner (lockout guard).
+export async function countOwners(): Promise<number | null> {
+  const c = client();
+  if (!c) return null; // null = DB unavailable, caller skips the guard
+  try {
+    const { count } = await c.from('workplace_users').select('id', { count: 'exact', head: true }).eq('role', 'owner');
+    return count ?? 0;
+  } catch { return null; }
+}
+
+export type WPAuditRow = {
+  id: string; user_id: string | null; user_name: string | null;
+  ip: string | null; action: string; detail: Record<string, unknown>; created_at: string;
+};
+
+export async function listAudit(limit = 100): Promise<WPAuditRow[]> {
+  const c = client();
+  if (!c) return [];
+  try {
+    const { data } = await c.from('workplace_audit_log')
+      .select('*').order('created_at', { ascending: false }).limit(limit);
+    return (data ?? []) as WPAuditRow[];
+  } catch { return []; }
+}
+
 export async function upsertUser(u: {
   id: string; name: string; phone?: string; email?: string;
   wechatOpenId?: string; ip?: string; role?: string; authMethod?: string;
