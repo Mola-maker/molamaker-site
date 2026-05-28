@@ -703,3 +703,163 @@
   line-height: 1.7;
 }
 .wp-empty-state__icon { font-size: 28px; opacity: 0.4; margin-bottom: 10px; display: block; }
+
+/* ========================================================================
+   Team panel — member roster with inline role control
+   ======================================================================== */
+.wp-team {
+  margin-top: 28px;
+  margin-bottom: 40px;
+}
+.wp-team__count {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+}
+
+/* List/table shell */
+.wp-team__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.wp-team__row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) 130px minmax(140px, 1.4fr) 100px 130px 90px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  transition: background 120ms;
+}
+.wp-team__row:last-child { border-bottom: none; }
+.wp-team__row:not(.wp-team__row--head):hover { background: var(--bg); }
+.wp-team__row--head {
+  background: var(--bg-deep);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.wp-team__row--head:hover { background: var(--bg-deep); }
+
+.wp-team__name {
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wp-team__contact,
+.wp-team__auth,
+.wp-team__ip {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wp-team__seen {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wp-team__seen time { color: inherit; }
+
+/* Role pill — tinted by role using existing design vars */
+.wp-team__role-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.wp-team__role-pill--owner {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.wp-team__role-pill--admin {
+  color: var(--signal-amber);
+  border-color: var(--signal-amber);
+}
+.wp-team__role-pill--contributor {
+  color: var(--ink-soft);
+  border-color: var(--rule);
+}
+.wp-team__role-pill--viewer {
+  color: var(--ink-faint);
+  border-color: var(--rule-soft);
+}
+
+/* Owner-only inline role select */
+.wp-team__select {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 5px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  transition: border-color 160ms;
+  width: 100%;
+  max-width: 130px;
+}
+.wp-team__select:hover { border-color: var(--accent); }
+.wp-team__select:focus { border-color: var(--accent); }
+
+/* Loading skeleton lines */
+.wp-team__loading {
+  display: grid;
+  gap: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.wp-team__skeleton-line { height: 14px; }
+.wp-team__skeleton-line:nth-child(2) { width: 85%; }
+.wp-team__skeleton-line:nth-child(3) { width: 70%; }
+
+/* Responsive — reuse existing 920 / 720 / 375 breakpoints */
+@media (max-width: 920px) {
+  .wp-team__row {
+    grid-template-columns: minmax(110px, 1.4fr) 120px minmax(120px, 1.2fr) 90px 90px;
+  }
+  .wp-team__ip { display: none; }
+  .wp-team__row--head .wp-team__ip { display: none; }
+}
+@media (max-width: 720px) {
+  .wp-team__row {
+    grid-template-columns: minmax(100px, 1.4fr) 120px 1fr 90px;
+  }
+  .wp-team__auth { display: none; }
+}
+@media (max-width: 375px) {
+  .wp-team__row {
+    grid-template-columns: 1fr 110px 72px;
+    gap: 8px;
+  }
+  .wp-team__contact { display: none; }
+  .wp-team__select { max-width: 110px; }
+}

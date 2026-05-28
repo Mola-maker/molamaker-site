@@ -86,6 +86,18 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [variant, setVariant] = useState<Variant>(tweaks.variant || 'terminal');
   const [locale, setLocale] = useState<Locale>(tweaks.locale || initialLocale);
+  // WeChat OAuth (and shareable deep links) redirect back to `/?variant=workplace`.
+  // Honor that hint once on mount so the dashboard opens directly.
+  useLayoutEffect(() => {
+    try {
+      const v = new URLSearchParams(window.location.search).get('variant');
+      const valid: Variant[] = ['terminal', 'magazine', 'atlas', 'stream', 'workplace'];
+      if (v && valid.includes(v as Variant) && v !== tweaks.variant) {
+        setVariant(v as Variant);
+        setTweak('variant', v as Variant);
+      }
+    } catch { /* ignore */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [transitionFor, setTransitionFor] = useState<Variant | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [localeFlashing, setLocaleFlashing] = useState(false);
@@ -215,6 +227,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
               { value: 'magazine', label: 'Magazine' },
               { value: 'atlas', label: 'Atlas' },
               { value: 'stream', label: 'Stream' },
+              { value: 'workplace', label: 'Workplace' },
             ]}
           />
           <TweakRadio

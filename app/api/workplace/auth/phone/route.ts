@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateOTP, verifyOTP } from '@/lib/workplace/otp';
-import { createSessionToken, generateUserId, setSessionCookie } from '@/lib/workplace/session';
-import { upsertUser, writeAudit } from '@/lib/workplace/db';
+import { createSessionToken, setSessionCookie } from '@/lib/workplace/session';
+import { getOrCreateUser, writeAudit } from '@/lib/workplace/db';
 
 export const runtime = 'nodejs';
 
@@ -29,16 +29,8 @@ export async function POST(req: NextRequest) {
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
 
-    const userId = generateUserId();
-    const token = createSessionToken({
-      userId,
-      name,
-      phone,
-      ip,
-      role: 'contributor',
-    });
-
-    await upsertUser({ id: userId, name, phone, ip, authMethod: 'phone' });
+    const { id: userId, role } = await getOrCreateUser({ name, phone, ip, authMethod: 'phone' });
+    const token = createSessionToken({ userId, name, phone, ip, role });
     await writeAudit({ action: 'login', userId, userName: name, ip });
 
     const res = NextResponse.json({ ok: true });

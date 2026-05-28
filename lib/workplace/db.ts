@@ -1,10 +1,92 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { generateUserId } from './session';
 
 function client() {
   try { return createServiceClient(); } catch { return null; }
 }
 
-export type AuditAction = 'login' | 'logout' | 'deploy' | 'workflow_add' | 'claude_run';
+export type AuditAction = 'login' | 'logout' | 'deploy' | 'workflow_add' | 'claude_run' | 'role_change';
+
+export type WPRole = 'owner' | 'admin' | 'contributor' | 'viewer';
+
+// Owner seeding: a phone or email listed in env is granted 'owner' at first login.
+function seedRole(opts: { phone?: string; email?: string }): WPRole {
+  const ownerPhone = process.env.WORKPLACE_OWNER_PHONE?.trim();
+  const ownerEmail = process.env.OWNER_EMAIL?.trim().toLowerCase();
+  if (ownerPhone && opts.phone && opts.phone.trim() === ownerPhone) return 'owner';
+  if (ownerEmail && opts.email && opts.email.trim().toLowerCase() === ownerEmail) return 'owner';
+  return 'contributor';
+}
+
+export type ResolvedUser = { id: string; role: WPRole };
+
+// Stable identity: find an existing user by phone/openid and reuse their id +
+// persisted role; otherwise create one. Falls back to an ephemeral id when
+// Supabase is unavailable (dev without env) so login still works.
+export async function getOrCreateUser(u: {
+  name: string; phone?: string; email?: string; wechatOpenId?: string;
+  ip?: string; authMethod?: 'phone' | 'wechat';
+}): Promise<ResolvedUser> {
+  const fallbackRole = seedRole(u);
+  const c = client();
+  if (!c) return { id: generateUserId(), role: fallbackRole };
+  try {
+    // Look up by phone, then by wechat openid
+    let existing: { id: string; role: string } | null = null;
+    if (u.phone) {
+      const { data } = await c.from('workplace_users').select('id, role').eq('phone', u.phone).maybeSingle();
+      if (data) existing = data;
+    }
+    if (!existing && u.wechatOpenId) {
+      const { data } = await c.from('workplace_users').select('id, role').eq('wechat_openid', u.wechatOpenId).maybeSingle();
+      if (data) existing = data;
+    }
+
+    if (existing) {
+      // Update last-seen/ip/name without clobbering the (possibly promoted) role
+      await c.from('workplace_users').update({
+        name: u.name, last_ip: u.ip ?? null, last_seen_at: new Date().toISOString(),
+      }).eq('id', existing.id);
+      return { id: existing.id, role: (existing.role as WPRole) ?? fallbackRole };
+    }
+
+    // New user
+    const id = generateUserId();
+    const role = fallbackRole;
+    await c.from('workplace_users').insert({
+      id, name: u.name, phone: u.phone ?? null, email: u.email ?? null,
+      wechat_openid: u.wechatOpenId ?? null, last_ip: u.ip ?? null,
+      role, auth_method: u.authMethod ?? null,
+    });
+    return { id, role };
+  } catch {
+    return { id: generateUserId(), role: fallbackRole };
+  }
+}
+
+export type WPUserRow = {
+  id: string; name: string; phone: string | null; email: string | null;
+  wechat_openid: string | null; last_ip: string | null; role: string;
+  auth_method: string | null; created_at: string; last_seen_at: string;
+};
+
+export async function listUsers(): Promise<WPUserRow[]> {
+  const c = client();
+  if (!c) return [];
+  try {
+    const { data } = await c.from('workplace_users').select('*').order('last_seen_at', { ascending: false });
+    return (data ?? []) as WPUserRow[];
+  } catch { return []; }
+}
+
+export async function setUserRole(id: string, role: WPRole): Promise<boolean> {
+  const c = client();
+  if (!c) return false;
+  try {
+    await c.from('workplace_users').update({ role }).eq('id', id);
+    return true;
+  } catch { return false; }
+}
 
 export async function upsertUser(u: {
   id: string; name: string; phone?: string; email?: string;
