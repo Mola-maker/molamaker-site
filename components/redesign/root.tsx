@@ -193,6 +193,9 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
 
       <VariantRail value={variant} onChange={changeVariant} />
 
+      {/* Visual pill that groups music + astrbot buttons into a unified dock */}
+      <div className="float-dock" aria-hidden />
+
       <MusicPlayer />
 
       <AstrbotChat />
