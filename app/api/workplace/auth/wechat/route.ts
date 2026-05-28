@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSessionToken, generateUserId, setSessionCookie } from '@/lib/workplace/session';
+import { upsertUser, writeAudit } from '@/lib/workplace/db';
 
 export const runtime = 'nodejs';
 
@@ -45,13 +46,18 @@ export async function GET(req: NextRequest) {
     const userData = await userRes.json() as { nickname?: string; headimgurl?: string; errcode?: number };
 
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const userId = generateUserId();
+    const name = userData.nickname ?? tokenData.openid;
     const token = createSessionToken({
-      userId: generateUserId(),
-      name: userData.nickname ?? tokenData.openid,
+      userId,
+      name,
       wechatOpenId: tokenData.openid,
       ip,
       role: 'contributor',
     });
+
+    await upsertUser({ id: userId, name, wechatOpenId: tokenData.openid, ip, authMethod: 'wechat' });
+    await writeAudit({ action: 'login', userId, userName: name, ip });
 
     const res = NextResponse.redirect(new URL('/workplace', req.url));
     return setSessionCookie(res, token);

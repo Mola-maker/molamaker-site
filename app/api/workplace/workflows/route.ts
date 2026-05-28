@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWPSession } from '@/lib/workplace/session';
+import { listStoredWorkflows, addStoredWorkflow, writeAudit } from '@/lib/workplace/db';
 
 export const runtime = 'nodejs';
 
@@ -29,8 +30,18 @@ async function ping(url: string): Promise<boolean> {
 }
 
 export async function GET() {
+  // Merge hardcoded defaults with persisted workflows (defaults win on id clash).
+  const merged: WorkflowDef[] = [...registry];
+  const seen = new Set(merged.map((w) => w.id));
+  for (const w of await listStoredWorkflows()) {
+    if (!seen.has(w.id)) {
+      merged.push(w);
+      seen.add(w.id);
+    }
+  }
+
   const results = await Promise.all(
-    registry.map(async (wf) => {
+    merged.map(async (wf) => {
       const healthUrl = wf.url ?? `http://localhost:${wf.port}`;
       const alive = await ping(healthUrl);
       return { ...wf, status: alive ? 'live' : 'offline' as const };
@@ -51,6 +62,15 @@ export async function POST(req: NextRequest) {
   if (registry.find((w) => w.id === body.id)) {
     return NextResponse.json({ error: 'workflow id already exists' }, { status: 409 });
   }
-  registry.push({ id: body.id, name: body.name, port: body.port, url: body.url, githubRepo: body.githubRepo, description: body.description });
-  return NextResponse.json({ ok: true, data: { workflow: registry.at(-1) } });
+  const workflow: WorkflowDef = { id: body.id, name: body.name, port: body.port, url: body.url, githubRepo: body.githubRepo, description: body.description };
+  registry.push(workflow);
+  await addStoredWorkflow(workflow);
+  await writeAudit({
+    action: 'workflow_add',
+    userId: session.userId,
+    userName: session.name,
+    ip: session.ip,
+    detail: { id: workflow.id, name: workflow.name, port: workflow.port },
+  });
+  return NextResponse.json({ ok: true, data: { workflow } });
 }

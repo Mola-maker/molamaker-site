@@ -8,6 +8,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const session = await getWPSession();
   if (!session) return new Response('unauthenticated', { status: 401 });
+  if (session.role !== 'admin' && session.role !== 'owner') {
+    return new Response('forbidden — admin or owner role required', { status: 403 });
+  }
 
   const { searchParams } = req.nextUrl;
   const prompt = searchParams.get('prompt') ?? '';

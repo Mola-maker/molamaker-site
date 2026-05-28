@@ -109,7 +109,8 @@ function ClaudeTerminal() {
         const lineType = msg.type === 'stderr' ? 'stderr' : 'stdout';
         // Split on newlines so each line is its own row
         const chunks = msg.data.split('\n').filter((s) => s);
-        setLines((l) => [...l, ...chunks.map((text) => ({ type: lineType as TermLine['type'], text }))]);
+        // Cap scrollback at 500 lines to bound memory on long-running sessions
+        setLines((l) => [...l, ...chunks.map((text) => ({ type: lineType as TermLine['type'], text }))].slice(-500));
       }
     };
     es.onerror = () => {
@@ -228,6 +229,7 @@ export function VWorkplace() {
   const [user, setUser] = useState<WPUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [wfLoaded, setWfLoaded] = useState(false);
   const [portTabs, setPortTabs] = useState<PortTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [showDeploy, setShowDeploy] = useState(false);
@@ -252,7 +254,8 @@ export function VWorkplace() {
         .then((j: { data?: { workflows: Workflow[] } }) => {
           if (j.data?.workflows) setWorkflows(j.data.workflows);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setWfLoaded(true));
     };
     load();
     const id = setInterval(load, 15_000);
@@ -276,7 +279,10 @@ export function VWorkplace() {
   const openPort = useCallback((wf: Workflow) => {
     const tabId = `port-${wf.id}`;
     if (!portTabs.find((t) => t.id === tabId)) {
-      const portUrl = wf.url ?? `http://localhost:${wf.port}`;
+      // Route through the same-origin reverse proxy so the iframe never points
+      // at the visitor's localhost or trips https→http mixed-content blocking.
+      // A full public https URL on the workflow overrides the proxy.
+      const portUrl = (wf.url && /^https:\/\//.test(wf.url)) ? wf.url : `/api/workplace/proxy/${wf.id}`;
       setPortTabs((t) => [...t, { id: tabId, label: wf.name, type: 'iframe', url: portUrl }]);
     }
     setActiveTab(tabId);
@@ -320,7 +326,7 @@ export function VWorkplace() {
   return (
     <div className="v-workplace">
       {/* Header */}
-      <div className="ct-inner">
+      <div className="wrap wrap--narrow">
         <div className="wp-header">
           <h2 className="wp-header__title">work<em>place</em></h2>
           <div className="wp-header__user">
@@ -342,15 +348,25 @@ export function VWorkplace() {
           </button>
         </div>
         <div className="wp-tiles">
-          {workflows.map((wf) => (
-            <WorkflowTile
-              key={wf.id}
-              wf={wf}
-              isActive={portTabs.some((t) => t.id === `port-${wf.id}` && t.id === activeTab)}
-              onOpen={() => openPort(wf)}
-              onOpenTerminal={() => openTerminal(wf)}
-            />
-          ))}
+          {!wfLoaded && workflows.length === 0 ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="wp-tile wp-tile--skeleton">
+                <div className="wp-skeleton wp-skeleton-line wp-skeleton-line--lg" />
+                <div className="wp-skeleton wp-skeleton-line wp-skeleton-line--sm" />
+                <div className="wp-skeleton wp-skeleton-line" />
+              </div>
+            ))
+          ) : (
+            workflows.map((wf) => (
+              <WorkflowTile
+                key={wf.id}
+                wf={wf}
+                isActive={portTabs.some((t) => t.id === `port-${wf.id}` && t.id === activeTab)}
+                onOpen={() => openPort(wf)}
+                onOpenTerminal={() => openTerminal(wf)}
+              />
+            ))
+          )}
           <div className="wp-tile wp-tile--add" onClick={() => setShowDeploy(true)}>
             <span className="wp-tile__plus">+</span>
             <span className="wp-tile__add-label">Add workflow</span>

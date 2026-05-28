@@ -144,12 +144,12 @@ export function WorkplaceAuth({ onAuth }: Props) {
                 {qrLoading && <div className="wp-wechat__qr-loading">Loading QR…</div>}
                 {qrError && <div style={{ fontSize: '10.5px', color: 'var(--ink-soft)', textAlign: 'center' }}>{qrError}</div>}
                 {qrUrl && !qrLoading && (
-                  <a href={qrUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', height: '100%' }}>
-                    {/* WeChat QR is an external page; show a placeholder and link */}
-                    <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: '11px', color: 'var(--ink-soft)', textAlign: 'center', padding: '8px' }}>
-                      Click to open WeChat QR login in a new window
-                    </div>
-                  </a>
+                  <iframe
+                    className="wp-wechat__frame"
+                    src={qrUrl}
+                    title="WeChat QR login"
+                    sandbox="allow-scripts allow-same-origin allow-top-navigation"
+                  />
                 )}
               </div>
               <p className="wp-wechat__label">

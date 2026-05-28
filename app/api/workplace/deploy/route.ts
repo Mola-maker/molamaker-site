@@ -6,6 +6,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { getWPSession } from '@/lib/workplace/session';
 import { messageBus } from '@/lib/workplace/bus';
+import { isRepoAllowed } from '@/lib/workplace/allowlist';
 
 export const runtime = 'nodejs';
 
@@ -28,6 +29,10 @@ export async function POST(req: NextRequest) {
   // Validate it looks like a GitHub URL
   if (!/^https:\/\/github\.com\/[^/]+\/[^/]+/.test(repoUrl)) {
     return NextResponse.json({ error: 'only github.com URLs supported' }, { status: 400 });
+  }
+
+  if (!isRepoAllowed(repoUrl)) {
+    return NextResponse.json({ error: 'repo not in allowlist — set WORKPLACE_REPO_ALLOWLIST' }, { status: 403 });
   }
 
   const port = nextPort++;
