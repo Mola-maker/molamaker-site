@@ -100,6 +100,7 @@ function MusicCard({ data }: { data: NowPlayingData | null }) {
       <SectionLabel><Pulse />Now playing</SectionLabel>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
         {data.cover && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={data.cover}
             alt={data.album}
