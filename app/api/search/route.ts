@@ -69,12 +69,16 @@ export async function GET(req: NextRequest) {
   // ── Guestbook entries ──────────────────────────────────────
   const supabase = await createClient();
   if (supabase) {
-    const { data: guests } = await supabase
-      .from('guestbook')
-      .select('name, message, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200)
-      .catch(() => ({ data: null }));
+    // Supabase query builders are thenables without a .catch(); guard with try/catch.
+    let guests: Array<{ name: unknown; message: unknown; created_at: unknown }> | null = null;
+    try {
+      const { data } = await supabase
+        .from('guestbook')
+        .select('name, message, created_at')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      guests = data;
+    } catch { guests = null; }
 
     for (const g of guests ?? []) {
       const s = terms.reduce((acc, t) =>
