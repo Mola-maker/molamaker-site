@@ -212,3 +212,72 @@ export async function addStoredWorkflow(w: StoredWorkflow): Promise<void> {
     });
   } catch { /* best-effort */ }
 }
+
+// ── Kanban tasks ────────────────────────────────────────────────────────
+
+export type TaskStatus = 'todo' | 'doing' | 'done';
+
+export type WPTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  repo_url: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function listTasks(): Promise<WPTask[]> {
+  const c = client();
+  if (!c) return [];
+  try {
+    const { data } = await c.from('workplace_tasks').select('*').order('status').order('position');
+    return (data ?? []) as WPTask[];
+  } catch { return []; }
+}
+
+export async function createTask(t: {
+  title: string; description?: string; status?: TaskStatus;
+  repoUrl?: string; createdBy?: string; createdByName?: string;
+}): Promise<WPTask | null> {
+  const c = client();
+  if (!c) return null;
+  try {
+    // Next position in column
+    const { count } = await c.from('workplace_tasks').select('id', { count: 'exact', head: true }).eq('status', t.status ?? 'todo');
+    const { data, error } = await c.from('workplace_tasks').insert({
+      title: t.title.slice(0, 200),
+      description: t.description?.slice(0, 1000) ?? null,
+      status: t.status ?? 'todo',
+      repo_url: t.repoUrl ?? null,
+      created_by: t.createdBy ?? null,
+      created_by_name: t.createdByName ?? null,
+      position: count ?? 0,
+    }).select().single();
+    if (error) return null;
+    return data as WPTask;
+  } catch { return null; }
+}
+
+export async function updateTaskStatus(id: string, status: TaskStatus, position?: number): Promise<boolean> {
+  const c = client();
+  if (!c) return false;
+  try {
+    const payload: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+    if (position !== undefined) payload.position = position;
+    await c.from('workplace_tasks').update(payload).eq('id', id);
+    return true;
+  } catch { return false; }
+}
+
+export async function deleteTask(id: string): Promise<boolean> {
+  const c = client();
+  if (!c) return false;
+  try {
+    await c.from('workplace_tasks').delete().eq('id', id);
+    return true;
+  } catch { return false; }
+}

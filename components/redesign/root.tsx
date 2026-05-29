@@ -15,6 +15,7 @@ import { VMagazine } from './v-magazine';
 import { VAtlas } from './v-atlas';
 import { VStream } from './v-stream';
 import { VWorkplace } from './v-workplace';
+import { VNotebook } from './v-notebook';
 import { MusicPlayer } from './music-player';
 import { AstrbotChat } from './astrbot-chat';
 import {
@@ -30,7 +31,7 @@ import {
   useTweaks,
 } from './tweaks';
 
-type Variant = 'terminal' | 'magazine' | 'atlas' | 'stream' | 'workplace';
+type Variant = 'terminal' | 'magazine' | 'atlas' | 'stream' | 'workplace' | 'notebook';
 
 type Tweaks = {
   variant: Variant;
@@ -65,7 +66,7 @@ const TWEAK_DEFAULTS: Tweaks = {
 };
 
 function variantLabel(v: string) {
-  return ({ terminal: 'no. 01', magazine: 'no. 02', atlas: 'no. 03', stream: 'no. 04', workplace: 'no. 05' } as Record<string, string>)[v] || v;
+  return ({ terminal: 'no. 01', magazine: 'no. 02', atlas: 'no. 03', stream: 'no. 04', workplace: 'no. 05', notebook: 'no. 06' } as Record<string, string>)[v] || v;
 }
 
 type RootProps = { initialLocale: Locale };
@@ -91,7 +92,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
   useLayoutEffect(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('variant');
-      const valid: Variant[] = ['terminal', 'magazine', 'atlas', 'stream', 'workplace'];
+      const valid: Variant[] = ['terminal', 'magazine', 'atlas', 'stream', 'workplace', 'notebook'];
       if (v && valid.includes(v as Variant) && v !== tweaks.variant) {
         setVariant(v as Variant);
         setTweak('variant', v as Variant);
@@ -186,6 +187,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
         )}
         {variant === 'stream' && <VStream t={i18n} locale={locale} />}
         {variant === 'workplace' && <VWorkplace />}
+        {variant === 'notebook' && <VNotebook t={i18n} locale={locale} posts={livePosts ?? undefined} guestbook={liveGuests ?? undefined} />}
       </div>
 
       {transitionFor && <MikuTransition variant={transitionFor} label={variantLabel(transitionFor)} />}
@@ -228,6 +230,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
               { value: 'atlas', label: 'Atlas' },
               { value: 'stream', label: 'Stream' },
               { value: 'workplace', label: 'Workplace' },
+              { value: 'notebook', label: 'Notebook' },
             ]}
           />
           <TweakRadio

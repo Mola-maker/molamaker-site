@@ -1025,3 +1025,186 @@
   /* Collapse the IP line gracefully — keep name + description + time. */
   .wp-activity__ip { display: none; }
 }
+
+/* ── Kanban Board ───────────────────────────────────────────────────── */
+.kb-board { margin-top: 8px; }
+
+.kb-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 720px) { .kb-columns { grid-template-columns: 1fr; } }
+
+.kb-col {
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 12px;
+  min-height: 120px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.kb-col--over {
+  border-color: var(--accent);
+  background: rgba(201, 100, 66, 0.04);
+}
+
+.kb-col__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.kb-col__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kb-col__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  flex: 1;
+}
+.kb-col__count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+
+.kb-col__cards { display: flex; flex-direction: column; gap: 8px; }
+
+.kb-col__empty {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ── Task Card ──────────────────────────────────────────────────────── */
+.kb-card {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: grab;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.kb-card:hover {
+  border-color: var(--accent-soft);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.kb-card:active { cursor: grabbing; }
+
+.kb-card__title {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.kb-card__desc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.kb-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kb-card__repo {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.kb-card__time, .kb-card__author {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink-faint);
+}
+.kb-card__author::before { content: '· '; }
+.kb-card__del {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--ink-faint);
+  line-height: 1;
+  transition: color 0.15s;
+}
+.kb-card__del:hover { color: #b43e3e; }
+
+/* ── Add Card Form ──────────────────────────────────────────────────── */
+.kb-add-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed var(--rule);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+  transition: border-color 0.15s, color 0.15s;
+  text-align: center;
+}
+.kb-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.kb-add-form {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kb-add-form__input {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.kb-add-form__input:focus { border-color: var(--accent); }
+.kb-add-form__err {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #b43e3e;
+}
+.kb-add-form__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.kb-add-form__cancel {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  transition: border-color 0.15s;
+}
+.kb-add-form__cancel:hover { border-color: var(--ink-soft); }
+.kb-add-form__submit {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--bg);
+  background: var(--accent);
+  padding: 4px 12px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+.kb-add-form__submit:disabled { opacity: 0.4; }

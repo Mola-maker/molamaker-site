@@ -21,7 +21,9 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: post.excerpt ?? undefined,
-      images: [`/og?title=${encodeURIComponent(post.title)}&date=${encodeURIComponent(new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}`],
+      images: [
+        `/og?title=${encodeURIComponent(post.title)}&date=${encodeURIComponent(new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}&tag=${encodeURIComponent(post.tag ?? '')}&readTime=${encodeURIComponent(String(post.read_time ?? ''))}&excerpt=${encodeURIComponent((post.excerpt ?? '').slice(0, 120))}`,
+      ],
     },
   };
 }

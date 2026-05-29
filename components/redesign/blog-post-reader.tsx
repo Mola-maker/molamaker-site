@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { TopNav, Footer } from './chrome';
 import { molaData, type Locale } from './data';
+import { GlossaryTooltip } from '@/components/glossary-tooltip';
 
 type PostProps = {
   title: string;
@@ -153,6 +154,7 @@ export default function BlogPostReader({ title, date, readTime, excerpt, markdow
         </div>
       </div>
       <Footer t={i18n} />
+      <GlossaryTooltip containerSelector=".blog-article__body" />
     </>
   );
 }

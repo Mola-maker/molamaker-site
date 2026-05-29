@@ -22,6 +22,7 @@ export default async function BlogPage({
     date: p.date.slice(0, 10),
     read_time: p.read_time,
     excerpt: p.excerpt,
+    tag: p.tag,
   }));
 
   return <BlogListReader posts={posts} locale={locale as Locale} />;
