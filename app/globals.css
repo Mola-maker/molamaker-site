@@ -1252,3 +1252,103 @@ html.lenis body {
   .cream-fluid-canvas { display: none; }
   .opening-replaying .opening-title { animation: none; opacity: 1; }
 }
+
+/* ── Journey: Planets / Orrery ─────────────────────────────── */
+@keyframes orbit-spin    { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+@keyframes orbit-counter { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+
+.journey-planets {
+  flex-direction: column;
+  gap: 32px;
+}
+.journey-planets__orrery {
+  position: relative;
+  width: 420px;
+  height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 500px) {
+  .journey-planets__orrery { width: 280px; height: 280px; transform: scale(0.75); }
+}
+.journey-sun {
+  position: absolute;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+  box-shadow: 0 0 32px rgba(201,100,66,0.5);
+}
+.journey-sun__core {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bg-elev);
+  letter-spacing: 0.06em;
+}
+.journey-orb-group {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.journey-planets__caption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Journey: Milestone timeline ───────────────────────────── */
+.journey-timeline { align-items: flex-start; padding: 80px 10vw; }
+.journey-timeline__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  max-width: 560px;
+}
+.journey-mile-line {
+  position: absolute;
+  left: 18px;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+.journey-mile {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+}
+.journey-mile__glyph {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  color: var(--accent);
+}
+.journey-mile__year {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.14em;
+  margin-bottom: 4px;
+}
+.journey-mile__label {
+  font-family: var(--font-serif, serif);
+  font-size: 20px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.journey-mile__body {
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  max-width: 44ch;
+}

@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { requireAdmin } from '@/lib/auth';
 
 // Static fallback so the feature works with no DB.
 const STATIC_GLOSSARY: Record<string, string> = {
@@ -19,9 +21,9 @@ const STATIC_GLOSSARY: Record<string, string> = {
   'bank conflict': 'A performance penalty in CUDA shared memory when multiple threads in a warp access the same memory bank simultaneously.',
 };
 
-// GET /api/glossary → { data: Record<term, definition> }
-export const revalidate = 3600;
+export const revalidate = 0;
 
+// GET /api/glossary → { data: Record<term, definition> }
 export async function GET() {
   const supabase = await createClient();
   if (!supabase) {
@@ -45,5 +47,44 @@ export async function GET() {
     return NextResponse.json({ data: merged });
   } catch {
     return NextResponse.json({ data: STATIC_GLOSSARY });
+  }
+}
+
+// POST /api/glossary — admin only, upsert a term
+export async function POST(req: NextRequest) {
+  try { await requireAdmin(); } catch { return NextResponse.json({ error: 'forbidden' }, { status: 403 }); }
+
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const term = String(body.term ?? '').trim().slice(0, 100);
+  const definition = String(body.definition ?? '').trim().slice(0, 500);
+  if (!term || !definition) return NextResponse.json({ error: 'term and definition required' }, { status: 400 });
+
+  const sc = createServiceClient();
+  if (!sc) return NextResponse.json({ error: 'db unavailable' }, { status: 503 });
+
+  try {
+    const { error } = await sc.from('glossary').upsert({ term, definition }, { onConflict: 'term' });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+// DELETE /api/glossary?term=... — admin only
+export async function DELETE(req: NextRequest) {
+  try { await requireAdmin(); } catch { return NextResponse.json({ error: 'forbidden' }, { status: 403 }); }
+
+  const term = new URL(req.url).searchParams.get('term') ?? '';
+  if (!term) return NextResponse.json({ error: 'term required' }, { status: 400 });
+
+  const sc = createServiceClient();
+  if (!sc) return NextResponse.json({ error: 'db unavailable' }, { status: 503 });
+
+  try {
+    await sc.from('glossary').delete().eq('term', term);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }

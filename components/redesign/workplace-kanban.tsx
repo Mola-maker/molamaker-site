@@ -5,7 +5,7 @@
 // Drag-and-drop via native HTML drag events (no external lib).
 // GET /api/workplace/tasks  POST (create)  PATCH (move)  DELETE (admin+)
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 
 type TaskStatus = 'todo' | 'doing' | 'done';
 
@@ -39,31 +39,86 @@ function relTime(iso: string): string {
 type CardProps = {
   task: Task;
   canDelete: boolean;
+  canEdit: boolean;
   onDelete: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<Pick<Task, 'title' | 'description' | 'repo_url'>>) => void;
   onDragStart: (task: Task) => void;
 };
 
-function TaskCard({ task, canDelete, onDelete, onDragStart }: CardProps) {
+function EditableField({
+  value, placeholder, multiline, onSave,
+}: {
+  value: string; placeholder: string; multiline?: boolean;
+  onSave: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  const commit = () => { onSave(draft.trim()); setEditing(false); };
+  const cancel = () => { setDraft(value); setEditing(false); };
+
+  if (!editing) {
+    return (
+      <span
+        onClick={() => setEditing(true)}
+        title="Click to edit"
+        style={{ cursor: 'text', display: 'block' }}
+      >
+        {value || <span style={{ color: 'var(--ink-faint)', fontStyle: 'italic' }}>{placeholder}</span>}
+      </span>
+    );
+  }
+
+  const props = {
+    ref,
+    value: draft,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(e.target.value),
+    onBlur: commit,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !multiline) { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') cancel();
+    },
+    style: {
+      width: '100%', background: 'var(--bg-deep)', border: '1px solid var(--accent)',
+      borderRadius: 3, padding: '3px 6px', color: 'var(--ink)',
+      fontFamily: 'inherit', fontSize: 'inherit', outline: 'none', resize: 'none' as const,
+    },
+  };
+
+  return multiline
+    ? <textarea {...props} rows={2} />
+    : <input {...props} type="text" />;
+}
+
+function TaskCard({ task, canDelete, canEdit, onDelete, onUpdate, onDragStart }: CardProps) {
   return (
     <div
       className="kb-card"
       draggable
       onDragStart={() => onDragStart(task)}
-      title="Drag to move"
     >
-      <div className="kb-card__title">{task.title}</div>
-      {task.description && (
-        <div className="kb-card__desc">{task.description}</div>
-      )}
+      <div className="kb-card__title">
+        {canEdit
+          ? <EditableField value={task.title} placeholder="Title…" onSave={(v) => v && onUpdate(task.id, { title: v })} />
+          : task.title}
+      </div>
+      <div className="kb-card__desc">
+        {canEdit
+          ? <EditableField value={task.description ?? ''} placeholder="Add description…" multiline onSave={(v) => onUpdate(task.id, { description: v || null })} />
+          : task.description}
+      </div>
       <div className="kb-card__meta">
-        {task.repo_url && (
-          <a
-            href={task.repo_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="kb-card__repo"
-            onClick={(e) => e.stopPropagation()}
-          >
+        {canEdit ? (
+          <EditableField
+            value={task.repo_url ?? ''}
+            placeholder="repo URL"
+            onSave={(v) => onUpdate(task.id, { repo_url: v || null })}
+          />
+        ) : task.repo_url && (
+          <a href={task.repo_url} target="_blank" rel="noopener noreferrer" className="kb-card__repo" onClick={(e) => e.stopPropagation()}>
             ↗ repo
           </a>
         )}
@@ -72,13 +127,7 @@ function TaskCard({ task, canDelete, onDelete, onDragStart }: CardProps) {
           <span className="kb-card__author">{task.created_by_name}</span>
         )}
         {canDelete && (
-          <button
-            className="kb-card__del"
-            onClick={() => onDelete(task.id)}
-            aria-label="Delete task"
-          >
-            ×
-          </button>
+          <button className="kb-card__del" onClick={() => onDelete(task.id)} aria-label="Delete task">×</button>
         )}
       </div>
     </div>
@@ -188,6 +237,15 @@ export function WorkplaceKanban({ currentRole }: Props) {
     await fetch(`/api/workplace/tasks?id=${id}`, { method: 'DELETE' });
   };
 
+  const handleUpdate = useCallback(async (id: string, patch: Partial<Pick<Task, 'title' | 'description' | 'repo_url'>>) => {
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t));
+    await fetch('/api/workplace/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...patch }),
+    });
+  }, []);
+
   const handleDrop = async (targetStatus: TaskStatus) => {
     if (!dragging || dragging.status === targetStatus) {
       setDragging(null); setDragOver(null); return;
@@ -237,7 +295,9 @@ export function WorkplaceKanban({ currentRole }: Props) {
                         key={t.id}
                         task={t}
                         canDelete={canDelete}
+                        canEdit={canEdit}
                         onDelete={handleDelete}
+                        onUpdate={handleUpdate}
                         onDragStart={setDragging}
                       />
                     ))

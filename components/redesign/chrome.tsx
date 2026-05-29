@@ -75,6 +75,14 @@ export function TopNav({ locale, onLocale, t }: TopNavProps) {
           })}
         </div>
         <div className="top-nav__meta">
+          <a
+            href={`/${locale}/search`}
+            className="top-nav__link"
+            title="Search"
+            style={{ fontSize: 15, opacity: 0.7 }}
+          >
+            ⌕
+          </a>
           <span className="pulse"></span>
           <span>{molaData.status.tz}</span>
           <Clock />

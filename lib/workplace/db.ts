@@ -273,6 +273,18 @@ export async function updateTaskStatus(id: string, status: TaskStatus, position?
   } catch { return false; }
 }
 
+export async function updateTaskFields(
+  id: string,
+  fields: { title?: string; description?: string | null; repo_url?: string | null },
+): Promise<boolean> {
+  const c = client();
+  if (!c) return false;
+  try {
+    await c.from('workplace_tasks').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id);
+    return true;
+  } catch { return false; }
+}
+
 export async function deleteTask(id: string): Promise<boolean> {
   const c = client();
   if (!c) return false;

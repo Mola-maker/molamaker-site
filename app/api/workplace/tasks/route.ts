@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWPSession } from '@/lib/workplace/session';
-import { listTasks, createTask, updateTaskStatus, deleteTask, type TaskStatus } from '@/lib/workplace/db';
+import { listTasks, createTask, updateTaskStatus, updateTaskFields, deleteTask, type TaskStatus } from '@/lib/workplace/db';
 
 // GET /api/workplace/tasks — all roles
 export async function GET() {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ data: task }, { status: 201 });
 }
 
-// PATCH /api/workplace/tasks — contributor+ (move card)
+// PATCH /api/workplace/tasks — contributor+ (move card OR edit fields)
 export async function PATCH(req: NextRequest) {
   const session = await getWPSession();
   if (!session) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
@@ -42,11 +42,24 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const id = String(body.id ?? '').trim();
-  const status = body.status as TaskStatus;
-  if (!id || !['todo', 'doing', 'done'].includes(status)) {
-    return NextResponse.json({ error: 'id and valid status required' }, { status: 400 });
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  // Field edit (title / description / repo_url)
+  if ('title' in body || 'description' in body || 'repo_url' in body) {
+    const fields: { title?: string; description?: string | null; repo_url?: string | null } = {};
+    if ('title' in body) fields.title = String(body.title ?? '').trim().slice(0, 200) || undefined;
+    if ('description' in body) fields.description = body.description ? String(body.description).slice(0, 1000) : null;
+    if ('repo_url' in body) fields.repo_url = body.repo_url ? String(body.repo_url) : null;
+    const ok = await updateTaskFields(id, fields);
+    if (!ok) return NextResponse.json({ error: 'update failed' }, { status: 500 });
+    return NextResponse.json({ ok: true });
   }
 
+  // Status move
+  const status = body.status as TaskStatus;
+  if (!['todo', 'doing', 'done'].includes(status)) {
+    return NextResponse.json({ error: 'valid status required' }, { status: 400 });
+  }
   const ok = await updateTaskStatus(id, status, typeof body.position === 'number' ? body.position : undefined);
   if (!ok) return NextResponse.json({ error: 'update failed' }, { status: 500 });
   return NextResponse.json({ ok: true });

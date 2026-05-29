@@ -47,6 +47,7 @@ type Tweaks = {
   dynamicWords: boolean;
   backdropBg: string;
   backdropOpacity: number;
+  darkMode: boolean;
 };
 
 const TWEAK_DEFAULTS: Tweaks = {
@@ -63,6 +64,7 @@ const TWEAK_DEFAULTS: Tweaks = {
   dynamicWords: true,
   backdropBg: '/redesign/miku-bg-2.gif',
   backdropOpacity: 0.14,
+  darkMode: false,
 };
 
 function variantLabel(v: string) {
@@ -159,6 +161,11 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
     document.body.style.cursor = tweaks.cursor ? 'none' : 'auto';
     document.body.dataset.grain = tweaks.grain ? '1' : '0';
     document.body.dataset.dyn = tweaks.dynamicWords ? '1' : '0';
+    if (tweaks.darkMode) {
+      document.body.classList.add('ink-mode');
+    } else {
+      document.body.classList.remove('ink-mode');
+    }
   }, [
     tweaks.accent,
     tweaks.displayFont,
@@ -168,6 +175,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
     tweaks.dynamicWords,
     tweaks.backdropBg,
     tweaks.backdropOpacity,
+    tweaks.darkMode,
   ]);
 
   return (
@@ -339,6 +347,9 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
           <TweakToggle label="Custom cursor" value={tweaks.cursor} onChange={(v) => setTweak('cursor', v)} />
           <TweakToggle label="Opening sequence" value={tweaks.opening} onChange={(v) => setTweak('opening', v)} />
           <TweakToggle label="Paper grain" value={tweaks.grain} onChange={(v) => setTweak('grain', v)} />
+        </TweakSection>
+        <TweakSection label="Theme">
+          <TweakToggle label="Ink (dark) mode" value={tweaks.darkMode} onChange={(v) => setTweak('darkMode', v)} />
         </TweakSection>
       </TweaksPanel>
     </>
