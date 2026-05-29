@@ -79,8 +79,9 @@ export function VisitorConstellation() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx2d = canvas.getContext('2d');
+    if (!ctx2d) return;
+    const ctx = ctx2d; // non-null binding so closures keep the narrowed type
 
     const resize = () => {
       canvas.width  = canvas.offsetWidth  * devicePixelRatio;

@@ -44,12 +44,15 @@ function PlanetsSection() {
         scrollTrigger: { trigger: sectionRef.current, start: 'top 65%', toggleActions: 'play none none reverse' },
       },
     );
-    gsap.fromTo(sectionRef.current?.querySelector('.journey-sun'),
-      { opacity: 0, scale: 0 },
-      { opacity: 1, scale: 1, duration: 1.1, ease: 'elastic.out(1,0.5)',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 70%', toggleActions: 'play none none reverse' },
-      },
-    );
+    const sun = sectionRef.current?.querySelector('.journey-sun');
+    if (sun) {
+      gsap.fromTo(sun,
+        { opacity: 0, scale: 0 },
+        { opacity: 1, scale: 1, duration: 1.1, ease: 'elastic.out(1,0.5)',
+          scrollTrigger: { trigger: sectionRef.current, start: 'top 70%', toggleActions: 'play none none reverse' },
+        },
+      );
+    }
   }, { scope: sectionRef });
 
   return (

@@ -90,8 +90,9 @@ export function ReadingGraph({ posts, locale }: { posts: PostNode[]; locale: str
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || posts.length < 2) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx2d = canvas.getContext('2d');
+    if (!ctx2d) return;
+    const ctx = ctx2d; // non-null binding so closures (tick) keep the narrowed type
 
     const W = canvas.offsetWidth;
     const H = canvas.offsetHeight;
