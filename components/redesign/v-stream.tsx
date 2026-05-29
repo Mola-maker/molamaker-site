@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { I18nBlock, Locale, Signal } from './data';
 import { molaData } from './data';
 import { AButton, HoverText, useReveal } from './atoms';
+import { VisitorConstellation } from '@/components/visitor-constellation';
 
 type Props = { t: I18nBlock; locale: Locale };
 
@@ -197,6 +198,10 @@ export function VStream({ t, locale }: Props) {
             <div className="row"><span className="k">guests / mo</span><span className="v">18</span></div>
             <div className="row"><span className="k">depth</span><span className="v">tap a row →</span></div>
           </aside>
+        </section>
+
+        <section className="reveal" style={{ marginBottom: 32 }}>
+          <VisitorConstellation />
         </section>
 
         <div className="stream-filters reveal" role="tablist">

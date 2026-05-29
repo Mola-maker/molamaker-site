@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { TopNav, Footer } from './chrome';
 import { molaData, type Locale } from './data';
+import { ReadingGraph } from '@/components/reading-graph';
 
-type PostMeta = { slug: string; title: string; date: string; read_time: number; excerpt: string };
+type PostMeta = { slug: string; title: string; date: string; read_time: number; excerpt: string; tag?: string };
 
 type Props = { posts: PostMeta[]; locale: Locale };
 
@@ -38,6 +39,11 @@ export default function BlogListReader({ posts, locale }: Props) {
                 No posts yet. Add markdown files to <code>content/</code>.
               </p>
             )}
+
+            <ReadingGraph
+              posts={posts.map((p) => ({ slug: p.slug, title: p.title, tag: p.tag ?? 'notes', read_time: p.read_time }))}
+              locale={locale}
+            />
 
             <div className="blog-list__grid">
               {posts.map((p) => (

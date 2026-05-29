@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "i18n:check": "tsx scripts/check-i18n.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:types": "supabase gen types typescript --linked > supabase/types/database.ts",

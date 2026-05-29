@@ -1,11 +1,15 @@
 import { NextRequest } from 'next/server';
 import { messageBus } from '@/lib/workplace/bus';
 import type { BusMessage } from '@/lib/workplace/bus';
+import { getWPSession } from '@/lib/workplace/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const session = await getWPSession();
+  if (!session) return new Response('unauthenticated', { status: 401 });
+
   const history = messageBus.getHistory(50);
 
   const stream = new ReadableStream({

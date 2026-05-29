@@ -7,6 +7,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WorkplaceAuth } from './workplace-auth';
+import WorkplaceTeam from './workplace-team';
+import WorkplaceActivity from './workplace-activity';
+import { WorkplaceKanban } from './workplace-kanban';
 import type { BusMessage } from '@/lib/workplace/bus';
 
 type WorkflowStatus = 'live' | 'offline' | 'starting' | 'error';
@@ -421,6 +424,17 @@ export function VWorkplace() {
           </div>
           <MessageBusPanel />
         </div>
+
+        {/* Kanban board — all authenticated roles */}
+        <WorkplaceKanban currentRole={user.role as 'owner' | 'admin' | 'contributor' | 'viewer'} />
+
+        {/* Team + Activity — visible to admins and the owner */}
+        {(user.role === 'admin' || user.role === 'owner') && (
+          <>
+            <WorkplaceTeam currentRole={user.role as 'owner' | 'admin' | 'contributor' | 'viewer'} />
+            <WorkplaceActivity />
+          </>
+        )}
       </div>
 
       {/* Deploy modal */}

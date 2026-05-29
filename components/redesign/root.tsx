@@ -15,6 +15,7 @@ import { VMagazine } from './v-magazine';
 import { VAtlas } from './v-atlas';
 import { VStream } from './v-stream';
 import { VWorkplace } from './v-workplace';
+import { VNotebook } from './v-notebook';
 import { MusicPlayer } from './music-player';
 import { AstrbotChat } from './astrbot-chat';
 import {
@@ -30,7 +31,7 @@ import {
   useTweaks,
 } from './tweaks';
 
-type Variant = 'terminal' | 'magazine' | 'atlas' | 'stream' | 'workplace';
+type Variant = 'terminal' | 'magazine' | 'atlas' | 'stream' | 'workplace' | 'notebook';
 
 type Tweaks = {
   variant: Variant;
@@ -46,6 +47,7 @@ type Tweaks = {
   dynamicWords: boolean;
   backdropBg: string;
   backdropOpacity: number;
+  darkMode: boolean;
 };
 
 const TWEAK_DEFAULTS: Tweaks = {
@@ -62,10 +64,11 @@ const TWEAK_DEFAULTS: Tweaks = {
   dynamicWords: true,
   backdropBg: '/redesign/miku-bg-2.gif',
   backdropOpacity: 0.14,
+  darkMode: false,
 };
 
 function variantLabel(v: string) {
-  return ({ terminal: 'no. 01', magazine: 'no. 02', atlas: 'no. 03', stream: 'no. 04', workplace: 'no. 05' } as Record<string, string>)[v] || v;
+  return ({ terminal: 'no. 01', magazine: 'no. 02', atlas: 'no. 03', stream: 'no. 04', workplace: 'no. 05', notebook: 'no. 06' } as Record<string, string>)[v] || v;
 }
 
 type RootProps = { initialLocale: Locale };
@@ -86,6 +89,18 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [variant, setVariant] = useState<Variant>(tweaks.variant || 'terminal');
   const [locale, setLocale] = useState<Locale>(tweaks.locale || initialLocale);
+  // WeChat OAuth (and shareable deep links) redirect back to `/?variant=workplace`.
+  // Honor that hint once on mount so the dashboard opens directly.
+  useLayoutEffect(() => {
+    try {
+      const v = new URLSearchParams(window.location.search).get('variant');
+      const valid: Variant[] = ['terminal', 'magazine', 'atlas', 'stream', 'workplace', 'notebook'];
+      if (v && valid.includes(v as Variant) && v !== tweaks.variant) {
+        setVariant(v as Variant);
+        setTweak('variant', v as Variant);
+      }
+    } catch { /* ignore */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [transitionFor, setTransitionFor] = useState<Variant | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [localeFlashing, setLocaleFlashing] = useState(false);
@@ -146,6 +161,11 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
     document.body.style.cursor = tweaks.cursor ? 'none' : 'auto';
     document.body.dataset.grain = tweaks.grain ? '1' : '0';
     document.body.dataset.dyn = tweaks.dynamicWords ? '1' : '0';
+    if (tweaks.darkMode) {
+      document.body.classList.add('ink-mode');
+    } else {
+      document.body.classList.remove('ink-mode');
+    }
   }, [
     tweaks.accent,
     tweaks.displayFont,
@@ -155,11 +175,12 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
     tweaks.dynamicWords,
     tweaks.backdropBg,
     tweaks.backdropOpacity,
+    tweaks.darkMode,
   ]);
 
   return (
     <>
-      {tweaks.opening && !opened && <Opening2 onDone={() => { sessionStorage.setItem('mola:opened', '1'); setOpened(true); }} />}
+      {tweaks.opening && !opened && <Opening2 onDone={() => { try { sessionStorage.setItem('mola:opened', '1'); } catch { /* storage disabled */ } setOpened(true); }} />}
       {tweaks.cursor && <Cursor />}
 
       <TopNav locale={locale} onLocale={changeLocale} t={i18n} />
@@ -174,6 +195,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
         )}
         {variant === 'stream' && <VStream t={i18n} locale={locale} />}
         {variant === 'workplace' && <VWorkplace />}
+        {variant === 'notebook' && <VNotebook t={i18n} locale={locale} posts={livePosts ?? undefined} guestbook={liveGuests ?? undefined} />}
       </div>
 
       {transitionFor && <MikuTransition variant={transitionFor} label={variantLabel(transitionFor)} />}
@@ -215,6 +237,8 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
               { value: 'magazine', label: 'Magazine' },
               { value: 'atlas', label: 'Atlas' },
               { value: 'stream', label: 'Stream' },
+              { value: 'workplace', label: 'Workplace' },
+              { value: 'notebook', label: 'Notebook' },
             ]}
           />
           <TweakRadio
@@ -323,6 +347,9 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
           <TweakToggle label="Custom cursor" value={tweaks.cursor} onChange={(v) => setTweak('cursor', v)} />
           <TweakToggle label="Opening sequence" value={tweaks.opening} onChange={(v) => setTweak('opening', v)} />
           <TweakToggle label="Paper grain" value={tweaks.grain} onChange={(v) => setTweak('grain', v)} />
+        </TweakSection>
+        <TweakSection label="Theme">
+          <TweakToggle label="Ink (dark) mode" value={tweaks.darkMode} onChange={(v) => setTweak('darkMode', v)} />
         </TweakSection>
       </TweaksPanel>
     </>

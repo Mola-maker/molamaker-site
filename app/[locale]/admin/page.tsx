@@ -2,6 +2,7 @@ import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Link } from '@/i18n/routing';
 import { DeleteButton } from '@/components/delete-button';
+import { GlossaryAdmin } from '@/components/glossary-admin';
 import type { Post } from '@/lib/types';
 
 export const revalidate = 0;
@@ -40,9 +41,14 @@ export default async function AdminPage() {
           <div className="label">Admin</div>
           <h2>Posts</h2>
         </div>
-        <Link href="/admin/new" className="send" style={{ textDecoration: 'none' }}>
-          New Post
-        </Link>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Link href="/admin/analytics" style={{ textDecoration: 'none', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent)', letterSpacing: '0.08em', padding: '8px 14px', border: '1px solid var(--accent)', borderRadius: 4 }}>
+            Analytics ↗
+          </Link>
+          <Link href="/admin/new" className="send" style={{ textDecoration: 'none' }}>
+            New Post
+          </Link>
+        </div>
       </div>
 
       {list.length === 0 ? (
@@ -95,6 +101,7 @@ export default async function AdminPage() {
           </tbody>
         </table>
       )}
+      <GlossaryAdmin />
     </div>
   );
 }

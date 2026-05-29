@@ -12,14 +12,14 @@ export async function savePost(formData: FormData) {
   await requireAdmin();
   const locale = await getLocale();
 
-  const existingSlug = (formData.get('existing_slug') as string) || null;
+  const existingSlug = String(formData.get('existing_slug') ?? '') || null;
 
   const parsed = PostSchema.safeParse({
-    slug: (formData.get('slug') as string).trim(),
-    title: (formData.get('title') as string).trim(),
-    excerpt: (formData.get('excerpt') as string).trim() || null,
-    content: (formData.get('content') as string) || '',
-    read_time: parseInt(formData.get('read_time') as string) || 5,
+    slug: String(formData.get('slug') ?? '').trim(),
+    title: String(formData.get('title') ?? '').trim(),
+    excerpt: String(formData.get('excerpt') ?? '').trim() || null,
+    content: String(formData.get('content') ?? ''),
+    read_time: parseInt(String(formData.get('read_time') ?? ''), 10) || 5,
     published: formData.get('published') === 'on',
   });
 
@@ -52,10 +52,14 @@ export async function savePost(formData: FormData) {
   };
 
   if (existingSlug && existingSlug !== slug) {
-    await supabase.from('posts').delete().eq('slug', existingSlug);
-    const { error: insertError } = await supabase.from('posts').insert(postData);
-    if (insertError) {
-      logError('admin/savePost', 'Insert failed', insertError);
+    // Rename in place so a failure (e.g. the new slug collides with another
+    // post) can't delete the original and lose the content.
+    const { error: renameError } = await supabase
+      .from('posts')
+      .update(postData)
+      .eq('slug', existingSlug);
+    if (renameError) {
+      logError('admin/savePost', 'Rename failed', renameError);
       redirect(`/${locale}/admin/edit/${existingSlug}?error=save_failed`);
     }
   } else {

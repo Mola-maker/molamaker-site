@@ -5,7 +5,11 @@ import { useState, useEffect } from 'react';
 type Props = { onAuth: () => void };
 
 export function WorkplaceAuth({ onAuth }: Props) {
-  const [tab, setTab] = useState<'wechat' | 'phone'>('phone');
+  const [tab, setTab] = useState<'wechat' | 'phone' | 'key'>('phone');
+  // Admin key state
+  const [adminKey, setAdminKey] = useState('');
+  const [adminName, setAdminName] = useState('');
+  const [keySubmitting, setKeySubmitting] = useState(false);
   // Phone OTP state
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
@@ -51,6 +55,23 @@ export function WorkplaceAuth({ onAuth }: Props) {
     } finally { setSending(false); }
   };
 
+  const signInWithKey = async () => {
+    if (!adminKey.trim()) { setError('Admin key required'); return; }
+    setKeySubmitting(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/workplace/auth/key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: adminKey.trim(), name: adminName.trim() || undefined }),
+      });
+      const j = await r.json() as { ok?: boolean; error?: string };
+      if (!r.ok || !j.ok) { setError(j.error ?? 'Sign-in failed'); return; }
+      onAuth();
+    } catch { setError('Network error'); }
+    finally { setKeySubmitting(false); }
+  };
+
   const verify = async () => {
     if (!code.trim() || !name.trim()) { setError('Name and verification code required'); return; }
     setVerifying(true);
@@ -79,6 +100,9 @@ export function WorkplaceAuth({ onAuth }: Props) {
           </button>
           <button className={`wp-auth-tab${tab === 'wechat' ? ' is-active' : ''}`} onClick={() => setTab('wechat')}>
             微 WeChat
+          </button>
+          <button className={`wp-auth-tab${tab === 'key' ? ' is-active' : ''}`} onClick={() => setTab('key')}>
+            ⌘ Admin key
           </button>
         </div>
 
@@ -135,6 +159,34 @@ export function WorkplaceAuth({ onAuth }: Props) {
               )}
               {error && <div className="wp-auth__error">{error}</div>}
               <p className="wp-auth__hint">Accounts are scoped to this workspace.<br />Your IP and device info will be recorded.</p>
+            </div>
+          )}
+
+          {tab === 'key' && (
+            <div className="wp-phone">
+              <label className="wp-phone__label">Display name</label>
+              <input
+                className="wp-phone__name"
+                type="text"
+                placeholder="Owner"
+                value={adminName}
+                onChange={(e) => setAdminName(e.target.value)}
+              />
+              <label className="wp-phone__label">Admin key</label>
+              <input
+                className="wp-phone__name"
+                type="password"
+                placeholder="••••••••••••"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && signInWithKey()}
+                autoComplete="off"
+              />
+              <button className="wp-phone__send" onClick={signInWithKey} disabled={keySubmitting}>
+                {keySubmitting ? 'Signing in…' : 'Sign in as owner →'}
+              </button>
+              {error && <div className="wp-auth__error">{error}</div>}
+              <p className="wp-auth__hint">Direct owner access via the shared key.<br />Your IP and device info will be recorded.</p>
             </div>
           )}
 

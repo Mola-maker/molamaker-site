@@ -21,11 +21,13 @@ type Props = {
 type Pos = { x: number; y: number };
 
 export function VAtlas({ t, locale, bgOpacity = 0.18, bgSrc, posts, guestbook, repos }: Props) {
+  // Fall back to bundled data when a live list is missing OR empty —
+  // downstream code dereferences posts[0]/repos[0], which crashes on [].
   const d = {
     ...molaData,
-    posts: posts ?? molaData.posts,
+    posts: posts && posts.length ? posts : molaData.posts,
     guestbook: guestbook ?? molaData.guestbook,
-    repos: repos ?? molaData.repos,
+    repos: repos && repos.length ? repos : molaData.repos,
   };
   const [active, setActive] = useState<string>('writing');
   const [exploded, setExploded] = useState<string | null>(null);
