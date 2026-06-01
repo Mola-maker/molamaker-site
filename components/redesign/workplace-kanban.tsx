@@ -55,6 +55,8 @@ function EditableField({
   const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
 
+  // Sync draft when the external value changes and we're not mid-edit.
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
   useLayoutEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
   const commit = () => { onSave(draft.trim()); setEditing(false); };

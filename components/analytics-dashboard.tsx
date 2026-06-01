@@ -136,8 +136,7 @@ export function AnalyticsDashboard() {
       <div className="label">Admin</div>
       <h2 style={{ marginBottom: 8 }}>Analytics</h2>
       <p style={{ ...mono, fontSize: 11, color: 'var(--ink-soft)', marginBottom: 40 }}>
-        <a href="analytics" style={{ color: 'var(--ink-soft)' }}>← back</a>
-        {' · '}Site traffic · last 30 days
+        Analytics · Site traffic · last 30 days
       </p>
 
       {/* Summary stats */}

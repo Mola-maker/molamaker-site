@@ -56,9 +56,10 @@ export function GlossaryAdmin() {
   const remove = async (t: string) => {
     if (!confirm(`Delete "${t}"?`)) return;
     try {
-      await fetch(`/api/glossary?term=${encodeURIComponent(t)}`, { method: 'DELETE' });
+      const r = await fetch(`/api/glossary?term=${encodeURIComponent(t)}`, { method: 'DELETE' });
+      if (!r.ok) { setErr(`Delete failed`); return; }
       setEntries((prev) => prev.filter((e) => e.term !== t));
-    } catch { /* best-effort */ }
+    } catch { setErr('Network error'); }
   };
 
   return (
