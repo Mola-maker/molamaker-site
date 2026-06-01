@@ -21,9 +21,9 @@ function score(text: string, q: string): number {
   const ql = q.toLowerCase();
   if (lower === ql) return 10;
   if (lower.startsWith(ql)) return 7;
-  if (lower.includes(ql)) return 4;
-  // word boundary match
-  if (lower.split(/\W+/).some((w) => w.startsWith(ql))) return 3;
+  // word-boundary start scores higher than an arbitrary substring match
+  if (lower.split(/\W+/).some((w) => w.startsWith(ql))) return 5;
+  if (lower.includes(ql)) return 3;
   return 0;
 }
 
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
   }
 
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim().slice(0, 100);
-  const locale = req.nextUrl.searchParams.get('locale') ?? 'en';
+  const rawLocale = req.nextUrl.searchParams.get('locale') ?? 'en';
+  const locale = ['en', 'zh'].includes(rawLocale) ? rawLocale : 'en';
   if (q.length < 2) return NextResponse.json({ data: [] });
 
   const terms = q.toLowerCase().split(/\s+/).filter(Boolean);

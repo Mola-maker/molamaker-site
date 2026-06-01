@@ -122,7 +122,7 @@ export function SearchPanel({ locale }: { locale: string }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxWidth: 760 }}>
             {results.map((hit, i) => (
               <a
-                key={i}
+                key={hit.url ?? hit.slug ?? i}
                 href={hit.url ?? '#'}
                 style={{
                   display: 'block',

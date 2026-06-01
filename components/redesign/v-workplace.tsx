@@ -10,6 +10,7 @@ import { WorkplaceAuth } from './workplace-auth';
 import WorkplaceTeam from './workplace-team';
 import WorkplaceActivity from './workplace-activity';
 import { WorkplaceKanban } from './workplace-kanban';
+import { WorkplaceMath } from './workplace-math';
 import type { BusMessage } from '@/lib/workplace/bus';
 
 type WorkflowStatus = 'live' | 'offline' | 'starting' | 'error';
@@ -427,6 +428,9 @@ export function VWorkplace() {
 
         {/* Kanban board — all authenticated roles */}
         <WorkplaceKanban currentRole={user.role as 'owner' | 'admin' | 'contributor' | 'viewer'} />
+
+        {/* Math assistant — all authenticated roles */}
+        <WorkplaceMath />
 
         {/* Team + Activity — visible to admins and the owner */}
         {(user.role === 'admin' || user.role === 'owner') && (
