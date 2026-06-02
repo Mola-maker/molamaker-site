@@ -176,7 +176,26 @@
   display: flex;
   align-items: flex-end;
   gap: 8px;
+  /* Each new message slides up + fades in as it mounts. */
+  animation: abMsgIn 300ms var(--ease-out-quart) both;
 }
+@keyframes abMsgIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-msg { animation: none; }
+}
+/* Inline images / photos returned by the bot */
+.ab-msg__img {
+  display: block;
+  max-width: 100%;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+}
+.ab-msg__img:only-child,
+.ab-msg__img:first-child { margin-top: 0; }
 .ab-msg--user {
   flex-direction: row-reverse;
 }
@@ -232,12 +251,69 @@
 /* Footer input */
 .ab-panel__footer {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
   border-top: 1px solid var(--rule);
   background: var(--bg-elev);
 }
+.ab-panel__input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+/* Attach (photo / file) button */
+.ab-panel__attach {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-size: 15px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  transition: border-color 160ms, color 160ms;
+}
+.ab-panel__attach:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.ab-panel__attach:disabled { opacity: 0.45; cursor: default; }
+/* Selected-attachment preview chip */
+.ab-attach {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.ab-attach__thumb {
+  width: 36px; height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.ab-attach__file { font-size: 18px; flex-shrink: 0; }
+.ab-attach__name {
+  flex: 1;
+  font-size: 11px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ab-attach__remove {
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  transition: color 140ms;
+}
+.ab-attach__remove:hover { color: var(--accent); }
 .ab-panel__input {
   flex: 1;
   resize: none;

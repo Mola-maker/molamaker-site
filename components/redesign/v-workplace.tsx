@@ -396,14 +396,9 @@ export function VWorkplace() {
                 >×</button>
               </button>
             ))}
-            {portTabs.length === 0 && (
-              <span style={{ padding: '10px 16px', fontSize: '10.5px', color: 'var(--ink-soft)' }}>
-                Open a workflow to view its UI here
-              </span>
-            )}
           </div>
           <div className={`wp-port-view${!currentTab ? ' wp-port-view--empty' : ''}`}>
-            {!currentTab && <span>No port selected</span>}
+            {!currentTab && <span>Open a workflow above to preview it here</span>}
             {currentTab?.type === 'iframe' && (
               <iframe
                 key={currentTab.id}

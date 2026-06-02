@@ -18,6 +18,20 @@ const PROVIDER_LABELS: Record<Provider, string> = {
 
 const GGB_CONTAINER_ID = 'wp-ggb-applet';
 
+// GeoGebra deploy-script sources, tried in order. A self-hosted mirror
+// (NEXT_PUBLIC_GEOGEBRA_BASE_URL — point it at the unzipped bundle's `GeoGebra/`
+// folder, which holds deployggb.js + HTML5/5.0/web3d/) is preferred because
+// cdn.geogebra.org is slow/blocked in mainland China; the public CDNs stay as
+// automatic fallbacks. The CDN's deployggb.js auto-resolves its codebase, but
+// the bundle's does NOT — so for a self-hosted source we pin it via
+// setHTML5Codebase (see setupApplet). Layout/hosting: deploy/geogebra/SETUP.md.
+const GGB_SELF = process.env.NEXT_PUBLIC_GEOGEBRA_BASE_URL?.replace(/\/+$/, '');
+const GGB_SOURCES: Array<{ url: string; selfHosted: boolean }> = [
+  ...(GGB_SELF ? [{ url: GGB_SELF, selfHosted: true }] : []),
+  { url: 'https://cdn.geogebra.org/apps', selfHosted: false },
+  { url: 'https://www.geogebra.org/apps', selfHosted: false },
+];
+
 function parseGgbBlock(text: string): string[] {
   const m = text.match(/```geogebra\n([\s\S]*?)```/m);
   if (!m) return [];
@@ -58,6 +72,8 @@ export function WorkplaceMath() {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [ggbReady, setGgbReady] = useState(false);
+  const [ggbError, setGgbError] = useState<string | null>(null);
+  const [ggbAttempt, setGgbAttempt] = useState(0);
   const [error, setError] = useState('');
 
   const apiRef = useRef<GGBApi | null>(null);
@@ -83,43 +99,90 @@ export function WorkplaceMath() {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
-  // Load GeoGebra applet (once)
+  // Load the GeoGebra applet from the first reachable source in GGB_SOURCES,
+  // auto-advancing on a failed/slow source (15s timeout + onerror) and surfacing
+  // a retryable error only once every source is exhausted — so it never hangs on
+  // "Loading GeoGebra…". Re-runs when ggbAttempt changes (each value = one source).
   useEffect(() => {
     const win = window as Window & {
       GGBApplet?: new (params: Record<string, unknown>, html5: boolean) => {
         inject: (id: string) => void;
+        setHTML5Codebase?: (path: string) => void;
       };
-      __ggbLoaded?: boolean;
+    };
+    const source = GGB_SOURCES[ggbAttempt];
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    // Move to the next source, or report failure once all are exhausted.
+    const fail = () => {
+      if (cancelled) return;
+      if (timer) clearTimeout(timer);
+      if (ggbAttempt + 1 < GGB_SOURCES.length) setGgbAttempt(ggbAttempt + 1);
+      else setGgbError('Could not load GeoGebra from any source. Check your network/region, then retry.');
     };
 
     const setupApplet = () => {
-      if (!win.GGBApplet) return;
-      const applet = new win.GGBApplet({
-        appName: 'geometry',
-        width: 600,
-        height: 500,
-        showToolBar: true,
-        showAlgebraInput: true,
-        showMenuBar: false,
-        enableRightClick: false,
-        appletOnLoad: (api: GGBApi) => {
-          apiRef.current = api;
-          setGgbReady(true);
-        },
-      }, true);
-      applet.inject(GGB_CONTAINER_ID);
+      if (cancelled) return;
+      if (!win.GGBApplet || !source) { fail(); return; }
+      try {
+        const container = document.getElementById(GGB_CONTAINER_ID);
+        if (container) container.innerHTML = ''; // clean slate on retry
+        const applet = new win.GGBApplet({
+          appName: 'geometry',
+          width: 600,
+          height: 500,
+          showToolBar: true,
+          showAlgebraInput: true,
+          showMenuBar: false,
+          enableRightClick: false,
+          appletOnLoad: (api: GGBApi) => {
+            if (cancelled) return;
+            if (timer) clearTimeout(timer);
+            apiRef.current = api;
+            setGgbReady(true);
+            setGgbError(null);
+          },
+        }, true);
+        // Self-hosted bundle: pin the app codebase to the mirror (the bundle's
+        // deployggb.js doesn't auto-resolve like the CDN's does).
+        if (source.selfHosted && typeof applet.setHTML5Codebase === 'function') {
+          applet.setHTML5Codebase(`${source.url}/HTML5/5.0/web3d/`);
+        }
+        applet.inject(GGB_CONTAINER_ID);
+      } catch {
+        fail();
+      }
     };
 
-    if (win.__ggbLoaded) {
+    // Fail-safe: if this source hasn't initialized in 15s, advance / show retry.
+    timer = setTimeout(() => {
+      if (!cancelled && !apiRef.current) fail();
+    }, 15_000);
+
+    if (win.GGBApplet) {
+      // deployggb.js already loaded from an earlier source — reuse it.
       setupApplet();
-      return;
+    } else if (!source) {
+      fail();
+    } else {
+      // Fresh <script> each attempt so advancing/retry actually re-fetches.
+      document.getElementById('ggb-deploy-script')?.remove();
+      const script = document.createElement('script');
+      script.id = 'ggb-deploy-script';
+      script.src = `${source.url}/deployggb.js`;
+      script.onload = setupApplet;
+      script.onerror = fail;
+      document.head.appendChild(script);
     }
 
-    win.__ggbLoaded = true;
-    const script = document.createElement('script');
-    script.src = 'https://cdn.geogebra.org/apps/deployggb.js';
-    script.onload = setupApplet;
-    document.head.appendChild(script);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [ggbAttempt]);
+
+  const retryGgb = useCallback(() => {
+    setGgbError(null);
+    setGgbReady(false);
+    setGgbAttempt(0); // restart from the preferred (self-hosted) source
   }, []);
 
   const applyCommands = useCallback((text: string) => {
@@ -282,9 +345,15 @@ export function WorkplaceMath() {
 
         {/* ── Right: GeoGebra pane ───────────────────────── */}
         <div className="wp-math__canvas">
-          {!ggbReady && (
+          {!ggbReady && !ggbError && (
             <div className="wp-math__ggb-loading">
               Loading GeoGebra…
+            </div>
+          )}
+          {!ggbReady && ggbError && (
+            <div className="wp-math__ggb-error">
+              <span className="wp-math__ggb-error-msg">⚠ {ggbError}</span>
+              <button className="wp-math__action-btn" onClick={retryGgb}>Retry</button>
             </div>
           )}
           <div

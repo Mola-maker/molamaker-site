@@ -22,7 +22,7 @@ type ProviderResult =
 
 // ── Provider 1: AstrBot ───────────────────────────────────────────────────
 async function tryAstrBot(
-  message: string,
+  message: string | Array<Record<string, unknown>>,
   sessionId: string | undefined,
   username: string,
 ): Promise<ProviderResult> {
@@ -187,25 +187,53 @@ export async function POST(req: NextRequest) {
   const sessionId = String(body.session_id ?? '').slice(0, 64) || undefined;
   const username  = String(body.username  ?? 'web-visitor').slice(0, 64);
 
-  if (!rawMessage) {
+  // Optional attachments — image/file/record/video referencing AstrBot
+  // attachment_ids from POST /api/astrbot/upload. Coze/DeepSeek can't resolve
+  // these ids, so attachment messages skip the fallback and go AstrBot-only.
+  const ATTACH_TYPES = new Set(['image', 'file', 'record', 'video']);
+  const attachments = (Array.isArray(body.attachments) ? body.attachments : [])
+    .map((a) => (a && typeof a === 'object' ? a as Record<string, unknown> : {}))
+    .map((a) => ({ type: String(a.type ?? ''), attachment_id: String(a.attachment_id ?? '') }))
+    .filter((a) => ATTACH_TYPES.has(a.type) && /^[A-Za-z0-9_-]{8,64}$/.test(a.attachment_id))
+    .slice(0, 6);
+
+  if (!rawMessage && attachments.length === 0) {
     return NextResponse.json({ error: { code: 'validation_error', message: 'message required' } }, { status: 400 });
   }
 
-  const msgParsed = chatMessageSchema.pick({ message: true }).safeParse({ message: rawMessage });
-  if (!msgParsed.success) {
+  let text = '';
+  if (rawMessage) {
+    const msgParsed = chatMessageSchema.pick({ message: true }).safeParse({ message: rawMessage });
+    if (!msgParsed.success) {
+      return NextResponse.json(
+        { error: { code: 'validation_error', message: msgParsed.error.issues[0]?.message ?? 'Invalid input' } },
+        { status: 400 },
+      );
+    }
+    text = msgParsed.data.message;
+  }
+
+  // Attachment messages: build an AstrBot message chain, AstrBot only.
+  if (attachments.length > 0) {
+    const chain: Array<Record<string, unknown>> = [];
+    if (text) chain.push({ type: 'plain', text });
+    for (const a of attachments) chain.push({ type: a.type, attachment_id: a.attachment_id });
+    const result = await tryAstrBot(chain, sessionId, username);
+    if (result.ok) {
+      return NextResponse.json({ data: { message: result.reply, provider: result.provider } });
+    }
     return NextResponse.json(
-      { error: { code: 'validation_error', message: msgParsed.error.issues[0]?.message ?? 'Invalid input' } },
-      { status: 400 },
+      { error: { code: 'astrbot_unavailable', message: 'Attachments need AstrBot, which is currently unavailable.', detail: result.reason } },
+      { status: 502 },
     );
   }
-  const message = msgParsed.data.message;
 
+  // Text-only: AstrBot → Coze → DeepSeek waterfall.
   const attempts: string[] = [];
-
   for (const run of [
-    () => tryAstrBot(message, sessionId, username),
-    () => tryCoze(message, sessionId ?? username),
-    () => tryDeepSeek(message),
+    () => tryAstrBot(text, sessionId, username),
+    () => tryCoze(text, sessionId ?? username),
+    () => tryDeepSeek(text),
   ]) {
     const result = await run();
     if (result.ok) {
