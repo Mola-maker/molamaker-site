@@ -4,6 +4,7 @@
 // orbit halo around Miku, and a per-variant transition sprite.
 
 import { useEffect, useRef, useState } from 'react';
+import { assetUrl } from '@/lib/asset-url';
 
 const ORBIT_TEXTS = [
   'systems', 'intelligence', 'CUDA', '边缘', 'kernel', 'agentic',
@@ -132,7 +133,7 @@ export function Opening2({ onDone }: Opening2Props) {
           playsInline
           tabIndex={-1}
         >
-          <source src="/photo/2677973855/miku-compressed.mp4" type="video/mp4" />
+          <source src={assetUrl('/photo/2677973855/miku-compressed.mp4')} type="video/mp4" />
         </video>
       </div>
       <div className="opening2__rays"></div>
@@ -157,7 +158,7 @@ export function Opening2({ onDone }: Opening2Props) {
 
         <div className="opening2__miku">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/redesign/miku-dance.gif" alt="Miku" />
+          <img src={assetUrl('/redesign/miku-dance.gif')} alt="Miku" />
         </div>
 
         <div className="opening2__orbit">
@@ -212,10 +213,12 @@ export function Opening2({ onDone }: Opening2Props) {
 }
 
 const MIKU_GESTURES: Record<string, { src: string; label: string; emoji: string }> = {
-  terminal: { src: '/redesign/miku-preview.jpg', label: 'thumbs-up', emoji: '👍' },
-  magazine: { src: '/redesign/miku-dance.gif', label: 'twirls in', emoji: '💃' },
-  atlas: { src: '/redesign/miku-orbit.gif', label: 'flying', emoji: '✦' },
-  stream: { src: '/redesign/miku-preview.jpg', label: 'waves', emoji: '👋' },
+  terminal: { src: assetUrl('/redesign/miku-preview.jpg'), label: 'thumbs-up', emoji: '👍' },
+  magazine: { src: assetUrl('/redesign/miku-dance.gif'), label: 'twirls in', emoji: '💃' },
+  atlas: { src: assetUrl('/redesign/miku-orbit.gif'), label: 'flying', emoji: '✦' },
+  stream: { src: assetUrl('/redesign/miku-preview.jpg'), label: 'waves', emoji: '👋' },
+  workplace: { src: assetUrl('/redesign/miku-dance.gif'), label: 'gets to work', emoji: '🛠️' },
+  notebook: { src: assetUrl('/redesign/miku-orbit.gif'), label: 'takes notes', emoji: '📓' },
 };
 
 type MikuTransitionProps = { variant: string; label: string };

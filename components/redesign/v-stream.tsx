@@ -8,6 +8,7 @@ import type { I18nBlock, Locale, Signal } from './data';
 import { molaData } from './data';
 import { AButton, HoverText, useReveal } from './atoms';
 import { VisitorConstellation } from '@/components/visitor-constellation';
+import { assetUrl } from '@/lib/asset-url';
 
 type Props = { t: I18nBlock; locale: Locale };
 
@@ -315,7 +316,7 @@ function SignalRow({ s, locale, open, onToggle, idx }: { s: Signal; locale: Loca
       {s.kind === 'song' && (
         <span className="signal-miku" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/redesign/miku-dance.gif" alt="" />
+          <img src={assetUrl('/redesign/miku-dance.gif')} alt="" />
         </span>
       )}
       <button className="signal__head" onClick={onToggle} aria-expanded={open}>

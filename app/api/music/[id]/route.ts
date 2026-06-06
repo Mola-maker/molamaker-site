@@ -21,14 +21,18 @@ export async function GET(
   try {
     let cdnUrl: string | null = null;
 
-    if (DOCKER_BASE && REAL_IP) {
+    if (DOCKER_BASE) {
       const cookies = await getNeteaseCookies();
       const headers: HeadersInit = {};
       if (cookies) headers['Cookie'] = cookies;
+      // realIP is only needed when the API server sits OUTSIDE China (to forward
+      // a CN IP past geo-blocking). On the China-hosted ECS the container's own
+      // outbound IP already passes, so it is optional there.
+      const realIp = REAL_IP ? `&realIP=${REAL_IP}` : '';
 
       for (const level of QUALITY_LEVELS) {
         const r = await fetch(
-          `${DOCKER_BASE}/song/url/v1?id=${id}&level=${level}&realIP=${REAL_IP}`,
+          `${DOCKER_BASE}/song/url/v1?id=${id}&level=${level}${realIp}`,
           { headers },
         );
         const j = await r.json();
@@ -40,7 +44,7 @@ export async function GET(
           const fresh = await getNeteaseCookies();
           if (fresh) {
             const r2 = await fetch(
-              `${DOCKER_BASE}/song/url/v1?id=${id}&level=${level}&realIP=${REAL_IP}`,
+              `${DOCKER_BASE}/song/url/v1?id=${id}&level=${level}${realIp}`,
               { headers: { Cookie: fresh } },
             );
             const j2 = await r2.json();

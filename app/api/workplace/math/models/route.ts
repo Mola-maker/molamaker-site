@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getWPSession } from '@/lib/workplace/session';
+import { getEffectiveProvider, PROVIDER_NAMES, type ProviderName } from '@/lib/workplace/settings';
+import { listProviderModels, pickDefaultModel } from '@/lib/workplace/provider-models';
+import { probeModelCatalog } from '@/lib/workplace/model-probe';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  const session = await getWPSession();
+  if (!session) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+
+  const provider = (req.nextUrl.searchParams.get('provider') ?? '').trim() as ProviderName;
+  if (!PROVIDER_NAMES.includes(provider)) {
+    return NextResponse.json({ error: 'invalid provider' }, { status: 400 });
+  }
+
+  const cfg = await getEffectiveProvider(provider);
+  if (!cfg.configured) {
+    return NextResponse.json({
+      provider,
+      configured: false,
+      models: [],
+      defaultModel: '',
+      probe: {},
+      source: 'fallback',
+      error: 'provider not configured',
+    });
+  }
+
+  const listed = await listProviderModels(provider, cfg);
+  const ids = listed.models.map((m) => m.id);
+  const probe = await probeModelCatalog(provider, cfg, ids, 3, 24);
+  const defaultModel = pickDefaultModel(listed.models, cfg.model, probe);
+
+  const models = listed.models
+    .map((m) => ({
+      ...m,
+      probe: probe[m.id] ?? { ok: false, ms: 0, error: 'not probed' },
+    }))
+    .sort((a, b) => {
+      const ao = a.probe.ok ? 0 : 1;
+      const bo = b.probe.ok ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      return a.id.localeCompare(b.id);
+    });
+
+  return NextResponse.json({
+    provider,
+    configured: true,
+    defaultModel,
+    source: listed.source,
+    listError: listed.error,
+    models,
+    probe,
+  });
+}

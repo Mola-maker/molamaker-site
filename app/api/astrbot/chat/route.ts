@@ -4,21 +4,24 @@ import { chatMessageSchema } from '@/lib/validation';
 import { validateOrigin } from '@/lib/origin';
 import { checkRate, RATE_CHAT } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
-
-// ── env ───────────────────────────────────────────────────────────────────
-const ASTRBOT_URL  = process.env.ASTRBOT_INTERNAL_URL;
-const ASTRBOT_KEY  = process.env.ASTRBOT_API_KEY;
-const COZE_KEY     = process.env.COZE_API_KEY;
-const COZE_BOT_ID  = process.env.COZE_BOT_ID;
-const COZE_BASE    = (process.env.COZE_BASE_URL ?? 'https://api.coze.cn').replace(/\/$/, '');
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
-
-const anyConfigured = () => !!(ASTRBOT_URL || COZE_KEY || DEEPSEEK_KEY);
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+import { getEffectiveProvider, type EffectiveProvider } from '@/lib/workplace/settings';
 
 // ── Provider result type ──────────────────────────────────────────────────
 type ProviderResult =
   | { ok: true;  reply: string; provider: string }
   | { ok: false; reason: string };
+
+// At least one provider must be usable (AstrBot endpoint, or a configured
+// DeepSeek/Coze key from the settings store).
+async function anyConfigured(): Promise<boolean> {
+  if (getAstrbotEnv().configured) return true;
+  const [coze, deepseek] = await Promise.all([
+    getEffectiveProvider('coze'),
+    getEffectiveProvider('deepseek'),
+  ]);
+  return coze.configured || deepseek.configured;
+}
 
 // ── Provider 1: AstrBot ───────────────────────────────────────────────────
 async function tryAstrBot(
@@ -26,16 +29,17 @@ async function tryAstrBot(
   sessionId: string | undefined,
   username: string,
 ): Promise<ProviderResult> {
-  if (!ASTRBOT_URL) return { ok: false, reason: 'astrbot: not configured' };
+  const { url, key } = getAstrbotEnv();
+  if (!url) return { ok: false, reason: 'astrbot: not configured' };
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (ASTRBOT_KEY) headers['Authorization'] = `Bearer ${ASTRBOT_KEY}`;
+  if (key) headers['Authorization'] = `Bearer ${key}`;
 
   try {
     const payload: Record<string, unknown> = { message, username, enable_streaming: false };
     if (sessionId) payload.session_id = sessionId;
 
-    const res = await fetch(`${ASTRBOT_URL}/api/v1/chat`, {
+    const res = await fetch(`${url}/api/v1/chat`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -64,12 +68,14 @@ async function tryAstrBot(
 async function tryCoze(
   message: string,
   userId: string,
+  cfg: EffectiveProvider,
 ): Promise<ProviderResult> {
-  if (!COZE_KEY || !COZE_BOT_ID) return { ok: false, reason: 'coze: not configured' };
+  if (!cfg.configured) return { ok: false, reason: 'coze: not configured' };
+  const COZE_BASE = cfg.baseUrl.replace(/\/$/, '');
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${COZE_KEY}`,
+    'Authorization': `Bearer ${cfg.apiKey}`,
   };
 
   try {
@@ -78,7 +84,7 @@ async function tryCoze(
       method: 'POST',
       headers,
       body: JSON.stringify({
-        bot_id: COZE_BOT_ID,
+        bot_id: cfg.botId,
         user_id: userId,
         additional_messages: [{ role: 'user', content: message, content_type: 'text' }],
         stream: false,
@@ -128,18 +134,18 @@ async function tryCoze(
 }
 
 // ── Provider 3: DeepSeek ──────────────────────────────────────────────────
-async function tryDeepSeek(message: string): Promise<ProviderResult> {
-  if (!DEEPSEEK_KEY) return { ok: false, reason: 'deepseek: not configured' };
+async function tryDeepSeek(message: string, cfg: EffectiveProvider): Promise<ProviderResult> {
+  if (!cfg.configured) return { ok: false, reason: 'deepseek: not configured' };
 
   try {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_KEY}`,
+        'Authorization': `Bearer ${cfg.apiKey}`,
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: cfg.model,
         messages: [{ role: 'user', content: message }],
         max_tokens: 1000,
       }),
@@ -158,7 +164,7 @@ async function tryDeepSeek(message: string): Promise<ProviderResult> {
 
 // ── GET: status probe (widget shows if any provider configured) ───────────
 export async function GET() {
-  if (!anyConfigured()) {
+  if (!(await anyConfigured())) {
     return NextResponse.json({ error: { code: 'not_configured' } }, { status: 503 });
   }
   return NextResponse.json({ status: 'ok' });
@@ -169,7 +175,7 @@ export async function POST(req: NextRequest) {
   const origin = validateOrigin(req);
   if (origin) return origin;
 
-  if (!anyConfigured()) {
+  if (!(await anyConfigured())) {
     return NextResponse.json({ error: { code: 'not_configured' } }, { status: 503 });
   }
 
@@ -229,11 +235,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Text-only: AstrBot → Coze → DeepSeek waterfall.
+  const [cozeCfg, deepseekCfg] = await Promise.all([
+    getEffectiveProvider('coze'),
+    getEffectiveProvider('deepseek'),
+  ]);
   const attempts: string[] = [];
   for (const run of [
     () => tryAstrBot(text, sessionId, username),
-    () => tryCoze(text, sessionId ?? username),
-    () => tryDeepSeek(text),
+    () => tryCoze(text, sessionId ?? username, cozeCfg),
+    () => tryDeepSeek(text, deepseekCfg),
   ]) {
     const result = await run();
     if (result.ok) {

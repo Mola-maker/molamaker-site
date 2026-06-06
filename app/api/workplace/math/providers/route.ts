@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
+import { getEffectiveProvider, PROVIDER_NAMES } from '@/lib/workplace/settings';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Which AI providers are configured for Math Studio (model lists are per-provider). */
 export async function GET() {
-  const available: string[] = [];
-  if (process.env.ANTHROPIC_API_KEY) available.push('anthropic');
-  if (process.env.DEEPSEEK_API_KEY) available.push('deepseek');
-  if (process.env.COZE_API_KEY && process.env.COZE_BOT_ID) available.push('coze');
-  return NextResponse.json({ available });
+  const entries = await Promise.all(
+    PROVIDER_NAMES.map(async (name) => {
+      const cfg = await getEffectiveProvider(name);
+      return { name, configured: cfg.configured, defaultModel: cfg.model };
+    }),
+  );
+  return NextResponse.json({
+    available: entries.filter((e) => e.configured).map((e) => e.name),
+    providers: Object.fromEntries(
+      entries.map((e) => [e.name, { configured: e.configured, defaultModel: e.defaultModel }]),
+    ),
+  });
 }

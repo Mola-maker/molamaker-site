@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from 'crypto';
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 
 const SECRET = process.env.WORKPLACE_SESSION_SECRET ?? 'dev-secret-please-set-in-env';
@@ -41,13 +41,16 @@ export function createSessionToken(session: Omit<WPSession, 'exp'>): string {
   return sign({ ...session, exp: Date.now() + TTL_MS });
 }
 
-export function setSessionCookie(res: NextResponse, token: string): NextResponse {
+export function setSessionCookie(res: NextResponse, token: string, req?: NextRequest): NextResponse {
+  // Nginx sends x-forwarded-proto; use it to decide secure flag (don't blindly
+  // trust NODE_ENV — the site may be proxied over HTTP even in production).
+  const isSecure = req?.headers.get('x-forwarded-proto') === 'https';
   res.cookies.set(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
     maxAge: TTL_MS / 1000,
     path: '/',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
   });
   return res;
 }

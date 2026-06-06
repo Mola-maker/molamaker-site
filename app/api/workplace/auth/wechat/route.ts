@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     await writeAudit({ action: 'login', userId, userName: name, ip });
 
     const res = NextResponse.redirect(new URL('/?variant=workplace', req.url));
-    return setSessionCookie(res, token);
+    return setSessionCookie(res, token, req);
   }
 
   return NextResponse.json({ error: 'missing params' }, { status: 400 });

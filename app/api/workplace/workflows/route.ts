@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWPSession } from '@/lib/workplace/session';
 import { listStoredWorkflows, addStoredWorkflow, writeAudit } from '@/lib/workplace/db';
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+
+// Resolve a reachable health/base URL for a workflow. AstrBot reuses the same
+// ASTRBOT_INTERNAL_URL the chat + proxy use, so the live/offline dot reflects the
+// real instance instead of always probing localhost.
+function healthUrlFor(wf: { id: string; url?: string; port: number }): string {
+  if (wf.url) return wf.url;
+  if (wf.id === 'astrbot') {
+    const url = getAstrbotEnv().url;
+    if (url) return url;
+  }
+  return `http://localhost:${wf.port}`;
+}
 
 export const runtime = 'nodejs';
 
@@ -16,7 +29,6 @@ export type WorkflowDef = {
 // Module-level workflow registry (persists within process)
 const registry: WorkflowDef[] = [
   { id: 'astrbot', name: 'AstrBot', port: 6185, description: 'AI chat agent platform' },
-  { id: 'claude', name: 'ClaudeCode', port: 6186, description: 'Claude CLI agent manager' },
 ];
 
 async function ping(url: string): Promise<boolean> {
@@ -42,8 +54,7 @@ export async function GET() {
 
   const results = await Promise.all(
     merged.map(async (wf) => {
-      const healthUrl = wf.url ?? `http://localhost:${wf.port}`;
-      const alive = await ping(healthUrl);
+      const alive = await ping(healthUrlFor(wf));
       return { ...wf, status: alive ? 'live' : 'offline' as const };
     })
   );

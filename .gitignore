@@ -1,8 +1,20 @@
 node_modules
 .next
 out
-.env.local
-.env*.local
+
+# Stray build/deploy artifacts that must NEVER be committed or shipped.
+# A second on-disk copy of _next/static caused a duplicate-bundle / wrong-build
+# upload risk in prod. Keep only the canonical .next from `next build`.
+_next/
+deploy/.next/
+.next.zip
+*.tar.gz
+# Environment files — never commit real secrets. Every real .env variant is
+# ignored; only *.example / *.template templates are tracked.
+.env
+.env.*
+!.env*.example
+!.env*.template
 .DS_Store
 *.log
 .vercel
@@ -16,8 +28,13 @@ tsconfig.tsbuildinfo
 login.json
 photo/
 public/photo/
+public/geogebra/
+data/workplace-settings.json*
 .omc/
 .claude/
 ONBOARDING.md 
 SHARED_TASK_NOTES.md 
 qa.txt
+test
+# Deploy artifact (large tarball, do not commit)
+deploy.tgz

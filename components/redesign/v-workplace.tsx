@@ -2,15 +2,17 @@
 
 // Variant E — Workplace
 // Auth-gated AI workflow orchestration dashboard.
-// Default tiles: AstrBot, ClaudeCode. Others added via GitHub deploy.
-// Tabs: iframe port-switcher + Claude CLI terminal. Live SSE message bus.
+// Default tiles: AstrBot + Math (GeoGebra). Others added via GitHub deploy.
+// Tabs: iframe port-switcher. Live SSE message bus.
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WorkplaceAuth } from './workplace-auth';
 import WorkplaceTeam from './workplace-team';
 import WorkplaceActivity from './workplace-activity';
+import WorkplaceSettings from './workplace-settings';
 import { WorkplaceKanban } from './workplace-kanban';
 import { WorkplaceMath } from './workplace-math';
+import { assetUrl } from '@/lib/asset-url';
 import type { BusMessage } from '@/lib/workplace/bus';
 
 type WorkflowStatus = 'live' | 'offline' | 'starting' | 'error';
@@ -24,8 +26,7 @@ type Workflow = {
   githubRepo?: string;
 };
 type WPUser = { userId: string; name: string; phone?: string; role: string };
-type PortTab = { id: string; label: string; type: 'iframe' | 'terminal'; url?: string };
-type TermLine = { type: 'stdout' | 'stderr' | 'exit' | 'error' | 'info'; text: string };
+type PortTab = { id: string; label: string; type: 'iframe'; url?: string };
 
 function fmtTime(ts: number): string {
   return new Date(ts).toLocaleTimeString('en', { hour12: false });
@@ -44,6 +45,7 @@ function DeployModal({ onClose, onDeploy }: { onClose: () => void; onDeploy: (ur
       const r = await fetch('/api/workplace/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ repoUrl: url.trim(), name: name.trim() || undefined }),
       });
       if (r.ok) { onDeploy(url.trim(), name.trim()); onClose(); }
@@ -80,77 +82,6 @@ function DeployModal({ onClose, onDeploy }: { onClose: () => void; onDeploy: (ur
   );
 }
 
-// ── Claude CLI terminal panel ────────────────────────────────────
-function ClaudeTerminal() {
-  const [lines, setLines] = useState<TermLine[]>([{ type: 'info', text: 'Claude Code CLI ready — enter a prompt and press Run' }]);
-  const [input, setInput] = useState('');
-  const [running, setRunning] = useState(false);
-  const outputRef = useRef<HTMLDivElement>(null);
-  const esRef = useRef<EventSource | null>(null);
-
-  useEffect(() => {
-    if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
-  }, [lines]);
-
-  const run = useCallback(() => {
-    const prompt = input.trim();
-    if (!prompt || running) return;
-    setInput('');
-    setRunning(true);
-    setLines((l) => [...l, { type: 'info', text: `$ claude -p "${prompt}"` }]);
-
-    if (esRef.current) { esRef.current.close(); }
-    const es = new EventSource(`/api/workplace/claude?prompt=${encodeURIComponent(prompt)}`);
-    esRef.current = es;
-
-    es.onmessage = (e) => {
-      const msg = JSON.parse(e.data) as { type: string; data: string };
-      if (msg.type === 'exit') {
-        setRunning(false);
-        setLines((l) => [...l, { type: 'exit', text: `[exit ${msg.data}]` }]);
-        es.close();
-      } else {
-        const lineType = msg.type === 'stderr' ? 'stderr' : 'stdout';
-        // Split on newlines so each line is its own row
-        const chunks = msg.data.split('\n').filter((s) => s);
-        // Cap scrollback at 500 lines to bound memory on long-running sessions
-        setLines((l) => [...l, ...chunks.map((text) => ({ type: lineType as TermLine['type'], text }))].slice(-500));
-      }
-    };
-    es.onerror = () => {
-      setRunning(false);
-      setLines((l) => [...l, { type: 'error', text: 'Connection lost' }]);
-      es.close();
-    };
-  }, [input, running]);
-
-  useEffect(() => () => { esRef.current?.close(); }, []);
-
-  return (
-    <div className="wp-terminal">
-      <div className="wp-terminal__output" ref={outputRef}>
-        {lines.map((ln, i) => (
-          <div key={i} className={`wp-terminal__line--${ln.type}`}>{ln.text}</div>
-        ))}
-      </div>
-      <div className="wp-terminal__input-row">
-        <span className="wp-terminal__prompt">›</span>
-        <input
-          className="wp-terminal__input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && run()}
-          placeholder="Enter prompt for Claude…"
-          disabled={running}
-        />
-        <button className="wp-terminal__run" onClick={run} disabled={running || !input.trim()}>
-          {running ? '…' : 'Run'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Message bus panel ────────────────────────────────────────────
 function MessageBusPanel() {
   const [messages, setMessages] = useState<BusMessage[]>([]);
@@ -161,6 +92,7 @@ function MessageBusPanel() {
     es.onmessage = (e) => {
       const msg = JSON.parse(e.data) as BusMessage;
       setMessages((m) => [...m.slice(-199), msg]);
+      try { window.dispatchEvent(new CustomEvent('wp:bus', { detail: msg })); } catch { /* ignore */ }
     };
     es.onerror = () => es.close();
     return () => es.close();
@@ -173,7 +105,13 @@ function MessageBusPanel() {
   return (
     <div className="wp-bus__feed" ref={feedRef}>
       {messages.length === 0
-        ? <div className="wp-bus__empty">No messages yet — workflows will publish here</div>
+        ? (
+          <div className="wp-bus__empty">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={assetUrl('/redesign/miku-dance.gif')} alt="" className="wp-empty-miku" />
+            <span>No messages yet — workflows will publish here</span>
+          </div>
+        )
         : messages.map((m) => (
           <div key={m.id} className={`wp-bus__row${m.level === 'error' ? ' wp-bus__row--error' : ''}`}>
             <span className="wp-bus__workflow">{m.workflow}</span>
@@ -187,11 +125,11 @@ function MessageBusPanel() {
 }
 
 // ── Workflow tile ────────────────────────────────────────────────
-function WorkflowTile({ wf, isActive, onOpen, onOpenTerminal }: {
+function WorkflowTile({ wf, isActive, isHero, onOpen }: {
   wf: Workflow;
   isActive: boolean;
+  isHero?: boolean;
   onOpen: () => void;
-  onOpenTerminal: () => void;
 }) {
   const dotClass = {
     live: 'wp-tile__dot--live',
@@ -201,7 +139,7 @@ function WorkflowTile({ wf, isActive, onOpen, onOpenTerminal }: {
   }[wf.status];
 
   return (
-    <div className={`wp-tile${isActive ? ' is-active' : ''}`} onClick={onOpen}>
+    <div className={`wp-tile wp-tile--${wf.status}${isHero ? ' wp-tile--hero' : ''}${isActive ? ' is-active' : ''}`} onClick={onOpen}>
       <div className="wp-tile__head">
         <span className="wp-tile__name">{wf.name}</span>
         <span className="wp-tile__status">
@@ -218,11 +156,6 @@ function WorkflowTile({ wf, isActive, onOpen, onOpenTerminal }: {
         <button className="wp-tile__btn wp-tile__btn--primary" onClick={(e) => { e.stopPropagation(); onOpen(); }}>
           Open
         </button>
-        {wf.id === 'claude' && (
-          <button className="wp-tile__btn" onClick={(e) => { e.stopPropagation(); onOpenTerminal(); }}>
-            Terminal
-          </button>
-        )}
       </div>
     </div>
   );
@@ -240,7 +173,7 @@ export function VWorkplace() {
 
   // Check auth on mount
   useEffect(() => {
-    fetch('/api/workplace/auth/me')
+    fetch('/api/workplace/auth/me', { credentials: 'include' })
       .then((r) => r.ok ? r.json() : null)
       .then((j: { data?: { user: WPUser } } | null) => {
         if (j?.data?.user) setUser(j.data.user);
@@ -253,7 +186,7 @@ export function VWorkplace() {
   useEffect(() => {
     if (!user) return;
     const load = () => {
-      fetch('/api/workplace/workflows')
+      fetch('/api/workplace/workflows', { credentials: 'include' })
         .then((r) => r.json())
         .then((j: { data?: { workflows: Workflow[] } }) => {
           if (j.data?.workflows) setWorkflows(j.data.workflows);
@@ -267,14 +200,14 @@ export function VWorkplace() {
   }, [user]);
 
   const handleAuth = useCallback(() => {
-    fetch('/api/workplace/auth/me')
+    fetch('/api/workplace/auth/me', { credentials: 'include' })
       .then((r) => r.json())
       .then((j: { data?: { user: WPUser } }) => { if (j.data?.user) setUser(j.data.user); })
       .catch(() => {});
   }, []);
 
   const logout = async () => {
-    await fetch('/api/workplace/auth/logout', { method: 'POST' });
+    await fetch('/api/workplace/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
     setPortTabs([]);
     setActiveTab(null);
@@ -288,14 +221,6 @@ export function VWorkplace() {
       // A full public https URL on the workflow overrides the proxy.
       const portUrl = (wf.url && /^https:\/\//.test(wf.url)) ? wf.url : `/api/workplace/proxy/${wf.id}`;
       setPortTabs((t) => [...t, { id: tabId, label: wf.name, type: 'iframe', url: portUrl }]);
-    }
-    setActiveTab(tabId);
-  }, [portTabs]);
-
-  const openTerminal = useCallback((wf: Workflow) => {
-    const tabId = `term-${wf.id}`;
-    if (!portTabs.find((t) => t.id === tabId)) {
-      setPortTabs((t) => [...t, { id: tabId, label: `${wf.name} CLI`, type: 'terminal' }]);
     }
     setActiveTab(tabId);
   }, [portTabs]);
@@ -317,11 +242,15 @@ export function VWorkplace() {
 
   const currentTab = portTabs.find((t) => t.id === activeTab);
 
+  // Bento hero — the live (or first) workflow gets the large tile.
+  const heroId = (workflows.find((w) => w.status === 'live') ?? workflows[0])?.id;
+
   if (!authChecked) return null; // avoid flash
 
   if (!user) {
     return (
       <div className="v-workplace">
+        <div className="miku-backdrop" aria-hidden="true" />
         <WorkplaceAuth onAuth={handleAuth} />
       </div>
     );
@@ -329,8 +258,10 @@ export function VWorkplace() {
 
   return (
     <div className="v-workplace">
-      {/* Header */}
-      <div className="wrap wrap--narrow">
+      <div className="wrap wrap--narrow wp-enter">
+        {/* Header + workflows sit over an ambient Miku backdrop (the hero) */}
+        <div className="wp-hero has-backdrop">
+          <div className="miku-backdrop" aria-hidden="true" />
         <div className="wp-header">
           <h2 className="wp-header__title">work<em>place</em></h2>
           <div className="wp-header__user">
@@ -351,7 +282,7 @@ export function VWorkplace() {
             + Deploy from GitHub
           </button>
         </div>
-        <div className="wp-tiles">
+        <div className="wp-tiles wp-tiles--bento">
           {!wfLoaded && workflows.length === 0 ? (
             Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className="wp-tile wp-tile--skeleton">
@@ -366,39 +297,56 @@ export function VWorkplace() {
                 key={wf.id}
                 wf={wf}
                 isActive={portTabs.some((t) => t.id === `port-${wf.id}` && t.id === activeTab)}
+                isHero={wf.id === heroId}
                 onOpen={() => openPort(wf)}
-                onOpenTerminal={() => openTerminal(wf)}
               />
             ))
           )}
+          {/* Math (GeoGebra) sits in the workflows row, aligned with the others. */}
+          <WorkplaceMath />
           <div className="wp-tile wp-tile--add" onClick={() => setShowDeploy(true)}>
             <span className="wp-tile__plus">+</span>
             <span className="wp-tile__add-label">Add workflow</span>
           </div>
         </div>
+        </div>{/* end .wp-hero */}
 
         {/* Port switcher */}
         <div className="wp-section-label">Port view</div>
         <div className="wp-ports">
           <div className="wp-port-tabs">
             {portTabs.map((tab) => (
-              <button
+              // A tab can't be a <button> because it contains the close <button>
+              // (nested buttons are invalid HTML and break hydration). Use a
+              // focusable role="tab" element with keyboard activation instead.
+              <div
                 key={tab.id}
+                role="tab"
+                tabIndex={0}
+                aria-selected={tab.id === activeTab}
                 className={`wp-port-tab${tab.id === activeTab ? ' is-active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveTab(tab.id); } }}
               >
                 <span className="wp-port-tab__dot" />
                 {tab.label}
                 <button
+                  type="button"
                   className="wp-port-tab__close"
                   onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                   aria-label={`Close ${tab.label}`}
                 >×</button>
-              </button>
+              </div>
             ))}
           </div>
           <div className={`wp-port-view${!currentTab ? ' wp-port-view--empty' : ''}`}>
-            {!currentTab && <span>Open a workflow above to preview it here</span>}
+            {!currentTab && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={assetUrl('/redesign/miku-dance.gif')} alt="" className="wp-empty-miku" />
+                <span>Open a workflow above to preview it here</span>
+              </>
+            )}
             {currentTab?.type === 'iframe' && (
               <iframe
                 key={currentTab.id}
@@ -408,7 +356,6 @@ export function VWorkplace() {
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               />
             )}
-            {currentTab?.type === 'terminal' && <ClaudeTerminal />}
           </div>
         </div>
 
@@ -424,14 +371,12 @@ export function VWorkplace() {
         {/* Kanban board — all authenticated roles */}
         <WorkplaceKanban currentRole={user.role as 'owner' | 'admin' | 'contributor' | 'viewer'} />
 
-        {/* Math assistant — all authenticated roles */}
-        <WorkplaceMath />
-
-        {/* Team + Activity — visible to admins and the owner */}
+        {/* Team + Activity + Settings — visible to admins and the owner */}
         {(user.role === 'admin' || user.role === 'owner') && (
           <>
             <WorkplaceTeam currentRole={user.role as 'owner' | 'admin' | 'contributor' | 'viewer'} />
             <WorkplaceActivity />
+            <WorkplaceSettings />
           </>
         )}
       </div>

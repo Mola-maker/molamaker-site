@@ -115,7 +115,7 @@ async function fetchGithubCommits(): Promise<Record<string, unknown>[]> {
     WATCHED_REPOS.map(async (repo) => {
       const res = await fetch(
         `https://api.github.com/repos/${GH_USERNAME}/${repo}/commits?per_page=3&sha=main`,
-        { headers, next: { revalidate: 300 } },
+        { headers, next: { revalidate: 300 }, signal: AbortSignal.timeout(4500) },
       );
       if (!res.ok) return [];
       const commits: Record<string, unknown>[] = await res.json();

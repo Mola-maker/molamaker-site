@@ -15,7 +15,7 @@ type NowPlaying = {
   url: string;
 };
 
-export function MusicPlayer() {
+export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [query, setQuery] = useState('');
@@ -177,6 +177,13 @@ export function MusicPlayer() {
     return () => window.removeEventListener('mola:pause-song', handler);
   }, []);
 
+  // The MikuHub satellite toggles the panel (replaces the standalone button).
+  useEffect(() => {
+    const handler = () => setOpen((o) => !o);
+    window.addEventListener('mola:music-toggle', handler);
+    return () => window.removeEventListener('mola:music-toggle', handler);
+  }, []);
+
   const togglePlayPause = () => {
     const audio = audioRef.current;
     if (!audio || !nowPlaying) return;
@@ -212,15 +219,17 @@ export function MusicPlayer() {
 
   return (
     <>
-      {/* Floating trigger button */}
-      <button
-        className={`music-btn${playing ? ' is-playing' : ''}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Music player"
-        title="NetEase Music"
-      >
-        <span className={`music-btn__note${playing ? ' is-playing' : ''}`}>♪</span>
-      </button>
+      {/* Floating trigger button — hidden when the MikuHub owns the trigger. */}
+      {!hideTrigger && (
+        <button
+          className={`music-btn${playing ? ' is-playing' : ''}`}
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Music player"
+          title="NetEase Music"
+        >
+          <span className={`music-btn__note${playing ? ' is-playing' : ''}`}>♪</span>
+        </button>
+      )}
 
       {/* Mini panel */}
       {open && (

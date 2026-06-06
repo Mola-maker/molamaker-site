@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter, usePathname } from '@/i18n/routing';
 import { molaData, type Locale, type Post, type Guest, type Repo } from './data';
+import { assetUrl } from '@/lib/asset-url';
 import { Cursor } from './cursor';
 import { Opening2, MikuTransition } from './opening';
 import { TopNav, VariantRail, Footer, Marquee, BrandChatModal } from './chrome';
@@ -17,10 +18,10 @@ import { VStream } from './v-stream';
 import { VWorkplace } from './v-workplace';
 import { VNotebook } from './v-notebook';
 import { MusicPlayer } from './music-player';
-import { AstrbotChat } from './astrbot-chat';
+import { MikuHub } from './miku-hub';
+import { Live2DChat } from './live2d-chat';
 import {
   TweaksPanel,
-  TweaksTrigger,
   TweakSection,
   TweakRadio,
   TweakSelect,
@@ -59,10 +60,10 @@ const TWEAK_DEFAULTS: Tweaks = {
   displayFont: 'Newsreader',
   monoFont: 'JetBrains Mono',
   grain: true,
-  atlasBg: '/redesign/miku-bg-orbit.gif',
+  atlasBg: assetUrl('/redesign/miku-bg-orbit.gif'),
   atlasBgOpacity: 0.2,
   dynamicWords: true,
-  backdropBg: '/redesign/miku-bg-2.gif',
+  backdropBg: assetUrl('/redesign/miku-bg-2.gif'),
   backdropOpacity: 0.14,
   darkMode: false,
 };
@@ -217,14 +218,11 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
 
       <VariantRail value={variant} onChange={changeVariant} />
 
-      {/* Visual pill that groups music + astrbot buttons into a unified dock */}
-      <div className="float-dock" aria-hidden />
-
-      <MusicPlayer />
-
-      <AstrbotChat />
-
-      <TweaksTrigger />
+      {/* Unified bottom-right control hub: one Miku button → chat; hover springs
+          out tweak · music · 看板娘 satellites. Panels below listen for events. */}
+      <MusicPlayer hideTrigger />
+      <Live2DChat autoLoad={variant === 'workplace'} />
+      <MikuHub />
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Composition">
@@ -301,10 +299,10 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
             value={tweaks.atlasBg}
             onChange={(v) => setTweak('atlasBg', v)}
             options={[
-              { value: '/redesign/miku-bg-orbit.gif', label: 'Miku · orbit' },
-              { value: '/redesign/miku-bg-2.gif', label: 'Miku · neon' },
-              { value: '/redesign/miku-bg-3.gif', label: 'Miku · summer' },
-              { value: '/redesign/miku-dance.gif', label: 'Miku · dance' },
+              { value: assetUrl('/redesign/miku-bg-orbit.gif'), label: 'Miku · orbit' },
+              { value: assetUrl('/redesign/miku-bg-2.gif'), label: 'Miku · neon' },
+              { value: assetUrl('/redesign/miku-bg-3.gif'), label: 'Miku · summer' },
+              { value: assetUrl('/redesign/miku-dance.gif'), label: 'Miku · dance' },
               { value: '', label: 'None' },
             ]}
           />
@@ -323,11 +321,11 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
             value={tweaks.backdropBg}
             onChange={(v) => setTweak('backdropBg', v)}
             options={[
-              { value: '/redesign/miku-bg-orbit.gif', label: 'Miku · orbit' },
-              { value: '/redesign/miku-bg-2.gif', label: 'Miku · neon' },
-              { value: '/redesign/miku-bg-3.gif', label: 'Miku · summer' },
-              { value: '/redesign/miku-dance.gif', label: 'Miku · dance' },
-              { value: '/redesign/miku-redial-cover.jpg', label: 'Miku · redial' },
+              { value: assetUrl('/redesign/miku-bg-orbit.gif'), label: 'Miku · orbit' },
+              { value: assetUrl('/redesign/miku-bg-2.gif'), label: 'Miku · neon' },
+              { value: assetUrl('/redesign/miku-bg-3.gif'), label: 'Miku · summer' },
+              { value: assetUrl('/redesign/miku-dance.gif'), label: 'Miku · dance' },
+              { value: assetUrl('/redesign/miku-redial-cover.jpg'), label: 'Miku · redial' },
               { value: '', label: 'None' },
             ]}
           />

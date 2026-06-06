@@ -482,13 +482,6 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.wp-port-view--empty::before {
-  content: '\229E'; /* ⊞ — framed-window glyph for the idle preview */
-  font-size: 34px;
-  line-height: 1;
-  opacity: 0.22;
-  text-transform: none;
-}
 .wp-port-iframe {
   width: 100%;
   height: 100%;
@@ -594,7 +587,11 @@
 }
 .wp-bus__text { color: var(--ink); line-height: 1.4; }
 .wp-bus__empty {
-  padding: 28px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   text-align: center;
   font-size: 10.5px;
   color: var(--ink-soft);
@@ -1231,22 +1228,62 @@
 /* ── Workplace Math ──────────────────────────────────────────── */
 .wp-math { margin-top: 32px; }
 
-.wp-math__layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  align-items: start;
+/* Math as a workflow tile (sits in .wp-tiles alongside AstrBot etc). */
+.wp-tile--math { cursor: pointer; }
+.wp-tile--math .wp-tile__dot--live { background: var(--accent); }
+.wp-math__tile-providers {
+  margin-top: 2px;
+}
+.wp-math__tile-providers .wp-math__pill {
+  font-size: 9px;
+  padding: 3px 9px;
+}
+.wp-tile--math .wp-math__launch-note {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  line-height: 1.5;
+  margin-top: 2px;
 }
 
-@media (max-width: 860px) {
-  .wp-math__layout { grid-template-columns: 1fr; }
-}
-
-.wp-math__chat {
+/* Inline launcher — the real workspace is the fullscreen Studio */
+.wp-math__launch {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 18px;
 }
+.wp-math__launch-desc {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 62ch;
+}
+.wp-math__launch-note {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+.wp-math__open-studio {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+.wp-math__open-studio:hover { background: var(--accent-deep, var(--accent)); transform: translateY(-1px); }
 
 .wp-math__providers {
   display: flex;
@@ -1277,10 +1314,52 @@
 }
 .wp-math__pill:disabled { opacity: 0.3; cursor: not-allowed; }
 
-.wp-math__messages {
-  height: 320px;
+.wp-math__model-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.wp-math__model-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+.wp-math__model-probe { opacity: 0.7; text-transform: none; letter-spacing: 0; }
+.wp-math__model-select {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--bg-elev);
+  color: var(--ink);
+}
+.wp-math__model-select:focus { border-color: var(--accent); outline: none; }
+.wp-math__model-select:disabled { opacity: 0.5; }
+.wp-math__model-coze {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 0;
+}
+.wp-math__model-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin: 0;
+  opacity: 0.85;
+}
+
+.wp-studio__messages {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 10px 0;
+  padding: 8px 2px;
   border-top: 1px dotted var(--rule);
   border-bottom: 1px dotted var(--rule);
 }
@@ -1297,6 +1376,56 @@
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.wp-math__cmd-palette {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  position: absolute;
+  left: 0;
+  right: 48px;
+  bottom: calc(100% + 4px);
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-elev, #1a1a1a);
+  border: 1px solid var(--rule, #333);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 20;
+}
+
+.wp-math__cmd-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--ink, #eee);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.wp-math__cmd-item.is-active,
+.wp-math__cmd-item:hover {
+  background: color-mix(in srgb, var(--accent, #6cf) 12%, transparent);
+}
+
+.wp-math__cmd-label {
+  font-weight: 600;
+  color: var(--accent, #6cf);
+}
+
+.wp-math__cmd-summary {
+  opacity: 0.75;
+  line-height: 1.4;
 }
 
 .wp-math__textarea {
@@ -1352,16 +1481,453 @@
 }
 .wp-math__action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-.wp-math__canvas {
+/* ── Fullscreen GeoGebra Studio ─────────────────────────────── */
+.wp-studio {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: none;
+  background: var(--bg);
+  --wp-studio-sidebar-w: 340px;
+}
+.wp-studio.is-open .wp-studio__sidebar {
   position: relative;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  z-index: 40;
+  isolation: isolate;
+}
+
+.wp-studio.is-open .wp-studio__stage {
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+}
+
+.wp-studio.is-open {
+  display: grid;
+  grid-template-columns: var(--wp-studio-sidebar-w) minmax(0, 1fr) var(--wp-katex-w, 0px);
+  grid-template-rows: 1fr;
+}
+
+.wp-studio.wp-studio--katex-open { --wp-katex-w: clamp(340px, 32vw, 580px); }
+
+.wp-studio.wp-studio--sidebar-collapsed { --wp-studio-sidebar-w: 46px; }
+
+/* Sidebar + canvas share the viewport (no overlay) so GGB fills the right column. */
+.wp-studio__sidebar {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-right: 1px solid var(--rule);
+  background: var(--bg-elev);
+  overflow: hidden;
+  transition: padding 0.18s ease;
+}
+.wp-studio__sidebar.is-collapsed { padding: 14px 8px; }
+.wp-studio__sidebar.is-collapsed > *:not(.wp-studio__bar) { display: none; }
+
+.wp-studio__stage {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background: var(--bg-elev);
-  min-height: 520px;
+}
+.wp-studio__stage-bar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+  z-index: 20;
+  position: relative;
+}
+.wp-studio__stage-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.wp-studio__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wp-studio__title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.wp-studio__sidebar.is-collapsed .wp-studio__title { display: none; }
+.wp-studio__collapse {
+  width: 28px; height: 28px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.wp-studio__collapse:hover { border-color: var(--accent); color: var(--accent); }
+
+/* GeoGebra scale target — deployggb.js scales to this box. */
+.wp-studio__canvas.wp-ggb-scale {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg-elev);
+}
+
+/* Keep GeoGebra view/settings popups inside the canvas column. */
+.wp-studio__canvas .gwt-PopupPanel,
+.wp-studio__canvas .PopupPanel,
+.wp-studio__canvas .ggbPopupMenu {
+  z-index: 30 !important;
+  max-width: min(100%, 300px);
+}
+
+body.wp-studio-ggb-open {
+  overflow: hidden;
+}
+
+.wp-ggb-host,
+.wp-studio__canvas #wp-ggb-applet {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* GeoGebra classic frame (article + inner wrappers). */
+.wp-studio__canvas #wp-ggb-applet > article,
+.wp-studio__canvas #wp-ggb-applet .GeoGebraFrame,
+.wp-studio__canvas #wp-ggb-applet article {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 auto !important;
+}
+
+/* Keep the graphics canvas visible inside the scaled frame. */
+.wp-studio__canvas #wp-ggb-applet .ggbTransform,
+.wp-studio__canvas #wp-ggb-applet .GeoGebraFrame > div {
+  transform-origin: top left;
+}
+.wp-studio__canvas #wp-ggb-applet canvas {
+  display: block;
+  max-width: none;
+}
+
+.wp-studio__close {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 21;
+}
+.wp-studio__close:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── KaTeX right panel (formula preview — does not affect GGB canvas DOM) ── */
+.wp-studio__katex {
+  grid-column: 3;
+  grid-row: 1;
+  display: none;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid var(--rule);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.wp-studio--katex-open .wp-studio__katex.is-open { display: flex; }
+
+.wp-studio__stage-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wp-studio__katex-toggle {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.wp-studio__katex-toggle.is-on,
+.wp-studio__katex-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wp-studio__katex-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+}
+.wp-studio__katex-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.wp-studio__katex-tabs { display: flex; gap: 4px; margin-left: auto; }
+.wp-studio__katex-tab {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.wp-studio__katex-tab.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.wp-studio__katex-close {
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.wp-studio__katex-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.wp-studio__katex-empty {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+.wp-studio__katex-source {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: var(--ink);
+}
+.wp-studio__katex-editor {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 18rem;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--bg-elev);
+  resize: vertical;
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.wp-studio__katex-render {
+  font-size: 14px;
+  line-height: 1.7;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+.wp-studio__katex-render .katex-display { overflow-x: auto; }
+
+/* ── "Magic!" TikZ export — toolbar button + modal ── */
+.wp-studio__magic {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--bg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wp-studio__magic:hover { filter: brightness(1.08); }
+.wp-studio__magic:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+.wp-tikz {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+}
+.wp-tikz__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.wp-tikz__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 92vw);
+  max-height: 84vh;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.wp-tikz__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+}
+.wp-tikz__title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.wp-tikz__modes { display: flex; gap: 4px; margin-left: auto; }
+.wp-tikz__mode {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.wp-tikz__mode.is-active { border-color: var(--accent); color: var(--accent); }
+.wp-tikz__copy {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.wp-tikz__copy:hover { border-color: var(--accent); color: var(--accent); }
+.wp-tikz__close {
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.wp-tikz__code {
+  flex: 1 1 auto;
+  min-height: 16rem;
+  margin: 0;
+  padding: 12px 14px;
+  border: none;
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+  overflow: auto;
+  resize: none;
+  box-sizing: border-box;
+}
+.wp-tikz__note {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-top: 1px solid var(--rule);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .wp-studio.wp-studio--katex-open {
+    --wp-katex-w: 0px;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: var(--wp-studio-sidebar-w) minmax(0, 1fr);
+  }
+  .wp-studio--katex-open .wp-studio__katex.is-open {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--rule);
+  }
+}
+
+@media (max-width: 640px) {
+  .wp-studio.is-open {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .wp-studio__sidebar {
+    grid-column: 1;
+    grid-row: 2;
+    max-height: 46vh;
+    border-right: none;
+    border-top: 1px solid var(--rule);
+  }
+  .wp-studio__sidebar.is-collapsed { max-height: 44px; padding: 8px 14px; }
+  .wp-studio__stage {
+    grid-column: 1;
+    grid-row: 1;
+  }
 }
 
 .wp-math__ggb-loading {
@@ -1369,21 +1935,24 @@
   font-size: 11px;
   color: var(--ink-soft);
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
 }
 .wp-math__ggb-error {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  z-index: 6;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  max-width: 82%;
+  padding: 16px;
   text-align: center;
+  background: color-mix(in srgb, var(--bg-elev) 94%, transparent);
 }
 .wp-math__ggb-error-msg {
   font-family: var(--font-mono);
@@ -1391,4 +1960,518 @@
   line-height: 1.6;
   color: var(--ink-soft);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Workplace v2 — livened editorial: Miku backdrop · bento · mascot · motion
+   ════════════════════════════════════════════════════════════════ */
+
+/* Lift the auth gate above its ambient backdrop (dashboard uses .wp-hero). */
+.v-workplace > .wp-auth-gate { position: relative; z-index: 1; }
+
+/* Hero band carrying the Miku backdrop behind the header + workflows. */
+.wp-hero { margin-bottom: 8px; padding: 6px 0; border-radius: 8px; }
+
+/* Miku in empty/loading states. */
+.wp-empty-miku { width: 58px; height: 58px; border-radius: 12px; object-fit: cover; opacity: 0.85; }
+
+/* ── Bento workflow grid ─────────────────────────────────────── */
+.wp-tiles--bento { grid-auto-flow: dense; grid-auto-rows: minmax(132px, auto); }
+.wp-tile { transition: border-color 180ms, box-shadow 180ms, transform 180ms, opacity 180ms; }
+.wp-tile:hover { transform: translateY(-2px); }
+.wp-tile--hero { grid-column: span 2; grid-row: span 2; padding: 20px; }
+.wp-tile--hero .wp-tile__name { font-size: 15px; }
+.wp-tile--hero .wp-tile__desc { font-size: 11.5px; }
+.wp-tile--live { box-shadow: inset 0 0 0 1px var(--accent-soft, rgba(201,100,66,0.22)); }
+.wp-tile--live:hover { box-shadow: inset 0 0 0 1px var(--accent), 0 4px 16px -6px rgba(201,100,66,0.25); }
+.wp-tile--offline { opacity: 0.6; }
+.wp-tile--offline:hover { opacity: 1; }
+.wp-tile--error { border-color: oklch(55% 0.18 25); }
+@media (max-width: 720px) {
+  .wp-tile--hero { grid-column: auto; grid-row: auto; padding: 16px; }
+}
+
+/* ── Entry stagger (subtle, GPU-only) ────────────────────────── */
+.wp-enter > * { animation: wpEnter 0.5s var(--ease-out-quart, ease) both; }
+.wp-enter > *:nth-child(1) { animation-delay: 0.04s; }
+.wp-enter > *:nth-child(2) { animation-delay: 0.10s; }
+.wp-enter > *:nth-child(3) { animation-delay: 0.16s; }
+.wp-enter > *:nth-child(4) { animation-delay: 0.22s; }
+.wp-enter > *:nth-child(5) { animation-delay: 0.28s; }
+.wp-enter > *:nth-child(6) { animation-delay: 0.34s; }
+.wp-enter > *:nth-child(7) { animation-delay: 0.40s; }
+.wp-enter > *:nth-child(n+8) { animation-delay: 0.46s; }
+@keyframes wpEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* ── Reactive Miku mascot (portaled, fixed bottom-left) ──────── */
+.wp-mascot {
+  position: fixed;
+  left: 20px; bottom: 20px;
+  z-index: 7000;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+.wp-mascot__btn, .wp-mascot__say { pointer-events: auto; }
+.wp-mascot__say {
+  max-width: 210px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: 12px 12px 12px 4px;
+  padding: 7px 11px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+  animation: wpEnter 0.3s ease both;
+}
+.wp-mascot__btn {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--bg-elev);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+  cursor: pointer; padding: 0; overflow: hidden;
+  flex-shrink: 0;
+}
+.wp-mascot__gif { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wp-mascot--idle    .wp-mascot__btn { animation: wpBob 3s ease-in-out infinite; }
+.wp-mascot--working .wp-mascot__btn { animation: wpBob 1s ease-in-out infinite; }
+.wp-mascot--wave    .wp-mascot__btn { animation: wpWave 0.9s ease-in-out infinite; }
+.wp-mascot--ping    .wp-mascot__btn { animation: wpBounce 0.6s ease; }
+.wp-mascot--alert   .wp-mascot__btn { animation: wpShake 0.5s ease-in-out infinite; border-color: oklch(55% 0.18 25); }
+@keyframes wpBob    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes wpWave   { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes wpBounce { 0%,100% { transform: scale(1) translateY(0); } 30% { transform: scale(1.12) translateY(-5px); } }
+@keyframes wpShake  { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@media (max-width: 640px) {
+  .wp-mascot { left: 10px; bottom: 10px; }
+  .wp-mascot__btn { width: 46px; height: 46px; }
+  .wp-mascot__say { max-width: 150px; font-size: 10px; }
+}
+
+/* ── Markdown in the agent chat bubble ───────────────────────── */
+.wp-md > *:first-child { margin-top: 0; }
+.wp-md > *:last-child { margin-bottom: 0; }
+.wp-md p { margin: 0 0 8px; }
+.wp-md h1, .wp-md h2, .wp-md h3, .wp-md h4 { font-size: 12.5px; font-weight: 600; margin: 10px 0 5px; letter-spacing: 0.01em; }
+.wp-md ul, .wp-md ol { margin: 4px 0 8px; padding-left: 18px; }
+.wp-md li { margin: 2px 0; }
+.wp-md code { font-family: var(--font-mono); background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; font-size: 11px; }
+.wp-md pre { background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; overflow-x: auto; margin: 6px 0; }
+.wp-md pre code { border: none; background: none; padding: 0; }
+.wp-md a { color: var(--accent); text-underline-offset: 2px; }
+.wp-md strong { font-weight: 600; }
+.wp-md blockquote { border-left: 2px solid var(--rule); margin: 6px 0; padding-left: 10px; color: var(--ink-soft); }
+.wp-md table { border-collapse: collapse; font-size: 11px; margin: 6px 0; }
+.wp-md th, .wp-md td { border: 1px solid var(--rule); padding: 3px 6px; }
+
+/* ── Reduced motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .wp-enter > * { animation: none; }
+  .wp-mascot__btn { animation: none !important; }
+  .wp-mascot__say { animation: none; }
+  .wp-tile:hover { transform: none; }
+}
+
+/* ── Studio: performance mode (caps 3D render resolution) ─────── */
+.wp-studio__bar-tools { display: flex; align-items: center; gap: 6px; }
+.wp-studio__perf {
+  width: 28px; height: 28px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 13px; line-height: 1;
+  flex-shrink: 0;
+}
+.wp-studio__perf:hover { border-color: var(--accent); color: var(--accent); }
+.wp-studio__perf.is-on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft, rgba(201,100,66,0.12)); }
+.wp-studio__sidebar.is-collapsed .wp-studio__perf { display: none; }
+/* Performance mode caps the render resolution in JS (fitApplet → setSize). */
+
+/* ── Model & access settings panel (owner/admin) ─────────────── */
+.wp-settings { margin-top: 28px; }
+.wp-settings__loading { display: flex; flex-direction: column; gap: 8px; }
+.wp-settings__skel { height: 48px; border-radius: 8px; }
+.wp-settings__grid { display: flex; flex-direction: column; gap: 16px; }
+.wp-settings__group {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  padding: 14px 16px;
+}
+.wp-settings__group-title {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink); margin: 0 0 12px;
+}
+.wp-settings__note { font-size: 10px; text-transform: none; letter-spacing: 0; color: var(--ink-soft); }
+.wp-settings__astrbot-desc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0 0 10px;
+}
+.wp-settings__astrbot-desc code {
+  font-size: 10px;
+  color: var(--ink);
+}
+.wp-settings__provider { padding: 10px 0; border-top: 1px solid var(--rule); }
+.wp-settings__provider:first-of-type { border-top: none; padding-top: 0; }
+.wp-settings__provider-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.wp-settings__provider-name { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+.wp-settings__chip {
+  font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px;
+  border: 1px solid var(--rule); color: var(--ink-soft); background: var(--bg);
+}
+.wp-settings__chip.is-on { color: var(--accent); border-color: var(--accent); }
+.wp-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 12px;
+}
+.wp-settings__field { display: flex; flex-direction: column; gap: 4px; }
+.wp-settings__field > span {
+  font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft);
+  display: flex; align-items: center; gap: 6px;
+}
+.wp-settings__set { font-style: normal; color: var(--accent); font-size: 9px; text-transform: uppercase; }
+.wp-settings__field input {
+  width: 100%;
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--bg); color: var(--ink);
+}
+.wp-settings__field input:focus { outline: none; border-color: var(--accent); }
+.wp-settings__field input:disabled { opacity: 0.5; cursor: not-allowed; }
+.wp-settings__hint { font-size: 9.5px; color: var(--ink-soft); }
+.wp-settings__toggle {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 4px 0 12px; cursor: pointer;
+}
+.wp-settings__toggle input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
+.wp-settings__toggle span { display: flex; flex-direction: column; gap: 2px; }
+.wp-settings__toggle strong { font-size: 12px; color: var(--ink); font-weight: 600; }
+.wp-settings__toggle small { font-size: 10.5px; color: var(--ink-soft); }
+.wp-settings__group .wp-settings__field { margin-top: 10px; }
+.wp-settings__actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.wp-settings__error { font-size: 11px; color: oklch(55% 0.18 25); }
+.wp-settings__ok { font-size: 11px; color: var(--accent); }
+.wp-settings__save {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+  padding: 9px 18px; border-radius: 7px;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  cursor: pointer; transition: opacity 160ms;
+}
+.wp-settings__save:hover { opacity: 0.88; }
+.wp-settings__save:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 520px) {
+  .wp-settings__fields { grid-template-columns: 1fr; }
+}
+
+/* ── Auth gate: 4 entry tabs (Visitor / Phone / WeChat / Admin) ── */
+.wp-auth-tabs--4 { grid-template-columns: repeat(4, 1fr); }
+.wp-auth-tabs--4 .wp-auth-tab { padding: 12px 4px; font-size: 9.5px; letter-spacing: 0.03em; }
+.wp-auth-tabs--4 .wp-auth-tab:last-child { border-right: none; }
+@media (max-width: 420px) {
+  .wp-auth-tabs--4 { grid-template-columns: repeat(2, 1fr); }
+  .wp-auth-tabs--4 .wp-auth-tab:nth-child(2) { border-right: none; }
+}
+
+/* ── Workplace entry clip (Miku switch-in animation) ─────────────── */
+.wp-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0b0a10;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 600ms ease;
+  display: grid;
+  place-items: center;
+}
+.wp-intro.is-out { opacity: 0; pointer-events: none; }
+.wp-intro__video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scale(1.04);
+  animation: wpIntroZoom 5s ease-out forwards;
+}
+@keyframes wpIntroZoom { to { transform: scale(1.12); } }
+.wp-intro__veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.10) 40%, rgba(0,0,0,0.45));
+}
+.wp-intro__brand {
+  position: relative;
+  text-align: center;
+  color: #fff;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  animation: wpIntroRise 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  text-shadow: 0 2px 24px rgba(0,0,0,0.5);
+}
+@keyframes wpIntroRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.wp-intro__title {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 7vw, 76px);
+  font-weight: 350;
+  letter-spacing: -0.02em;
+}
+.wp-intro__title em { font-style: italic; color: var(--accent); }
+.wp-intro__sub {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(255,255,255,0.78);
+}
+.wp-intro__skip {
+  position: absolute; right: 18px; bottom: 16px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.8);
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer; transition: background 160ms, color 160ms;
+}
+.wp-intro__skip:hover { background: rgba(255,255,255,0.16); color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .wp-intro__video { animation: none; }
+  .wp-intro__brand { animation: none; }
+}
+
+/* Studio uses the NATIVE cursor. The site sets body { cursor: none } for its
+   custom cursor, which renders BELOW the studio overlay — so without this the
+   pointer vanishes over the canvas. GeoGebra's own tool cursors still apply. */
+.wp-studio, .wp-studio__canvas { cursor: auto; }
+
+/* ── Mobile (≤520px): workplace + studio + chat ──────────────── */
+@media (max-width: 520px) {
+  .wp-tiles { grid-template-columns: 1fr; }
+  .wp-tile--hero { grid-column: auto; grid-row: auto; }
+  .wp-hero { padding: 0; }
+  .wp-header { flex-wrap: wrap; row-gap: 6px; }
+  .wp-launch, .wp-math__launch { padding: 14px; }
+}
 .kb-add-form__submit:disabled { opacity: 0.4; }
+
+/* ── Live2D × AstrBot chat panel (bottom-left anchor) ────────── */
+/* The panel slides out from the left, to the right of the Live2D character.
+   Base .ab-panel styles are in 09-astrbot.css; these override for left-anchor. */
+.ab-panel--live2d {
+  animation: abPanelInLeft 300ms var(--ease-out-quart);
+}
+@keyframes abPanelInLeft {
+  from { opacity: 0; transform: translateX(-16px) translateY(8px); }
+  to   { opacity: 1; transform: translateX(0) translateY(0); }
+}
+/* ── Live2D widget overrides ── */
+
+/* Raise the widget above marquee (z-index:5) and footer (z-index:5). */
+#waifu {
+  z-index: 7000 !important;
+  transition: filter 150ms ease;
+}
+/* Restore native cursors inside the widget — the site applies
+   `body.style.cursor = 'none'` for the custom cursor, which hides the
+   toolbar's pointer/grab cues. */
+#waifu, #waifu * {
+  cursor: auto !important;
+}
+/* Keep the grab cursor on the character canvas */
+#waifu #live2d {
+  cursor: grab !important;
+}
+#waifu #live2d:active {
+  cursor: grabbing !important;
+}
+/* Toolbar: keep icons clickable; faint until hover */
+#waifu #waifu-tool {
+  opacity: 0.45;
+  pointer-events: auto;
+  z-index: 2;
+}
+#waifu:hover #waifu-tool,
+#waifu #waifu-tool:hover {
+  opacity: 1;
+}
+#waifu-tool svg {
+  cursor: pointer !important;
+  pointer-events: auto;
+}
+
+/* Click feedback: subtle brightening on the character container */
+#waifu:hover {
+  filter: brightness(1.08);
+}
+#waifu:active {
+  filter: brightness(1.15) saturate(1.1);
+}
+
+/* Live2D chat panel: also restore native cursors */
+.ab-panel--live2d, .ab-panel--live2d * {
+  cursor: auto !important;
+}
+/* Mobile: narrower panel */
+@media (max-width: 520px) {
+  .ab-panel--live2d { width: calc(100vw - 24px); }
+  #waifu { filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-panel--live2d { animation: none; }
+  #waifu { transition: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   GeoGebra Studio — refined chrome (overrides; later = wins)
+   ════════════════════════════════════════════════════════════════ */
+
+/* Sidebar: soft accent-washed top, tighter rhythm. */
+.wp-studio__sidebar {
+  gap: 12px;
+  padding: 16px 16px 14px;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--accent) 6%, var(--bg-elev)) 0%, var(--bg-elev) 140px);
+}
+.wp-studio__bar { padding-bottom: 11px; border-bottom: 1px solid var(--rule); }
+.wp-studio__title {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11px; letter-spacing: 0.16em; color: var(--ink);
+}
+.wp-studio__title::before {
+  content: '';
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--signal-green, oklch(72% 0.16 145));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--signal-green, oklch(72% 0.16 145)) 22%, transparent);
+}
+.wp-studio__sidebar .wp-math__pill { font-size: 10px; padding: 5px 12px; }
+
+/* Empty hint: vertically centered, with a friendly mark. */
+.wp-studio__messages { padding: 12px 4px; }
+
+/* "Expand earlier N messages" toggle when history is collapsed. */
+.wp-math__more {
+  align-self: center;
+  margin: 2px 0 10px;
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px dashed var(--rule);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.wp-math__more:hover { border-color: var(--accent); color: var(--accent); }
+.wp-studio .wp-math__hint {
+  display: flex; flex-direction: column; gap: 9px;
+  align-items: flex-start; justify-content: center;
+  min-height: 180px; height: 100%;
+  padding: 0 2px;
+}
+.wp-studio .wp-math__hint::before {
+  content: '✦';
+  font-size: 22px; line-height: 1;
+  color: var(--accent); opacity: 0.75;
+}
+
+/* Composer: pill textarea with an accent focus ring + circular send. */
+.wp-studio .wp-math__textarea {
+  border-radius: 12px;
+  padding: 10px 13px;
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wp-studio .wp-math__textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 16%, transparent);
+}
+.wp-studio .wp-math__send {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 15px;
+  box-shadow: 0 4px 14px color-mix(in oklch, var(--accent) 32%, transparent);
+  transition: transform 0.12s, opacity 0.15s, box-shadow 0.15s;
+}
+.wp-studio .wp-math__send:not(:disabled):hover { transform: translateY(-1px); }
+
+/* Stage bar + close: a little more presence. */
+.wp-studio__stage-bar { padding: 9px 14px; }
+.wp-studio__stage-label { color: var(--ink); opacity: 0.7; font-weight: 600; }
+.wp-studio__close { width: 30px; height: 30px; font-size: 18px; }
+
+/* Action buttons: pill style for parity with the rest of the chrome. */
+.wp-studio .wp-math__action-btn { border-radius: 999px; padding: 5px 12px; }
+
+/* Active model + status row (under the provider pills). */
+.wp-math__status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  padding: 2px 2px 0;
+  min-width: 0;
+}
+.wp-math__status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ink-faint);
+  transition: background 0.2s;
+}
+.wp-math__status-provider { color: var(--ink); font-weight: 600; flex-shrink: 0; }
+.wp-math__status-model {
+  color: var(--accent);
+  font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.wp-math__status-model::before { content: '· '; color: var(--ink-faint); font-weight: 400; }
+.wp-math__status-ggb {
+  color: var(--signal-green, oklch(72% 0.16 145));
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.wp-math__status-ggb::before { content: '· '; color: var(--ink-faint); font-weight: 400; }
+.wp-math__status-text { margin-left: auto; flex-shrink: 0; opacity: 0.8; }
+/* states */
+.wp-math__status--ready .wp-math__status-dot { background: var(--signal-green, oklch(72% 0.16 145)); }
+.wp-math__status--busy .wp-math__status-dot {
+  background: var(--signal-amber, oklch(78% 0.15 75));
+  animation: wpStatusPulse 1s ease-in-out infinite;
+}
+.wp-math__status--error .wp-math__status-dot { background: oklch(58% 0.2 25); }
+.wp-math__status--error .wp-math__status-text { color: oklch(58% 0.2 25); }
+@keyframes wpStatusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 color-mix(in oklch, var(--signal-amber, oklch(78% 0.15 75)) 60%, transparent); }
+  50%      { opacity: 0.7; transform: scale(0.82); box-shadow: 0 0 0 4px transparent; }
+}
+
+/* Provider switch: the newly-active pill pops + glows so the change is obvious. */
+.wp-math__pill--active {
+  animation: wpPillPop 360ms var(--ease-out-quart, cubic-bezier(0.165, 0.84, 0.44, 1));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent);
+}
+@keyframes wpPillPop {
+  0%   { transform: scale(0.9); }
+  55%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wp-math__status--busy .wp-math__status-dot { animation: none; }
+  .wp-math__pill--active { animation: none; }
+}

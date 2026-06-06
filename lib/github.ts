@@ -44,6 +44,9 @@ export async function fetchRepos(username: string): Promise<Repo[]> {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         next: { revalidate: 3600 },
+        // api.github.com is slow/blocked in mainland China — fail fast (≈4.5s)
+        // instead of hanging on undici's 10s connect timeout, then fall back.
+        signal: AbortSignal.timeout(4500),
       }
     );
     if (!res.ok) {
@@ -77,6 +80,7 @@ export async function fetchUserStats(username: string): Promise<UserStats | null
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(4500),
     });
     if (!res.ok) return null;
     return res.json();

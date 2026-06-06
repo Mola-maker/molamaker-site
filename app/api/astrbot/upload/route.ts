@@ -2,17 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateOrigin } from '@/lib/origin';
 import { checkRate } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
 
 export const runtime = 'nodejs';
 
 // Same-origin proxy for AstrBot's file-upload endpoint (POST /api/v1/file).
 // The browser sends multipart here; we forward it to AstrBot with the server
 // API key and return the attachment_id, which the client then references in a
-// chat message chain. Only AstrBot supports attachments, so this needs
-// ASTRBOT_INTERNAL_URL configured.
-
-const ASTRBOT_URL = process.env.ASTRBOT_INTERNAL_URL;
-const ASTRBOT_KEY = process.env.ASTRBOT_API_KEY;
+// chat message chain. Only AstrBot supports attachments.
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPE = /^(image\/(png|jpe?g|gif|webp|svg\+xml)|application\/pdf|text\/plain)$/;
@@ -21,7 +18,8 @@ export async function POST(req: NextRequest) {
   const origin = validateOrigin(req);
   if (origin) return origin;
 
-  if (!ASTRBOT_URL) {
+  const { url, key } = getAstrbotEnv();
+  if (!url) {
     return NextResponse.json(
       { error: { code: 'not_configured', message: 'File upload requires AstrBot.' } },
       { status: 503 },
@@ -60,10 +58,10 @@ export async function POST(req: NextRequest) {
   upstream.append('file', file, file.name || 'upload');
 
   const headers: Record<string, string> = {};
-  if (ASTRBOT_KEY) headers['Authorization'] = `Bearer ${ASTRBOT_KEY}`;
+  if (key) headers['Authorization'] = `Bearer ${key}`;
 
   try {
-    const res = await fetch(`${ASTRBOT_URL}/api/v1/file`, {
+    const res = await fetch(`${url}/api/v1/file`, {
       method: 'POST',
       headers,
       body: upstream,

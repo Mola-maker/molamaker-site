@@ -52,34 +52,37 @@ describe('checkRate', () => {
     expect(result.resetMs).toBe(30000);
   });
 
-  it('fails closed when RPC returns an error', async () => {
+  // Fail OPEN on backend trouble: a missing/unreachable limiter backend must not
+  // lock every user out (it was 429-ing all workplace logins in prod). The only
+  // legitimate deny is a genuine over-limit row (tested above).
+  it('fails open when RPC returns an error', async () => {
     mockRpc.mockResolvedValueOnce({
       data: null,
       error: new Error('connection failed'),
     });
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
-    expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(5);
   });
 
-  it('fails closed when RPC returns empty array', async () => {
+  it('fails open when RPC returns empty array', async () => {
     mockRpc.mockResolvedValueOnce({
       data: [],
       error: null,
     });
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
-    expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(5);
   });
 
-  it('fails closed when RPC throws', async () => {
+  it('fails open when RPC throws (e.g. service key unset on ECS)', async () => {
     mockRpc.mockRejectedValueOnce(new Error('timeout'));
 
     const result = await checkRate(uniqueKey(), 5, 60_000);
-    expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(5);
   });
 
   it('uses RATE_GUESTBOOK constants correctly', () => {

@@ -3,6 +3,8 @@
 // and type-checked. API-backed data (chat, guestbook, views) is wired separately;
 // this only powers the visual prototype copy.
 
+import { assetUrl } from '@/lib/asset-url';
+
 export type Post = {
   slug: string;
   title: string;
@@ -228,7 +230,7 @@ export const molaData = {
     {
       kind: 'song', time: '00:08',
       title: 'Polite Conversation', artist: 'Kabanagu', album: 'okosama suite',
-      cover: '/redesign/miku-bg-2.gif',
+      cover: assetUrl('/redesign/miku-bg-2.gif'),
       progress: 0.42, length: '3:48', position: '1:35',
       bpm: 92, key: 'F# minor', mood: 'soft / late',
       recent: ['Polite Conversation', 'Redial', 'Tell Your World', 'Senbonzakura'],
