@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { I18nBlock, Locale, Post, Guest, Repo } from './data';
 import { molaData } from './data';
 import { AButton, HoverText, useReveal } from './atoms';
+import { assetUrl } from '@/lib/asset-url';
 
 type Props = {
   t: I18nBlock;
@@ -268,7 +269,7 @@ export function VAtlas({ t, locale, bgOpacity = 0.18, bgSrc, posts, guestbook, r
               <video src={bgSrc} autoPlay loop muted playsInline />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={bgSrc || '/redesign/miku-bg-orbit.gif'} alt="" />
+              <img src={bgSrc || assetUrl('/redesign/miku-bg-orbit.gif')} alt="" />
             )}
           </div>
 

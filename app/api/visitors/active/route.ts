@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRate } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
+import { dedupeActiveVisitors } from '@/lib/visitors';
 
 // GET /api/visitors/active
 // Returns anonymous visitor dots: { data: { visitors: Dot[] } }
@@ -29,15 +30,13 @@ export async function GET(req: NextRequest) {
     const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from('page_views')
-      .select('path, created_at')
+      .select('path, created_at, session_id')
       .gte('created_at', cutoff)
       .order('created_at', { ascending: false })
-      .limit(80);
+      .limit(500);
 
-    const visitors = (data ?? []).map((row) => ({
-      page: String(row.path ?? '/').slice(0, 40),
-      age_s: Math.floor((Date.now() - new Date(row.created_at).getTime()) / 1000),
-    }));
+    // One dot per DISTINCT visitor (session_id), not per page-view event.
+    const visitors = dedupeActiveVisitors(data ?? []);
 
     return NextResponse.json({ data: { visitors } });
   } catch {

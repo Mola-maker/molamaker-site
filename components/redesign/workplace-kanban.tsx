@@ -180,6 +180,8 @@ function AddForm({ status, onAdd }: AddFormProps) {
     <div className="kb-add-form">
       <input
         ref={inputRef}
+        id="kb-add-title"
+        name="title"
         className="kb-add-form__input"
         placeholder="Task title…"
         value={title}
@@ -187,12 +189,16 @@ function AddForm({ status, onAdd }: AddFormProps) {
         onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setOpen(false); }}
       />
       <input
+        id="kb-add-desc"
+        name="description"
         className="kb-add-form__input"
         placeholder="Description (optional)"
         value={desc}
         onChange={(e) => setDesc(e.target.value)}
       />
       <input
+        id="kb-add-repo"
+        name="repo_url"
         className="kb-add-form__input"
         placeholder="GitHub/repo URL (optional)"
         value={repo}

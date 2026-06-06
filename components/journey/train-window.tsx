@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { assetUrl } from '@/lib/asset-url';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
@@ -113,24 +114,24 @@ export default function TrainWindow() {
     isMobile === null ? null : isMobile ? (
       <div
         className="train-static-bg"
-        style={{ backgroundImage: 'url(/journey/train/background.svg)' }}
+        style={{ backgroundImage: `url(${assetUrl('/journey/train/background.svg')})` }}
       />
     ) : (
       <>
         <div
           ref={bgRef}
           className="parallax-layer parallax-layer--bg"
-          style={{ backgroundImage: 'url(/journey/train/background.svg)' }}
+          style={{ backgroundImage: `url(${assetUrl('/journey/train/background.svg')})` }}
         />
         <div
           ref={midRef}
           className="parallax-layer parallax-layer--mid"
-          style={{ backgroundImage: 'url(/journey/train/middle.svg)' }}
+          style={{ backgroundImage: `url(${assetUrl('/journey/train/middle.svg')})` }}
         />
         <div
           ref={fgRef}
           className="parallax-layer parallax-layer--fg"
-          style={{ backgroundImage: 'url(/journey/train/foreground.svg)' }}
+          style={{ backgroundImage: `url(${assetUrl('/journey/train/foreground.svg')})` }}
         />
       </>
     );

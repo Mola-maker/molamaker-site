@@ -17,13 +17,16 @@ export async function getTotalViews(): Promise<number> {
   return count ?? 0;
 }
 
-export async function insertPageView(path: string): Promise<void> {
+export async function insertPageView(path: string, sessionId?: string): Promise<void> {
   const supabase = await createClient();
   if (!supabase) return;
 
+  const row: { path: string; session_id?: string } = { path };
+  if (sessionId) row.session_id = sessionId;
+
   const { error } = await supabase
     .from('page_views')
-    .insert({ path });
+    .insert(row);
 
   if (error) {
     logError('page-views', 'insert failed', error);

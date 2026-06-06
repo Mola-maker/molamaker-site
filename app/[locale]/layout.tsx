@@ -9,6 +9,13 @@ import Konami from '@/components/konami';
 // CursorGlow / ScrollReveal / ReturnToOpening removed — the redesign provides
 // its own Cursor, IntersectionObserver-based reveal, and Opening2 sequence.
 
+// Vercel web-analytics + speed-insights inject /_vercel/*/script.js, which only
+// exists on Vercel's edge. On the Aliyun ECS deploy those requests 404 (served
+// the HTML 404 page → "MIME text/html, not executable" console noise). Gate them
+// to Vercel-only so the self-hosted build stays clean. Page views are already
+// recorded server-side via proxy.ts → /api/views.
+const onVercel = Boolean(process.env.VERCEL);
+
 // Fonts: Fraunces / DM Sans / JetBrains Mono loaded from fonts.loli.net
 // (a CN-accessible mirror of Google Fonts). Avoids fonts.googleapis.com
 // which is blocked in mainland China and was causing 4×3s timeouts on
@@ -21,7 +28,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker-site.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://molamaker.cn'),
   title: 'molamaker — portfolio & journal',
   description: 'Building at the edge of systems and intelligence.',
   openGraph: {
@@ -60,8 +67,8 @@ export default async function LocaleLayout({
           <Konami />
           {children}
         </NextIntlClientProvider>
-        <Analytics />
-        <SpeedInsights />
+        {onVercel && <Analytics />}
+        {onVercel && <SpeedInsights />}
       </body>
     </html>
   );

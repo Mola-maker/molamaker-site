@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const apiUrl = process.env.ASTRBOT_INTERNAL_URL;
-  const apiKey = process.env.ASTRBOT_API_KEY;
+  const { url: apiUrl, key: apiKey } = getAstrbotEnv();
 
   if (!apiUrl) {
     return NextResponse.json(

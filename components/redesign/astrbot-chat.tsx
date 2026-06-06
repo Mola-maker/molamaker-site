@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { assetUrl } from '@/lib/asset-url';
 
 interface Message {
   id: string;
@@ -364,7 +365,7 @@ export function AstrbotChat() {
             title="Chat with AstrBot"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/redesign/miku-dance.gif" alt="Miku" className="ab-bubble__gif" />
+            <img src={assetUrl('/redesign/miku-dance.gif')} alt="Miku" className="ab-bubble__gif" />
             <span className="ab-bubble__badge" aria-hidden="true">✦</span>
           </button>
         )}
@@ -377,7 +378,7 @@ export function AstrbotChat() {
           <div className="ab-panel__header" onMouseDown={onMouseDown}>
             <div className="ab-panel__avatar">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/redesign/miku-dance.gif" alt="" />
+              <img src={assetUrl('/redesign/miku-dance.gif')} alt="" />
             </div>
             <div className="ab-panel__title">
               <span className="ab-panel__name">AstrBot × Miku</span>

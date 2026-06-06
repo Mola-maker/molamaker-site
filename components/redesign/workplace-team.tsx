@@ -86,6 +86,7 @@ function TeamRow({
       <span className="wp-team__role" role="cell">
         {canEdit ? (
           <select
+            name={`role-${user.id}`}
             className="wp-team__select"
             value={user.role}
             aria-label={`Role for ${user.name}`}

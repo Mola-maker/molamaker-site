@@ -3,10 +3,10 @@ import { chatHistoryQuerySchema, astrbotHistorySchema } from '@/lib/validation';
 import { checkRate, RATE_CHAT } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
 import { logError } from '@/lib/logger';
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
 
 export async function GET(request: NextRequest) {
-  const apiUrl = process.env.ASTRBOT_INTERNAL_URL;
-  const apiKey = process.env.ASTRBOT_API_KEY;
+  const { url: apiUrl, key: apiKey } = getAstrbotEnv();
 
   if (!apiUrl || !apiKey) {
     return NextResponse.json({ messages: [] });

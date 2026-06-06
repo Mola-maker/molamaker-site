@@ -22,7 +22,7 @@ export async function GET() {
       WATCHED.map(async (repo) => {
         const res = await fetch(
           `https://api.github.com/repos/${USERNAME}/${repo}/commits?per_page=3&sha=main`,
-          { headers, next: { revalidate: 300 } },
+          { headers, next: { revalidate: 300 }, signal: AbortSignal.timeout(4500) },
         );
         if (!res.ok) return [];
         const commits: Record<string, unknown>[] = await res.json();

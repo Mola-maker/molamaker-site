@@ -3,6 +3,7 @@ import { pageViewSchema } from '@/lib/validation';
 import { checkRate, RATE_VIEWS } from '@/lib/rate-limit';
 import { insertPageView } from '@/lib/data/page-views';
 import { clientIp } from '@/lib/client-ip';
+import { visitorHash } from '@/lib/visitor-hash';
 import { logError } from '@/lib/logger';
 
 /**
@@ -37,7 +38,9 @@ export async function POST(req: Request) {
       });
     }
 
-    await insertPageView(parsed.data.path);
+    // Distinct-visitor fingerprint (one-way hash of IP+UA+day; no PII stored).
+    const ua = req.headers.get('user-agent') ?? '';
+    await insertPageView(parsed.data.path, visitorHash(ip, ua));
 
     return NextResponse.json({ ok: true });
   } catch (err) {

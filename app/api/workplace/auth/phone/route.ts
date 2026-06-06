@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     await writeAudit({ action: 'login', userId, userName: name, ip });
 
     const res = NextResponse.json({ ok: true });
-    return setSessionCookie(res, token);
+    return setSessionCookie(res, token, req);
   }
 
   return NextResponse.json({ error: 'unknown action' }, { status: 400 });

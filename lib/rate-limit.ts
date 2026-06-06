@@ -23,7 +23,10 @@ export async function checkRate(
     });
 
     if (error || !data || (Array.isArray(data) && data.length === 0)) {
-      return { allowed: false, remaining: 0, resetMs: 60_000 };
+      // Backend reachable but returned nothing usable (missing RPC, bad row):
+      // fail OPEN so a limiter misconfiguration can't lock every user out.
+      // The only legitimate "deny" is a genuine over-limit row, handled below.
+      return { allowed: true, remaining: limit, resetMs: 0 };
     }
 
     // PostgREST returns SETOF results as an array — unwrap the first row
@@ -34,7 +37,10 @@ export async function checkRate(
       resetMs: Number(row?.reset_ms ?? 0),
     };
   } catch {
-    return { allowed: false, remaining: 0, resetMs: 60_000 };
+    // Backend down (e.g. SUPABASE_SERVICE_ROLE_KEY unset on ECS → createServiceClient
+    // throws): don't lock users out. Brute-force window only lapses while Supabase
+    // is unreachable; auth/login routes stay usable. See deploy runbook.
+    return { allowed: true, remaining: limit, resetMs: 0 };
   }
 }
 

@@ -15,7 +15,7 @@ export async function GET() {
   try {
     const res = await fetch(
       `https://api.github.com/users/${username}/repos?sort=updated&per_page=10&type=public`,
-      { headers, next: { revalidate: 3600 } },
+      { headers, next: { revalidate: 3600 }, signal: AbortSignal.timeout(4500) },
     );
     if (!res.ok) {
       return NextResponse.json(

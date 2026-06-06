@@ -5,15 +5,14 @@ import { clientIp } from '@/lib/client-ip';
 import { logError } from '@/lib/logger';
 import { parseSseReply } from '@/lib/sse-parser';
 import { validateOrigin } from '@/lib/origin';
-
-const ASTRBOT_URL = process.env.ASTRBOT_INTERNAL_URL;
-const ASTRBOT_KEY = process.env.ASTRBOT_API_KEY;
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
 
 export async function POST(request: NextRequest) {
   const origin = validateOrigin(request);
   if (origin) return origin;
 
-  if (!ASTRBOT_URL || !ASTRBOT_KEY) {
+  const { url, key } = getAstrbotEnv();
+  if (!url || !key) {
     return NextResponse.json({ error: 'bot_unavailable' }, { status: 503 });
   }
 
@@ -43,11 +42,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${ASTRBOT_URL}/api/v1/chat`, {
+    const res = await fetch(`${url}/api/v1/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ASTRBOT_KEY}`,
+        'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
         message,

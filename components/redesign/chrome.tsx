@@ -168,6 +168,9 @@ export function Footer({ t }: FooterProps) {
           © 2026 molamaker · made with <span className="heart">❤</span> and too much coffee
         </span>
         <span>built on a quiet desk in {t.based === 'based' ? 'Hangzhou' : '杭州'}</span>
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+          皖ICP备2026015981号-1
+        </a>
       </div>
     </footer>
   );
@@ -389,6 +392,7 @@ export function BrandChatModal({ locale }: BrandChatModalProps) {
           </div>
           <form className="brand-chat-form" onSubmit={send}>
             <input
+              name="brand-chat"
               className="brand-chat-input"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

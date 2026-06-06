@@ -3,6 +3,9 @@ import { chatMessageSchema } from '@/lib/validation';
 import { validateOrigin } from '@/lib/origin';
 import { checkRate, RATE_CHAT } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
+import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+import { getEffectiveProvider, type EffectiveProvider } from '@/lib/workplace/settings';
+import { ATTACH_SEGMENT_TYPES, attachmentMarkdown, cleanAstrBotText, toolCallMarkdown } from '@/lib/sse-parser';
 
 // Live token streaming for the chat widget. Mirrors the SSE pattern proven in
 // app/api/workplace/math/route.ts: emit `data: {"token":"…"}` frames, end with
@@ -11,18 +14,22 @@ import { clientIp } from '@/lib/client-ip';
 // BEFORE emitting any token — once tokens flow we commit to that provider.
 //
 // Attachments still use the non-streaming JSON route (POST /api/astrbot/chat).
+//
+// `persona` (optional) is the per-character Live2D personality system prompt.
+// DeepSeek receives it as a real system message; AstrBot/Coze get it prefixed
+// to the turn so switching the Live2D character actually changes the voice.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const ASTRBOT_URL  = process.env.ASTRBOT_INTERNAL_URL;
-const ASTRBOT_KEY  = process.env.ASTRBOT_API_KEY;
-const COZE_KEY     = process.env.COZE_API_KEY;
-const COZE_BOT_ID  = process.env.COZE_BOT_ID;
-const COZE_BASE    = (process.env.COZE_BASE_URL ?? 'https://api.coze.cn').replace(/\/$/, '');
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
-
-const anyConfigured = () => !!(ASTRBOT_URL || COZE_KEY || DEEPSEEK_KEY);
+async function anyConfigured(): Promise<boolean> {
+  if (getAstrbotEnv().configured) return true;
+  const [coze, deepseek] = await Promise.all([
+    getEffectiveProvider('coze'),
+    getEffectiveProvider('deepseek'),
+  ]);
+  return coze.configured || deepseek.configured;
+}
 
 type Send = (token: string) => void;
 
@@ -53,15 +60,22 @@ function makeSseStream(gen: (send: Send) => Promise<void>): Response {
   });
 }
 
-// ── AstrBot — native SSE with enable_streaming:true, chunks are
-//    { "type": "plain", "data": "<token>" } ──────────────────────────────────
-async function streamAstrBot(message: string, sessionId: string | undefined, username: string, send: Send): Promise<void> {
+async function streamAstrBot(
+  message: string,
+  sessionId: string | undefined,
+  username: string,
+  send: Send,
+  persona?: string,
+): Promise<void> {
+  const { url, key } = getAstrbotEnv();
+  if (!url) throw new Error('astrbot: not configured');
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (ASTRBOT_KEY) headers['Authorization'] = `Bearer ${ASTRBOT_KEY}`;
-  const payload: Record<string, unknown> = { message, username, enable_streaming: true };
+  if (key) headers['Authorization'] = `Bearer ${key}`;
+  const text = persona ? `[Roleplay as: ${persona}]\n\n${message}` : message;
+  const payload: Record<string, unknown> = { message: text, username, enable_streaming: true };
   if (sessionId) payload.session_id = sessionId;
 
-  const r = await fetch(`${ASTRBOT_URL}/api/v1/chat`, {
+  const r = await fetch(`${url}/api/v1/chat`, {
     method: 'POST', headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(60_000),
   });
   if (!r.ok || !r.body) throw new Error(`astrbot: ${r.status}`);
@@ -69,6 +83,15 @@ async function streamAstrBot(message: string, sessionId: string | undefined, use
   const reader = r.body.getReader();
   const dec = new TextDecoder();
   let buf = '';
+  let sentText = '';
+  let plainBuf = '';
+  const emitText = (full: string) => {
+    const clean = cleanAstrBotText(full);
+    if (!clean || clean === sentText) return;
+    send(clean);
+    sentText = clean;
+  };
+
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -83,22 +106,42 @@ async function streamAstrBot(message: string, sessionId: string | undefined, use
       let j: Record<string, unknown>;
       try { j = JSON.parse(raw) as Record<string, unknown>; } catch { continue; }
       if (j.status === 'error') throw new Error(`astrbot: ${j.message ?? 'error'}`);
-      if (j.type === 'plain' && typeof j.data === 'string' && j.data) send(j.data);
+      const toolMd = toolCallMarkdown(j);
+      if (toolMd) {
+        send(toolMd);
+      } else if (j.chain_type === 'tool_call' || j.chain_type === 'tool_call_result') {
+        // Tool JSON is transport metadata; render only the user-facing result.
+      } else if (j.type === 'plain' && typeof j.data === 'string' && j.data) {
+        plainBuf += j.data;
+      } else if (j.type === 'complete' && typeof j.data === 'string') {
+        emitText(j.data);
+      } else if (typeof j.type === 'string' && ATTACH_SEGMENT_TYPES.has(j.type)) {
+        const md = attachmentMarkdown(j);
+        if (md) send(md);
+      }
     }
   }
+  if (!sentText && plainBuf) emitText(plainBuf);
 }
 
-// ── Coze v3 — streaming chat (event: conversation.message.delta) ─────────────
-async function streamCoze(message: string, userId: string, send: Send): Promise<void> {
+async function streamCoze(
+  message: string,
+  userId: string,
+  send: Send,
+  cfg: EffectiveProvider,
+  persona?: string,
+): Promise<void> {
+  const COZE_BASE = cfg.baseUrl.replace(/\/$/, '');
+  const content = persona ? `[Roleplay as: ${persona}]\n\n${message}` : message;
   const r = await fetch(`${COZE_BASE}/v3/chat`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${COZE_KEY}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      bot_id: COZE_BOT_ID,
+      bot_id: cfg.botId,
       user_id: userId,
       stream: true,
       auto_save_history: false,
-      additional_messages: [{ role: 'user', content: message, content_type: 'text' }],
+      additional_messages: [{ role: 'user', content, content_type: 'text' }],
     }),
     signal: AbortSignal.timeout(60_000),
   });
@@ -127,14 +170,21 @@ async function streamCoze(message: string, userId: string, send: Send): Promise<
   }
 }
 
-// ── DeepSeek — OpenAI-compatible SSE (choices[].delta.content) ──────────────
-async function streamDeepSeek(message: string, send: Send): Promise<void> {
-  const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
+async function streamDeepSeek(
+  message: string,
+  send: Send,
+  cfg: EffectiveProvider,
+  persona?: string,
+): Promise<void> {
+  const messages = persona
+    ? [{ role: 'system', content: persona }, { role: 'user', content: message }]
+    : [{ role: 'user', content: message }];
+  const r = await fetch(`${cfg.baseUrl}/v1/chat/completions`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${DEEPSEEK_KEY}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [{ role: 'user', content: message }],
+      model: cfg.model,
+      messages,
       stream: true,
     }),
     signal: AbortSignal.timeout(60_000),
@@ -168,7 +218,7 @@ export async function POST(req: NextRequest) {
   const origin = validateOrigin(req);
   if (origin) return origin;
 
-  if (!anyConfigured()) {
+  if (!(await anyConfigured())) {
     return new Response(JSON.stringify({ error: { code: 'not_configured' } }), {
       status: 503, headers: { 'Content-Type': 'application/json' },
     });
@@ -186,6 +236,8 @@ export async function POST(req: NextRequest) {
   const rawMessage = String(body.message ?? '').trim().slice(0, 2000);
   const sessionId = String(body.session_id ?? '').slice(0, 64) || undefined;
   const username  = String(body.username  ?? 'web-visitor').slice(0, 64);
+  const persona   = String(body.persona ?? '').trim().slice(0, 800) || undefined;
+  const astrbotOnly = Boolean(body.astrbot_only);
 
   if (!rawMessage) {
     return new Response(JSON.stringify({ error: { code: 'validation_error', message: 'message required' } }), {
@@ -200,22 +252,29 @@ export async function POST(req: NextRequest) {
   }
   const message = parsed.data.message;
 
+  const [cozeCfg, deepseekCfg] = await Promise.all([
+    getEffectiveProvider('coze'),
+    getEffectiveProvider('deepseek'),
+  ]);
+
   return makeSseStream(async (send) => {
     let emitted = false;
     const wrap: Send = (t) => { emitted = true; send(t); };
 
     const runners: Array<() => Promise<void>> = [];
-    if (ASTRBOT_URL) runners.push(() => streamAstrBot(message, sessionId, username, wrap));
-    if (COZE_KEY && COZE_BOT_ID) runners.push(() => streamCoze(message, sessionId ?? username, wrap));
-    if (DEEPSEEK_KEY) runners.push(() => streamDeepSeek(message, wrap));
+    if (getAstrbotEnv().configured) runners.push(() => streamAstrBot(message, sessionId, username, wrap, persona));
+    if (!astrbotOnly) {
+      if (cozeCfg.configured) runners.push(() => streamCoze(message, sessionId ?? username, wrap, cozeCfg, persona));
+      if (deepseekCfg.configured) runners.push(() => streamDeepSeek(message, wrap, deepseekCfg, persona));
+    }
+    if (runners.length === 0) { send('AstrBot is not connected yet — start the AstrBot service to chat here.'); return; }
 
     for (const run of runners) {
       try {
         await run();
-        if (emitted) return; // a provider answered — done
+        if (emitted) return;
       } catch {
-        if (emitted) return; // mid-stream failure: keep the partial reply, stop
-        // otherwise fall through to the next provider
+        if (emitted) return;
       }
     }
     if (!emitted) send('AI is temporarily unavailable — try again in a moment.');
