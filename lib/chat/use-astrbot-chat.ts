@@ -105,6 +105,9 @@ export function useAstrbotChat(options?: {
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Abort in-flight SSE stream on unmount so the reader loop doesn't
+  // continue calling setMessages on an unmounted component.
+  const abortRef = useRef<AbortController | null>(null);
 
   // Share session ID with the terminal chat so both talk to the same conversation
   const [sessionId, setSessionId] = useState(() => {
@@ -142,6 +145,13 @@ export function useAstrbotChat(options?: {
   const bodyRef = useRef<HTMLDivElement>(null);
 
   // ── Effects ────────────────────────────────────────────────────
+
+  // Abort any in-flight SSE stream when the hook unmounts.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // Probe whether AstrBot is configured (GET returns 200 if configured, 503 if not)
   useEffect(() => {
@@ -222,6 +232,12 @@ export function useAstrbotChat(options?: {
     const text = input.trim();
     if ((!text && !attachment) || loading || uploading) return;
 
+    // Create a fresh AbortController for this send; abort any stale one.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const signal = controller.signal;
+
     let attachPayload: { type: string; attachment_id: string } | null = null;
     let localImage: string | undefined;
 
@@ -231,17 +247,17 @@ export function useAstrbotChat(options?: {
       try {
         const fd = new FormData();
         fd.append('file', attachment.file);
-        const up = await fetch('/api/astrbot/upload', { method: 'POST', body: fd });
+        const up = await fetch('/api/astrbot/upload', { method: 'POST', body: fd, signal });
         const uj = await up.json().catch(() => ({})) as { data?: { attachment_id: string; type: string }; error?: { message?: string } };
         if (!up.ok || !uj.data) {
-          setMessages((m) => [...m, { id: uid(), role: 'bot', text: uj.error?.message ?? 'Upload failed — try a smaller file.', ts: Date.now() }]);
+          if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: uj.error?.message ?? 'Upload failed — try a smaller file.', ts: Date.now() }]);
           setUploading(false);
           return;
         }
         attachPayload = { type: uj.data.type, attachment_id: uj.data.attachment_id };
         if (attachment.type === 'image') localImage = attachment.previewUrl;
       } catch {
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Upload failed — please retry.', ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Upload failed — please retry.', ts: Date.now() }]);
         setUploading(false);
         return;
       }
@@ -261,18 +277,20 @@ export function useAstrbotChat(options?: {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: text, session_id: sessionId, attachments: [attachPayload] }),
+          signal,
         });
         if (!r.ok) {
           const j = await r.json().catch(() => ({})) as { error?: { message?: string } };
-          setMessages((m) => [...m, { id: uid(), role: 'bot', text: j.error?.message ?? 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+          if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: j.error?.message ?? 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
           return;
         }
         const json = await r.json() as { data?: { message?: string; reply?: string } };
         const reply = json.data?.message ?? json.data?.reply ?? 'AI is temporarily unavailable — try again in a moment.';
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: reply, ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: reply, ts: Date.now() }]);
       } catch {
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Connection lost — please retry.', ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Connection lost — please retry.', ts: Date.now() }]);
       } finally {
+        if (abortRef.current === controller) abortRef.current = null;
         setLoading(false);
       }
       return;
@@ -283,6 +301,7 @@ export function useAstrbotChat(options?: {
     let acc = '';
     let started = false;
     const pushToken = (tok: string) => {
+      if (signal.aborted) return;
       acc += tok;
       if (!started) {
         started = true;
@@ -297,9 +316,10 @@ export function useAstrbotChat(options?: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, session_id: sessionId, persona, astrbot_only: astrbotOnly }),
+        signal,
       });
       if (!r.ok || !r.body) {
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
         return;
       }
       const reader = r.body.getReader();
@@ -322,16 +342,18 @@ export function useAstrbotChat(options?: {
           } catch { /* skip malformed frame */ }
         }
       }
-      if (!started) {
+      if (!started && !signal.aborted) {
         setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
       }
     } catch {
-      if (started) {
+      if (signal.aborted) { /* unmounted — skip state update */ }
+      else if (started) {
         setMessages((m) => m.map((x) => (x.id === botId ? { ...x, text: `${acc} …(connection lost)` } : x)));
       } else {
         setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Connection lost — please retry.', ts: Date.now() }]);
       }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setLoading(false);
     }
   }, [input, loading, uploading, attachment, sessionId, persona, astrbotOnly]);

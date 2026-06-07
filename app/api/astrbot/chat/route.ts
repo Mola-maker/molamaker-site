@@ -43,7 +43,7 @@ async function tryAstrBot(
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(300_000), // 5 min — covers AstrBot MCP tool calls
     });
 
     if (!res.ok) return { ok: false, reason: `astrbot: ${res.status}` };

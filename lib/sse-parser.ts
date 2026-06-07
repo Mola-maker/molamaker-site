@@ -105,7 +105,14 @@ export function cleanAstrBotText(text: string, options: { trim?: boolean } = {})
   return options.trim === false ? cleaned : cleaned.trim();
 }
 
-/** Extract attachments emitted via AstrBot's send_message_to_user tool call. */
+/**
+ * Extract user-facing content from AstrBot's send_message_to_user tool call.
+ * Handles plain text, images, files, records, and videos — everything the bot
+ * can emit autonomously (same capability as the QQ adapter).
+ *
+ * Returns '' when the frame isn't a send_message_to_user call or all messages
+ * are empty, so the caller can fall through to other frame-type handlers.
+ */
 export function toolCallMarkdown(frame: Record<string, unknown>): string {
   if (frame.chain_type !== 'tool_call' || typeof frame.data !== 'string') return '';
   let call: Record<string, unknown>;
@@ -120,10 +127,28 @@ export function toolCallMarkdown(frame: Record<string, unknown>): string {
     ? call.args as Record<string, unknown>
     : {};
   const messages = Array.isArray(args.messages) ? args.messages : [];
-  return messages
-    .map((msg) => (msg && typeof msg === 'object' ? attachmentMarkdown(msg as Record<string, unknown>) : ''))
-    .filter(Boolean)
-    .join('');
+  const parts: string[] = [];
+  for (const msg of messages) {
+    if (!msg || typeof msg !== 'object') continue;
+    const m = msg as Record<string, unknown>;
+    const type = String(m.type ?? '');
+    // Plain text — the bot is "talking" autonomously (same as QQ text messages).
+    if (type === 'plain' || type === 'text') {
+      const t = typeof m.text === 'string' ? m.text.trim() : '';
+      if (t) parts.push(t);
+      continue;
+    }
+    // Attachment types (image, file, record, video) — render as markdown.
+    if (ATTACH_SEGMENT_TYPES.has(type)) {
+      const md = attachmentMarkdown(m);
+      if (md) parts.push(md);
+      continue;
+    }
+    // Unknown type with text fallback.
+    const t = typeof m.text === 'string' ? m.text.trim() : '';
+    if (t) parts.push(t);
+  }
+  return parts.join('\n\n');
 }
 
 export function parseSseReply(raw: string): string {
