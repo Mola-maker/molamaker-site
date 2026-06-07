@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { LrcLine } from '@/lib/lrc';
 
 type Song = {
   id: number;
@@ -13,6 +14,14 @@ type NowPlaying = {
   title: string;
   artist: string;
   url: string;
+  cover?: string;
+  album?: string;
+  duration?: number;
+  lyrics?: Array<{ time: number; text: string }>;
+  recent?: string[];
+  bpm?: number;
+  key?: string;
+  mood?: string;
 };
 
 export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } = {}) {
@@ -50,7 +59,20 @@ export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } =
     const dispatchPlayState = (playing: boolean) => {
       const np = nowPlayingRef.current;
       if (np) window.dispatchEvent(new CustomEvent('mola:now-playing', {
-        detail: { id: np.id, title: np.title, artist: np.artist, playing },
+        detail: {
+          id: np.id,
+          title: np.title,
+          artist: np.artist,
+          cover: np.cover ?? '',
+          album: np.album ?? '',
+          duration: np.duration ?? 0,
+          lyrics: np.lyrics ?? [],
+          recent: np.recent ?? [],
+          bpm: np.bpm ?? 0,
+          key: np.key ?? '—',
+          mood: np.mood ?? '—',
+          playing,
+        },
       }));
     };
     audio.addEventListener('play',  () => { setPlaying(true);  dispatchPlayState(true);  });
@@ -82,11 +104,21 @@ export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } =
   useEffect(() => {
     fetch('/api/music/nowplaying')
       .then((r) => r.json())
-      .then((json: { data?: { id: string; title: string; artist: string } | null }) => {
+      .then((json: { data?: { id: string; title: string; artist: string; album?: string; cover?: string; duration?: number; lyrics?: Array<{ time: number; text: string }>; recent?: string[] } | null }) => {
         const d = json.data;
         if (!d) return;
         // Use functional update to avoid stale closure — don't overwrite a song the user already picked
-        setNowPlaying((current) => current ?? { id: Number(d.id), title: d.title, artist: d.artist, url: '' });
+        setNowPlaying((current) => current ?? {
+          id: Number(d.id),
+          title: d.title,
+          artist: d.artist,
+          url: '',
+          album: d.album,
+          cover: d.cover,
+          duration: d.duration,
+          lyrics: d.lyrics,
+          recent: d.recent,
+        });
       })
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -129,21 +161,74 @@ export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } =
     audio.pause();
     clearPendingCanPlay();
 
-    // Update ref + UI immediately so the stream reflects the new song
-    // even before audio starts buffering (3.8s+ proxy time)
-    nowPlayingRef.current = { id, title: name, artist, url: '' };
-    setNowPlaying({ id, title: name, artist, url: '' });
+    // Update ref + UI immediately with basic info
+    const basicNowPlaying: NowPlaying = {
+      id,
+      title: name,
+      artist,
+      url: '',
+      cover: '',
+      album: '',
+      duration: 0,
+      lyrics: [],
+      recent: [],
+      bpm: 0,
+      key: '—',
+      mood: '—',
+    };
+    nowPlayingRef.current = basicNowPlaying;
+    setNowPlaying(basicNowPlaying);
     setCurrentTime(0);
     setDuration(0);
     window.dispatchEvent(new CustomEvent('mola:now-playing', {
-      detail: { id, title: name, artist, playing: true },
+      detail: { id, title: name, artist, cover: '', album: '', duration: 0, lyrics: [], recent: [], bpm: 0, key: '—', mood: '—', playing: true },
     }));
 
-    // Proxy through our API to avoid CORS / hotlink blocking
+    // Fetch full metadata in the background
+    fetch('/api/music/nowplaying')
+      .then((r) => r.json())
+      .then((json) => {
+        const d = json.data;
+        if (d && Number(d.id) === id) {
+          const enrichedNowPlaying: NowPlaying = {
+            id,
+            title: name,
+            artist,
+            url: '',
+            album: d.album ?? '',
+            cover: d.cover ?? '',
+            duration: d.duration ?? 0,
+            lyrics: d.lyrics ?? [],
+            recent: d.recent ?? [],
+            bpm: d.bpm ?? 0,
+            key: d.key ?? '—',
+            mood: d.mood ?? '—',
+          };
+          nowPlayingRef.current = enrichedNowPlaying;
+          setNowPlaying(enrichedNowPlaying);
+          window.dispatchEvent(new CustomEvent('mola:now-playing', {
+            detail: {
+              id,
+              title: name,
+              artist,
+              cover: d.cover ?? '',
+              album: d.album ?? '',
+              duration: d.duration ?? 0,
+              lyrics: d.lyrics ?? [],
+              recent: d.recent ?? [],
+              bpm: d.bpm ?? 0,
+              key: d.key ?? '—',
+              mood: d.mood ?? '—',
+              playing: true,
+            },
+          }));
+        }
+      })
+      .catch(() => {});
+
     audio.src = `/api/music/${id}`;
     audio.load();
 
-    // Wait for buffered data before calling play(), or the promise rejects
     const startPlayback = () => {
       clearPendingCanPlay();
       audio.play().catch((err: unknown) => {

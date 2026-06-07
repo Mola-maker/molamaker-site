@@ -22,12 +22,38 @@ export function VStream({ t, locale }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Track the currently playing song from the music player
-  const [nowPlaying, setNowPlaying] = useState<{ id: number; title: string; artist: string; playing: boolean } | null>(null);
+  const [nowPlaying, setNowPlaying] = useState<{
+    id: number;
+    title: string;
+    artist: string;
+    playing: boolean;
+    cover?: string;
+    album?: string;
+    duration?: number;
+    lyrics?: Array<{ time: number; text: string }>;
+    recent?: string[];
+    bpm?: number;
+    key?: string;
+    mood?: string;
+  } | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const { id, title, artist, playing } = (e as CustomEvent<{ id: number; title: string; artist: string; playing: boolean }>).detail;
-      setNowPlaying({ id, title, artist, playing });
+      const detail = (e as CustomEvent).detail;
+      setNowPlaying({
+        id: detail.id,
+        title: detail.title,
+        artist: detail.artist,
+        playing: detail.playing,
+        cover: detail.cover,
+        album: detail.album,
+        duration: detail.duration,
+        lyrics: detail.lyrics,
+        recent: detail.recent,
+        bpm: detail.bpm,
+        key: detail.key,
+        mood: detail.mood,
+      });
     };
     window.addEventListener('mola:now-playing', handler);
     return () => window.removeEventListener('mola:now-playing', handler);
@@ -96,15 +122,16 @@ export function VStream({ t, locale }: Props) {
           time: 'now',
           title: nowPlaying.title,
           artist: nowPlaying.artist,
-          album: '♪',
-          cover: '',
-          progress: 0,
-          length: '0:00',
+          album: nowPlaying.album ?? '♪',
+          cover: nowPlaying.cover ?? '',
+          progress: nowPlaying.duration && nowPlaying.duration > 0 ? 0.42 : 0,
+          length: formatDuration(nowPlaying.duration ?? 0),
           position: '0:00',
-          bpm: 0,
-          key: '—',
-          mood: '—',
-          recent: [],
+          bpm: nowPlaying.bpm ?? 0,
+          key: nowPlaying.key ?? '—',
+          mood: nowPlaying.mood ?? '—',
+          recent: nowPlaying.recent ?? [],
+          lyricsPreview: nowPlaying.lyrics ?? [],
         };
         (synthetic as Record<string, unknown>).id = `song-${nowPlaying.id}`;
         sigs = [synthetic, ...sigs];
@@ -142,6 +169,13 @@ export function VStream({ t, locale }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, message }),
     }).catch(() => {});
+  };
+
+  const formatDuration = (seconds: number): string => {
+    if (!seconds || seconds <= 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(Math.floor(s)).padStart(2, '0')}`;
   };
 
   return (
