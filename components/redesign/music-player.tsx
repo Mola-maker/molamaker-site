@@ -184,45 +184,44 @@ export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } =
       detail: { id, title: name, artist, cover: '', album: '', duration: 0, lyrics: [], recent: [], bpm: 0, key: '—', mood: '—', playing: true },
     }));
 
-    // Fetch full metadata in the background
-    fetch('/api/music/nowplaying')
+    // Fetch full metadata by song ID (cover, lyrics, duration)
+    fetch(`/api/music/detail?id=${id}`)
       .then((r) => r.json())
       .then((json) => {
         const d = json.data;
-        if (d && Number(d.id) === id) {
-          const enrichedNowPlaying: NowPlaying = {
+        if (!d) return;
+        const enrichedNowPlaying: NowPlaying = {
+          id,
+          title: name,
+          artist,
+          url: '',
+          album: d.album ?? '',
+          cover: d.cover ?? '',
+          duration: d.duration ?? 0,
+          lyrics: d.lyrics ?? [],
+          recent: [],
+          bpm: 0,
+          key: '—',
+          mood: '—',
+        };
+        nowPlayingRef.current = enrichedNowPlaying;
+        setNowPlaying(enrichedNowPlaying);
+        window.dispatchEvent(new CustomEvent('mola:now-playing', {
+          detail: {
             id,
             title: name,
             artist,
-            url: '',
-            album: d.album ?? '',
             cover: d.cover ?? '',
+            album: d.album ?? '',
             duration: d.duration ?? 0,
             lyrics: d.lyrics ?? [],
-            recent: d.recent ?? [],
-            bpm: d.bpm ?? 0,
-            key: d.key ?? '—',
-            mood: d.mood ?? '—',
-          };
-          nowPlayingRef.current = enrichedNowPlaying;
-          setNowPlaying(enrichedNowPlaying);
-          window.dispatchEvent(new CustomEvent('mola:now-playing', {
-            detail: {
-              id,
-              title: name,
-              artist,
-              cover: d.cover ?? '',
-              album: d.album ?? '',
-              duration: d.duration ?? 0,
-              lyrics: d.lyrics ?? [],
-              recent: d.recent ?? [],
-              bpm: d.bpm ?? 0,
-              key: d.key ?? '—',
-              mood: d.mood ?? '—',
-              playing: true,
-            },
-          }));
-        }
+            recent: [],
+            bpm: 0,
+            key: '—',
+            mood: '—',
+            playing: true,
+          },
+        }));
       })
       .catch(() => {});
 

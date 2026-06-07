@@ -105,6 +105,13 @@ export function VStream({ t, locale }: Props) {
 
   const signals = liveSignals ?? d.signals;
 
+  const formatDuration = (seconds: number): string => {
+    if (!seconds || seconds <= 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(Math.floor(s)).padStart(2, '0')}`;
+  };
+
   // Inject a synthetic song card when the music player plays a song not in the stream data
   const items: Signal[] = useMemo(() => {
     let sigs: Signal[] = filter === 'all' ? signals : signals.filter((s) => s.kind === filter);
@@ -169,13 +176,6 @@ export function VStream({ t, locale }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, message }),
     }).catch(() => {});
-  };
-
-  const formatDuration = (seconds: number): string => {
-    if (!seconds || seconds <= 0) return '0:00';
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${String(Math.floor(s)).padStart(2, '0')}`;
   };
 
   return (
