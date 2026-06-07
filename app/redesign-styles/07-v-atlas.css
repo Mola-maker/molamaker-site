@@ -425,3 +425,74 @@
 .v-atlas .strip ul li:last-child { border-bottom: none; }
 .v-atlas .strip ul li .k { color: var(--ink-2); }
 .v-atlas .strip ul li .v { color: var(--ink-soft); }
+
+/* ═══════════════════════════════════════════════════════════════
+   VISUAL IMPACT — scroll breakpoints & genius.com editorial drama
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Ghost "01" behind atlas hero */
+.v-atlas .atlas-hero { overflow: hidden; }
+.v-atlas .atlas-hero::after {
+  content: '01';
+  position: absolute;
+  right: -0.04em; bottom: -0.2em;
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(160px, 22vw, 340px);
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0.04;
+  pointer-events: none; user-select: none;
+  letter-spacing: -0.06em;
+  z-index: 0;
+}
+.v-atlas .atlas-hero > * { position: relative; z-index: 1; }
+
+/* Zone detail: thick accent bar + ghost counter + bigger title */
+.v-atlas .zone-detail {
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid var(--accent);
+}
+.v-atlas .zone-detail::after {
+  content: '03';
+  position: absolute;
+  right: -0.04em; bottom: -0.22em;
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(100px, 16vw, 220px);
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0.04;
+  pointer-events: none; user-select: none;
+  letter-spacing: -0.06em;
+  z-index: 0;
+}
+.v-atlas .zone-detail > * { position: relative; z-index: 1; }
+.v-atlas .zone-detail__side h3 { font-size: clamp(56px, 7vw, 96px); }
+
+/* Zone pin: stronger hover glow */
+.v-atlas .zone:hover .zone__pin,
+.v-atlas .zone.is-active .zone__pin {
+  box-shadow: 0 0 0 8px rgba(201,100,66,0.14), 0 0 20px rgba(201,100,66,0.35);
+}
+
+/* Companion strips — dark ink band */
+.v-atlas .atlas-strips {
+  background: var(--bg-ink);
+  border-radius: 6px;
+  padding: 40px 36px;
+}
+.v-atlas .atlas-strips .strip {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.09);
+}
+.v-atlas .atlas-strips .strip__head       { color: rgba(245,241,235,0.42); }
+.v-atlas .atlas-strips .strip__title      { color: rgba(245,241,235,0.92); }
+.v-atlas .atlas-strips .strip__body       { color: rgba(245,241,235,0.65); }
+.v-atlas .atlas-strips .strip ul li       { border-color: rgba(255,255,255,0.08); }
+.v-atlas .atlas-strips .strip ul li .k   { color: rgba(245,241,235,0.65); }
+.v-atlas .atlas-strips .strip ul li .v   { color: rgba(245,241,235,0.42); }
+
+/* Scroll reveal: more dramatic entrance for Atlas sections */
+.v-atlas .reveal {
+  transition: opacity 900ms var(--ease-out-expo), transform 900ms var(--ease-out-expo);
+}
