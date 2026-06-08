@@ -32,6 +32,8 @@ async function anyConfigured(): Promise<boolean> {
 }
 
 type Send = (token: string) => void;
+type ToolProgressFrame = { name: string; status: 'running' | 'done' | 'error'; summary?: string };
+type SendTool = (frame: ToolProgressFrame) => void;
 
 // ── Timeouts ───────────────────────────────────────────────────────
 // AstrBot MCP tools have a 120 s timeout each, and the agent may call
@@ -47,7 +49,7 @@ const IDLE_TIMEOUT_MS = 130_000;
 /** Overall connection timeout — safety net for truly hung connections. */
 const OVERALL_TIMEOUT_MS = 600_000;
 
-function makeSseStream(gen: (send: Send) => Promise<void>): Response {
+function makeSseStream(gen: (send: Send, sendTool: SendTool) => Promise<void>): Response {
   const enc = new TextEncoder();
   // Keep nginx (proxy_read_timeout 60 s default) and browser connections
   // alive while AstrBot runs MCP tools — tool_call frames are skipped by
@@ -60,12 +62,16 @@ function makeSseStream(gen: (send: Send) => Promise<void>): Response {
         try { controller.enqueue(enc.encode(`data: ${JSON.stringify({ token })}\n\n`)); }
         catch { /* client disconnected */ }
       };
+      const sendTool: SendTool = (frame) => {
+        try { controller.enqueue(enc.encode(`data: ${JSON.stringify({ tool: frame })}\n\n`)); }
+        catch { /* client disconnected */ }
+      };
       const hb = setInterval(() => {
         try { controller.enqueue(enc.encode(': heartbeat\n\n')); }
         catch { clearInterval(hb); }
       }, HEARTBEAT_MS);
       try {
-        await gen(send);
+        await gen(send, sendTool);
       } finally {
         clearInterval(hb);
         try {
@@ -89,6 +95,7 @@ async function streamAstrBot(
   sessionId: string | undefined,
   username: string,
   send: Send,
+  sendTool: SendTool,
   persona?: string,
 ): Promise<void> {
   const { url, key } = getAstrbotEnv();
@@ -149,8 +156,24 @@ async function streamAstrBot(
       const toolMd = toolCallMarkdown(j);
       if (toolMd) {
         send(toolMd);
-      } else if (j.chain_type === 'tool_call' || j.chain_type === 'tool_call_result') {
-        // Tool JSON is transport metadata; render only the user-facing result.
+      } else if (j.chain_type === 'tool_call' && typeof j.data === 'string') {
+        try {
+          const call = JSON.parse(j.data) as { name?: string };
+          const name = String(call.name ?? 'tool');
+          if (name !== 'send_message_to_user') {
+            sendTool({ name, status: 'running', summary: `Running ${name}…` });
+          }
+        } catch { /* malformed */ }
+      } else if (j.chain_type === 'tool_call_result' && typeof j.data === 'string') {
+        try {
+          const res = JSON.parse(j.data) as { name?: string; content?: string; result?: string };
+          const name = String(res.name ?? 'tool');
+          if (name !== 'send_message_to_user') {
+            const raw = typeof res.content === 'string' ? res.content : typeof res.result === 'string' ? res.result : '';
+            const summary = raw.slice(0, 100).replace(/\n/g, ' ') || 'done';
+            sendTool({ name, status: 'done', summary });
+          }
+        } catch { /* malformed */ }
       } else if (j.type === 'plain' && typeof j.data === 'string' && j.data) {
         plainBuf += j.data;
       } else if (j.type === 'complete' && typeof j.data === 'string') {
@@ -168,6 +191,7 @@ async function streamCoze(
   message: string,
   userId: string,
   send: Send,
+  _sendTool: SendTool,
   cfg: EffectiveProvider,
   persona?: string,
 ): Promise<void> {
@@ -213,6 +237,7 @@ async function streamCoze(
 async function streamDeepSeek(
   message: string,
   send: Send,
+  _sendTool: SendTool,
   cfg: EffectiveProvider,
   persona?: string,
 ): Promise<void> {
@@ -297,25 +322,24 @@ export async function POST(req: NextRequest) {
     getEffectiveProvider('deepseek'),
   ]);
 
-  return makeSseStream(async (send) => {
+  return makeSseStream(async (send, sendTool) => {
     let emitted = false;
     const wrap: Send = (t) => { emitted = true; send(t); };
+    const wrapTool: SendTool = (f) => sendTool(f);
 
     const runners: Array<() => Promise<void>> = [];
-    if (getAstrbotEnv().configured) runners.push(() => streamAstrBot(message, sessionId, username, wrap, persona));
+    if (getAstrbotEnv().configured)
+      runners.push(() => streamAstrBot(message, sessionId, username, wrap, wrapTool, persona));
     if (!astrbotOnly) {
-      if (cozeCfg.configured) runners.push(() => streamCoze(message, sessionId ?? username, wrap, cozeCfg, persona));
-      if (deepseekCfg.configured) runners.push(() => streamDeepSeek(message, wrap, deepseekCfg, persona));
+      if (cozeCfg.configured)
+        runners.push(() => streamCoze(message, sessionId ?? username, wrap, () => {}, cozeCfg, persona));
+      if (deepseekCfg.configured)
+        runners.push(() => streamDeepSeek(message, wrap, () => {}, deepseekCfg, persona));
     }
     if (runners.length === 0) { send('AstrBot is not connected yet — start the AstrBot service to chat here.'); return; }
 
     for (const run of runners) {
-      try {
-        await run();
-        if (emitted) return;
-      } catch {
-        if (emitted) return;
-      }
+      try { await run(); if (emitted) return; } catch { if (emitted) return; }
     }
     if (!emitted) send('AI is temporarily unavailable — try again in a moment.');
   });
