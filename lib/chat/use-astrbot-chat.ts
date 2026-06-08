@@ -7,6 +7,8 @@
 // API and supply their own JSX.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { detectMood } from '@/lib/chat/mood';
+import { detectTrigger, type AnimationType } from '@/lib/chat/trigger-words';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -16,6 +18,13 @@ export interface ChatMessage {
   text: string;
   ts: number;
   image?: string; // local preview URL for a photo the visitor sent
+  // Rich message kinds
+  kind?: 'text' | 'tool';
+  toolName?: string;
+  toolStatus?: 'running' | 'done' | 'error';
+  toolSummary?: string;
+  // Humanoid pacing
+  mood?: 'playful' | 'warm' | 'sharp' | 'neutral';
 }
 
 export type ChatAttachment = { file: File; previewUrl: string; type: 'image' | 'file' };
@@ -300,15 +309,49 @@ export function useAstrbotChat(options?: {
     const botId = uid();
     let acc = '';
     let started = false;
+    const TYPING_DELAY_MS = 300;
+    let pendingStart: ReturnType<typeof setTimeout> | null = null;
+
+    const flush = () => {
+      if (signal.aborted || started) return;
+      started = true;
+      setMessages((m) => [...m, {
+        id: botId, role: 'bot' as const, text: acc, ts: Date.now(),
+        mood: detectMood(acc),
+      }]);
+    };
+
     const pushToken = (tok: string) => {
       if (signal.aborted) return;
       acc += tok;
       if (!started) {
-        started = true;
-        setMessages((m) => [...m, { id: botId, role: 'bot', text: acc, ts: Date.now() }]);
-      } else {
-        setMessages((m) => m.map((x) => (x.id === botId ? { ...x, text: acc } : x)));
+        if (pendingStart === null) pendingStart = setTimeout(flush, TYPING_DELAY_MS);
+        return;
       }
+      setMessages((m) => m.map((x) =>
+        x.id === botId ? { ...x, text: acc, mood: detectMood(acc) } : x
+      ));
+    };
+
+    const pushToolFrame = (frame: { name: string; status: 'running' | 'done' | 'error'; summary?: string }) => {
+      if (signal.aborted) return;
+      const toolId = `tool-${botId}-${frame.name}`;
+      setMessages((m) => {
+        const existing = m.find((x) => x.id === toolId);
+        if (existing) {
+          return m.map((x) => x.id === toolId
+            ? { ...x, toolStatus: frame.status, toolSummary: frame.summary }
+            : x
+          );
+        }
+        return [...m, {
+          id: toolId, role: 'bot' as const, text: '', ts: Date.now(),
+          kind: 'tool' as const,
+          toolName: frame.name,
+          toolStatus: frame.status,
+          toolSummary: frame.summary,
+        }];
+      });
     };
 
     try {
@@ -337,13 +380,17 @@ export function useAstrbotChat(options?: {
           const raw = line.slice(5).trim();
           if (raw === '[DONE]') { buf = ''; break; }
           try {
-            const { token } = JSON.parse(raw) as { token?: string };
-            if (token) pushToken(token);
+            const j = JSON.parse(raw) as { token?: string; tool?: { name: string; status: 'running' | 'done' | 'error'; summary?: string } };
+            if (j.token) pushToken(j.token);
+            else if (j.tool) pushToolFrame(j.tool);
           } catch { /* skip malformed frame */ }
         }
       }
       if (!started && !signal.aborted) {
+        if (pendingStart) clearTimeout(pendingStart);
         setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+      } else if (started && acc) {
+        setMessages((m) => m.map((x) => x.id === botId ? { ...x, mood: detectMood(acc) } : x));
       }
     } catch {
       if (signal.aborted) { /* unmounted — skip state update */ }
@@ -393,6 +440,22 @@ export function useAstrbotChat(options?: {
     };
   }, []);
 
+  // ── Trigger animation ───────────────────────────────────────────
+  const [activeAnimation, setActiveAnimation] = useState<AnimationType | null>(null);
+  const lastTriggerMsgId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.id === lastTriggerMsgId.current) return;
+    const anim = detectTrigger(last.text);
+    if (anim) {
+      lastTriggerMsgId.current = last.id;
+      setActiveAnimation(anim);
+    }
+  }, [messages]);
+
+  const dismissAnimation = useCallback(() => setActiveAnimation(null), []);
+
   // ── Panel position helper ───────────────────────────────────────
 
   const panelStyle = useCallback((anchor: PanelAnchor = 'bottom-right') => {
@@ -418,6 +481,8 @@ export function useAstrbotChat(options?: {
     onMouseDown, pos,
     // Panel
     panelStyle,
+    // Animation
+    activeAnimation, dismissAnimation,
     // Constants
     INITIAL_MESSAGE,
   } as const;
