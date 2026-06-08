@@ -14,6 +14,7 @@ interface ChatPanelProps {
   uploading: boolean;
   configured: boolean | null;
   avatarContent: React.ReactNode;
+  avatarClass?: string;
   name: string;
   extraClass?: string;
   bodyRef: RefObject<HTMLDivElement | null>;
@@ -34,7 +35,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({
   messages, loading, input, attachment, uploading, configured,
-  avatarContent, name, extraClass, bodyRef, fileRef,
+  avatarContent, avatarClass, name, extraClass, bodyRef, fileRef,
   style, onMouseDown, onReset, onClose, onAttachClick,
   onPickFile, onClearAttachment, onInputChange, onKeyDown, onSend,
   activeAnimation, onDismissAnimation,
@@ -42,7 +43,7 @@ export function ChatPanel({
   return (
     <div className={`ab-panel${extraClass ? ` ${extraClass}` : ''}`} style={style}>
       <div className="ab-panel__header" onMouseDown={onMouseDown}>
-        <div className="ab-panel__avatar">{avatarContent}</div>
+        <div className={`ab-panel__avatar${avatarClass ? ` ${avatarClass}` : ''}`}>{avatarContent}</div>
         <div className="ab-panel__title">
           <span className="ab-panel__name">{name}</span>
           <span className="ab-panel__status">
