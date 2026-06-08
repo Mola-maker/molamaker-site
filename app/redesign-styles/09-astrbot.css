@@ -471,3 +471,133 @@
 .ab-md table { border-collapse: collapse; font-size: 11px; margin: 6px 0; display: block; overflow-x: auto; }
 .ab-md th, .ab-md td { border: 1px solid var(--rule); padding: 3px 6px; }
 .ab-msg__usertext { white-space: pre-wrap; }
+
+/* ── Mood tinting ─────────────────────────────────────────────── */
+.ab-msg--bot[data-mood="playful"] .ab-msg__bubble { border-left: 3px solid oklch(78% 0.18 145); }
+.ab-msg--bot[data-mood="warm"]    .ab-msg__bubble { border-left: 3px solid oklch(78% 0.18 55); }
+.ab-msg--bot[data-mood="sharp"]   .ab-msg__bubble { border-left: 3px solid oklch(72% 0.14 0); }
+
+/* ── Tool progress card ───────────────────────────────────────── */
+.ab-tool-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--rule);
+  background: var(--bg);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  max-width: 78%;
+  animation: abMsgIn 300ms var(--ease-out-quart) both;
+}
+.ab-tool-card__icon { font-size: 13px; flex-shrink: 0; }
+.ab-tool-card__name { font-weight: 600; color: var(--ink); }
+.ab-tool-card__summary {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ab-tool-card--running .ab-tool-card__icon {
+  animation: abToolSpin 1s linear infinite;
+}
+.ab-tool-card--done { opacity: 0.6; }
+.ab-tool-card--error { border-color: oklch(72% 0.14 0); color: oklch(60% 0.14 0); }
+@keyframes abToolSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Full-screen trigger animation overlay ───────────────────── */
+.ab-anim-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ab-anim-overlay__bg {
+  position: absolute;
+  inset: 0;
+  animation: abAnimFade 2.5s ease-out forwards;
+}
+.ab-anim-overlay__char {
+  position: relative;
+  font-size: clamp(80px, 20vw, 160px);
+  line-height: 1;
+  z-index: 1;
+  user-select: none;
+}
+@keyframes abAnimFade {
+  0%   { opacity: 0.85; }
+  60%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.ab-anim--wave .ab-anim-overlay__bg { background: radial-gradient(circle, oklch(85% 0.14 200 / 0.5) 0%, transparent 70%); }
+.ab-anim--wave .ab-anim-overlay__char { animation: abWave 2.5s ease-out forwards; }
+@keyframes abWave {
+  0%   { transform: translateX(-120%) scale(0.8); opacity: 0; }
+  20%  { transform: translateX(0) scale(1.1); opacity: 1; }
+  40%  { transform: translateX(0) rotate(-15deg) scale(1.05); }
+  60%  { transform: translateX(0) rotate(15deg) scale(1.05); }
+  80%  { transform: translateX(0) rotate(-8deg) scale(1); opacity: 1; }
+  100% { transform: translateX(120%) scale(0.8); opacity: 0; }
+}
+.ab-anim--laugh .ab-anim-overlay__bg { background: radial-gradient(circle, oklch(85% 0.18 85 / 0.45) 0%, transparent 70%); }
+.ab-anim--laugh .ab-anim-overlay__char { animation: abLaugh 2.5s ease-out forwards; }
+@keyframes abLaugh {
+  0%,100% { transform: scale(0); opacity: 0; }
+  10%     { transform: scale(1.4); opacity: 1; }
+  20%,40%,60% { transform: scale(1) rotate(-8deg); }
+  30%,50%     { transform: scale(1.05) rotate(8deg); }
+  85%     { transform: scale(1); opacity: 1; }
+}
+.ab-anim--blush .ab-anim-overlay__bg { background: radial-gradient(circle, oklch(85% 0.2 0 / 0.4) 0%, transparent 60%); }
+.ab-anim--blush .ab-anim-overlay__char { animation: abBlush 2.5s ease-out forwards; }
+@keyframes abBlush {
+  0%   { transform: scale(0) rotate(20deg); opacity: 0; }
+  15%  { transform: scale(1.3) rotate(-5deg); opacity: 1; }
+  30%  { transform: scale(1.1) rotate(0deg); }
+  80%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.ab-anim--sparkle .ab-anim-overlay__bg { background: radial-gradient(circle, oklch(92% 0.15 55 / 0.5) 0%, transparent 65%); }
+.ab-anim--sparkle .ab-anim-overlay__char { animation: abSparkle 2.5s ease-out forwards; }
+@keyframes abSparkle {
+  0%,100% { transform: scale(0); opacity: 0; }
+  10%     { transform: scale(1.5); opacity: 1; }
+  20%,60% { transform: scale(1) rotate(-5deg); }
+  40%,80% { transform: scale(1.1) rotate(5deg); }
+  90%     { transform: scale(1); opacity: 0.8; }
+}
+.ab-anim--heart .ab-anim-overlay__bg { background: radial-gradient(circle, oklch(85% 0.2 350 / 0.4) 0%, transparent 60%); }
+.ab-anim--heart .ab-anim-overlay__char { animation: abHeart 2.5s ease-out forwards; }
+@keyframes abHeart {
+  0%   { transform: translateY(40vh) scale(0.5); opacity: 0; }
+  15%  { transform: translateY(0) scale(1.3); opacity: 1; }
+  40%  { transform: translateY(-10px) scale(1.2); }
+  65%  { transform: translateY(5px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(-60vh) scale(0.5); opacity: 0; }
+}
+.ab-anim--konnichiwa .ab-anim-overlay__bg { background: radial-gradient(circle, oklch(85% 0.16 165 / 0.45) 0%, transparent 65%); }
+.ab-anim--konnichiwa .ab-anim-overlay__char { animation: abKonnichiwa 2.5s ease-out forwards; }
+@keyframes abKonnichiwa {
+  0%   { transform: translateY(-100%) scale(0.8); opacity: 0; }
+  15%  { transform: translateY(0) scale(1.1); opacity: 1; }
+  35%  { transform: translateY(0) rotate(-20deg) scale(0.9); }
+  50%  { transform: translateY(0) rotate(0deg) scale(1); }
+  75%  { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100%) scale(0.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab-anim-overlay__char { animation: abAnimFlash 0.5s ease-out forwards !important; }
+  @keyframes abAnimFlash {
+    0%,100% { opacity: 0; }
+    50%     { opacity: 1; }
+  }
+}
