@@ -19,6 +19,7 @@ import { VWorkplace } from './v-workplace';
 import { VNotebook } from './v-notebook';
 import { MusicPlayer } from './music-player';
 import { MikuHub } from './miku-hub';
+import { MikuFairy } from './miku-fairy';
 import { Live2DChat } from './live2d-chat';
 import {
   TweaksPanel,
@@ -49,6 +50,7 @@ type Tweaks = {
   backdropBg: string;
   backdropOpacity: number;
   darkMode: boolean;
+  mikuFairy: boolean;
 };
 
 const TWEAK_DEFAULTS: Tweaks = {
@@ -66,6 +68,7 @@ const TWEAK_DEFAULTS: Tweaks = {
   backdropBg: assetUrl('/redesign/miku-bg-2.gif'),
   backdropOpacity: 0.14,
   darkMode: false,
+  mikuFairy: true,
 };
 
 function variantLabel(v: string) {
@@ -223,6 +226,9 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
       <MusicPlayer hideTrigger />
       <Live2DChat autoLoad={variant === 'workplace'} />
       <MikuHub />
+      {/* Wandering chibi Miku — walks the bars, hides behind headlines, swims
+          the blank zones, and acts out [miku:…] stage directions from chat. */}
+      {opened && <MikuFairy enabled={tweaks.mikuFairy} />}
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Composition">
@@ -342,6 +348,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
           <TweakToggle label="Hover-animated text" value={tweaks.dynamicWords} onChange={(v) => setTweak('dynamicWords', v)} />
         </TweakSection>
         <TweakSection label="Motion">
+          <TweakToggle label="Miku fairy companion" value={tweaks.mikuFairy} onChange={(v) => setTweak('mikuFairy', v)} />
           <TweakToggle label="Custom cursor" value={tweaks.cursor} onChange={(v) => setTweak('cursor', v)} />
           <TweakToggle label="Opening sequence" value={tweaks.opening} onChange={(v) => setTweak('opening', v)} />
           <TweakToggle label="Paper grain" value={tweaks.grain} onChange={(v) => setTweak('grain', v)} />

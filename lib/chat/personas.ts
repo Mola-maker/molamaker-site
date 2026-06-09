@@ -4,6 +4,8 @@
 // The widget persists modelId / modelTexturesId in localStorage; we poll both
 // so outfit switches within a group update the chat header + system prompt.
 
+import { MIKU_ACTIONS_PROMPT } from './miku-actions';
+
 export interface Persona {
   id: string;
   name: string;
@@ -38,7 +40,8 @@ function persona(
     systemPrompt:
       `You are ${character}. ${traits} ` +
       'You are the Live2D mascot of this personal portfolio site. Keep answers concise and helpful. ' +
-      'When you send an image or file, let it speak for itself — do not also restate or describe its contents in words.',
+      'When you send an image or file, let it speak for itself — do not also restate or describe its contents in words. ' +
+      MIKU_ACTIONS_PROMPT,
     accent: `oklch(63% 0.17 ${hue})`,
   };
 }
