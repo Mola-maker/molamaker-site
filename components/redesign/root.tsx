@@ -20,6 +20,7 @@ import { VNotebook } from './v-notebook';
 import { MusicPlayer } from './music-player';
 import { MikuHub } from './miku-hub';
 import { MikuFairy } from './miku-fairy';
+import { MikuStage } from './miku-stage';
 import { Live2DChat } from './live2d-chat';
 import {
   TweaksPanel,
@@ -224,11 +225,16 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
       {/* Unified bottom-right control hub: one Miku button → chat; hover springs
           out tweak · music · 看板娘 satellites. Panels below listen for events. */}
       <MusicPlayer hideTrigger />
-      <Live2DChat autoLoad={variant === 'workplace'} />
+      {/* The Live2D 看板娘 is the lead performer — load on every variant so
+          chat reactions, lip-sync and stage scenes always have their star. */}
+      <Live2DChat autoLoad />
       <MikuHub />
       {/* Wandering chibi Miku — walks the bars, hides behind headlines, swims
           the blank zones, and acts out [miku:…] stage directions from chat. */}
       {opened && <MikuFairy enabled={tweaks.mikuFairy} />}
+      {/* Fullscreen cinematic scenes (concert / fireworks / sakura / stars /
+          snow / confetti) directed by the LLM or typed commands. */}
+      {opened && <MikuStage />}
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Composition">
@@ -298,6 +304,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
           <TweakButton label="▶ Replay opening" onClick={() => { sessionStorage.removeItem('mola:opened'); setOpened(false); }} />
           <TweakButton label="↺ Reset atlas zones" onClick={() => window.dispatchEvent(new CustomEvent('atlas:reset'))} />
           <TweakButton label="🎲 Shuffle Miku gestures" onClick={() => window.dispatchEvent(new CustomEvent('miku:shuffle'))} />
+          <TweakButton label="🎤 Miku · stage live!" onClick={() => window.dispatchEvent(new CustomEvent('miku:scene', { detail: { scene: 'concert' } }))} />
         </TweakSection>
         <TweakSection label="Atlas">
           <TweakSelect

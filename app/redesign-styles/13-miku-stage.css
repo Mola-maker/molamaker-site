@@ -1,0 +1,168 @@
+/* ── MikuStage — fullscreen cinematic scenes ────────────────────────
+   Overlay + canvas particle engine (miku-stage.tsx). During a scene the
+   body carries `mstage-on mstage-<scene>`, and `mstage-live` when the
+   Live2D widget is on stage — that's what glides #waifu from its corner
+   to center stage, scaled up under the spotlights. */
+
+.mstage {
+  position: fixed;
+  inset: 0;
+  z-index: 8750;
+  cursor: pointer;
+  animation: mstageIn 0.6s ease both;
+  overflow: hidden;
+}
+.mstage.is-closing { animation: mstageOut 0.5s ease both; }
+@keyframes mstageIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mstageOut { from { opacity: 1; } to { opacity: 0; } }
+
+.mstage__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mstage__hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  animation: mstageHint 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes mstageHint { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+
+/* ── Scene backdrops ─────────────────────────────────────────────── */
+.mstage--concert {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 108%, rgba(57, 197, 187, 0.2), transparent 60%),
+    radial-gradient(ellipse 120% 90% at 50% 50%, rgba(22, 16, 52, 0.86), rgba(4, 4, 14, 0.95));
+}
+.mstage--fireworks {
+  background: linear-gradient(180deg, rgba(5, 7, 20, 0.92), rgba(10, 12, 28, 0.86));
+}
+.mstage--sakura {
+  background: linear-gradient(180deg, rgba(255, 237, 244, 0.32), rgba(255, 222, 234, 0.18));
+}
+.mstage--stars {
+  background: linear-gradient(180deg, rgba(6, 9, 30, 0.94), rgba(13, 17, 46, 0.86));
+}
+.mstage--snow {
+  background: linear-gradient(180deg, rgba(214, 228, 240, 0.34), rgba(228, 238, 248, 0.2));
+}
+.mstage--confetti { background: rgba(0, 0, 0, 0.04); }
+
+/* ── Concert rig: beams, floor glow, pulsing rings ───────────────── */
+.mstage__rig { position: absolute; inset: 0; pointer-events: none; }
+
+.mstage__beam {
+  position: absolute;
+  top: -4vh;
+  left: 50%;
+  width: 17vw;
+  height: 135vh;
+  margin-left: -8.5vw;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  filter: blur(7px);
+  transform-origin: 50% 0;
+  animation: mstageBeam 5.2s ease-in-out infinite alternate;
+}
+.mstage__beam--1 { background: linear-gradient(180deg, rgba(57, 197, 187, 0.5), transparent 72%); animation-delay: 0s; }
+.mstage__beam--2 { background: linear-gradient(180deg, rgba(255, 159, 190, 0.42), transparent 72%); animation-delay: -1.4s; animation-duration: 4.4s; }
+.mstage__beam--3 { background: linear-gradient(180deg, rgba(160, 205, 255, 0.4), transparent 72%); animation-delay: -2.6s; animation-duration: 6s; }
+.mstage__beam--4 { background: linear-gradient(180deg, rgba(255, 247, 194, 0.34), transparent 72%); animation-delay: -3.4s; animation-duration: 4.9s; }
+@keyframes mstageBeam {
+  0%   { transform: rotate(-26deg); }
+  100% { transform: rotate(26deg); }
+}
+
+.mstage__floor {
+  position: absolute;
+  left: 50%;
+  bottom: -6vh;
+  width: 90vw;
+  height: 26vh;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 50%, rgba(57, 197, 187, 0.4), rgba(255, 159, 190, 0.12) 45%, transparent 70%);
+  filter: blur(10px);
+  animation: mstageFloor 2.2s ease-in-out infinite alternate;
+}
+@keyframes mstageFloor { from { opacity: 0.6; } to { opacity: 1; } }
+
+.mstage__rings {
+  position: absolute;
+  left: 50%;
+  bottom: 4vh;
+  width: 60vmin;
+  height: 60vmin;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 38%, rgba(57, 197, 187, 0.18) 40%, transparent 44%),
+    radial-gradient(circle, transparent 58%, rgba(255, 159, 190, 0.14) 60%, transparent 64%),
+    radial-gradient(circle, transparent 76%, rgba(255, 255, 255, 0.1) 78%, transparent 82%);
+  animation: mstageRings 3.2s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+@keyframes mstageRings {
+  0%, 100% { transform: translateX(-50%) scale(0.92); opacity: 0.7; }
+  50%      { transform: translateX(-50%) scale(1.06); opacity: 1; }
+}
+
+/* ── Stars scene moon ────────────────────────────────────────────── */
+.mstage__moon {
+  position: absolute;
+  top: 9vh;
+  right: 12vw;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #fffdf2, #f3ecd2 60%, #d9d2b8);
+  box-shadow: 0 0 60px 22px rgba(255, 250, 224, 0.28);
+  pointer-events: none;
+}
+
+/* ── Live2D center stage ─────────────────────────────────────────── */
+/* The widget normally sits bottom-left at z-index 1. During a live scene it
+   glides to center stage above the overlay, scaled up — transition included
+   so entry and exit are one continuous camera move. */
+body.mstage-on #waifu {
+  transition: transform 1s cubic-bezier(0.3, 0.9, 0.3, 1), left 1s cubic-bezier(0.3, 0.9, 0.3, 1), bottom 1s ease;
+}
+body.mstage-live #waifu {
+  left: 50% !important;
+  bottom: 3vh !important;
+  z-index: 8770 !important;
+  transform: translateX(-50%) translateY(0) scale(1.85) !important;
+  transform-origin: 50% 100%;
+}
+body.mstage-live.mstage-concert #waifu {
+  filter: drop-shadow(0 0 26px rgba(57, 197, 187, 0.45));
+}
+/* No chrome on stage — tools hidden, speech bubble becomes the lyric line. */
+body.mstage-live #waifu #waifu-tool { display: none; }
+body.mstage-live #waifu #waifu-tips {
+  background: rgba(8, 10, 24, 0.62);
+  border-color: rgba(57, 197, 187, 0.5);
+  color: #eafffd;
+  text-align: center;
+  font-size: 15px;
+}
+
+/* Lighter scenes keep her in the corner but still above the weather. */
+body.mstage-on:not(.mstage-live) #waifu { z-index: 8770 !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mstage { display: none; }
+}
+@media (max-width: 640px) {
+  body.mstage-live #waifu { transform: translateX(-50%) translateY(0) scale(1.3) !important; }
+  .mstage__beam { width: 30vw; margin-left: -15vw; }
+}

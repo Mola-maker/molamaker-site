@@ -18,9 +18,9 @@
 import { useEffect, useRef } from 'react';
 import {
   actionsFromUserText,
-  isMikuAction,
+  isSpriteAction,
   extractMikuActions,
-  type MikuAction,
+  type SpriteAction,
 } from '@/lib/chat/miku-actions';
 
 const W = 64;
@@ -43,11 +43,10 @@ interface Plan {
   /** Horizontal position inside the anchor rect, as a 0–1 fraction. */
   frac?: number;
   targets?: { x: number; y: number }[];
-  queue?: MikuAction[];
+  queue?: SpriteAction[];
   started?: boolean;
   cycles?: number;
   up?: boolean;
-  burstsLeft?: number;
 }
 
 const PHRASES = {
@@ -158,18 +157,6 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     const sparkles = (x: number, y: number, n = 6) => {
       for (let i = 0; i < n; i++) {
         fx('mfx--spark', x + (Math.random() - 0.5) * 54, y + (Math.random() - 0.5) * 44, '✦');
-      }
-    };
-    const burst = (x: number, y: number) => {
-      const colors = ['#39c5bb', '#f4a7b3', '#ffd166', '#7ab8f5', '#c96442'];
-      for (let i = 0; i < 12; i++) {
-        const a = (Math.PI * 2 * i) / 12 + Math.random() * 0.4;
-        const r = 40 + Math.random() * 46;
-        fx('mfx--burst', x, y, '✦', {
-          '--dx': `${Math.cos(a) * r}px`,
-          '--dy': `${Math.sin(a) * r}px`,
-          '--c': pick(colors),
-        });
       }
     };
     const noteRain = () => {
@@ -303,7 +290,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       plan = { kind: 'chat', step: 0, until: 0, target: null };
     };
     const startPerform = (actions: string[]) => {
-      const queue = actions.filter(isMikuAction) as MikuAction[];
+      const queue = actions.filter(isSpriteAction) as SpriteAction[];
       if (!queue.length) return;
       setBehind(false);
       plan = { kind: 'perform', step: 0, until: 0, target: null, queue, started: false };
@@ -469,9 +456,9 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       }
     };
 
-    const ACTION_DUR: Record<MikuAction, number> = {
+    const ACTION_DUR: Record<SpriteAction, number> = {
       dance: 3800, spin: 1400, jump: 1000, wave: 1800, hearts: 1900,
-      fireworks: 2600, sing: 3200, hide: 0, swim: 0, sleep: 4200, zoom: 0,
+      sing: 3200, hide: 0, swim: 0, sleep: 4200, zoom: 0,
     };
 
     const tickPerform = (now: number, dt: number) => {
@@ -501,7 +488,6 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
           case 'jump': setMode('jump'); break;
           case 'wave': setMode('wave'); break;
           case 'hearts': setMode('happy'); hearts(7); break;
-          case 'fireworks': setMode('happy'); plan.burstsLeft = 5; S.fxClock = 99; break;
           case 'sleep': setMode('sleep'); say(PHRASES.sleepy, 2200); break;
           default: setMode('idle');
         }
@@ -521,17 +507,6 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         return;
       }
 
-      if (action === 'fireworks' && (plan.burstsLeft ?? 0) > 0) {
-        S.fxClock += dt;
-        if (S.fxClock > 0.45) {
-          S.fxClock = 0;
-          plan.burstsLeft = (plan.burstsLeft ?? 1) - 1;
-          burst(
-            (0.15 + 0.7 * Math.random()) * window.innerWidth,
-            (0.12 + 0.4 * Math.random()) * window.innerHeight,
-          );
-        }
-      }
       if (action === 'sing') {
         S.fxClock += dt;
         if (S.fxClock > 0.4) {
@@ -643,7 +618,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (detail?.actions?.length) startPerform(detail.actions);
     };
     const onShuffle = () => {
-      startPerform([pick(['dance', 'spin', 'jump', 'wave', 'hearts', 'fireworks'] as MikuAction[])]);
+      startPerform([pick(['dance', 'spin', 'jump', 'wave', 'hearts'] as SpriteAction[])]);
     };
     const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
     const onClick = () => {
