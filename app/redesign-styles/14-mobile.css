@@ -1,0 +1,100 @@
+/* ── Mobile & touch polish ──────────────────────────────────────────
+   One consolidated layer for phones and touch input, loaded last so it
+   wins over the per-variant sheets. Three concerns:
+     1. touch ≠ hover — neutralise sticky :hover states and give every
+        floating control a ≥44px target;
+     2. safe areas — fixed bottom chrome clears the iOS home indicator;
+     3. small viewports — floating panels become sheets, display type
+        steps down, nothing scrolls sideways. */
+
+/* ── 1 · Touch input ─────────────────────────────────────────────── */
+@media (hover: none) {
+  /* Magazine: tap shouldn't leave a row stuck in its inverted state. */
+  .v-mag .index-table__row:hover {
+    background: transparent;
+    border-color: var(--rule);
+    padding-left: 0;
+  }
+  .v-mag .index-table__row:hover .index-table__title { color: var(--ink); }
+  .v-mag .index-table__row:hover .index-table__date,
+  .v-mag .index-table__row:hover .index-table__no,
+  .v-mag .index-table__row:hover .index-table__excerpt,
+  .v-mag .index-table__row:hover .index-table__meta { color: var(--ink-2); }
+  .v-mag .index-table__row:hover::before { width: 0; }
+  .v-mag .work-card:hover { transform: none; box-shadow: none; }
+  .v-mag .work-card:hover .work-card__art .glyph { transform: none; opacity: 0.11; }
+
+  /* Atlas: don't dim sibling zones under a lingering tap. */
+  .v-atlas .map:hover .zone { opacity: 1; }
+  .v-atlas .atlas-strips .strip:hover { transform: none; background: rgba(255, 255, 255, 0.04); }
+}
+
+@media (pointer: coarse) {
+  /* Floating controls reach the 44px touch-target floor. */
+  .miku-hub__sat-btn { min-width: 44px; min-height: 44px; }
+  .variant-rail button { padding: 10px 12px; }
+  .ab-panel__close, .ab-panel__reset, .ab-panel__attach, .ab-panel__send {
+    min-width: 40px; min-height: 40px;
+  }
+  /* The fairy is decorative — don't let her intercept scrolling fingers. */
+  .mfairy__rig { cursor: default; }
+}
+
+/* ── 2 · Safe areas (iOS home indicator / notches) ──────────────── */
+.miku-hub { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.variant-rail { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 720px) {
+  .miku-hub { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── 3 · Small viewports ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* No sideways scroll, ever — oversized ghost numerals are clipped per
+     section, but a stray transform shouldn't widen the page. */
+  body.redesign-on { overflow-x: hidden; }
+
+  /* Chat panel: width comes inline from getPanelPos (vw-aware); make the
+     chrome match the sheet feel and keep iOS from zooming the input. */
+  .ab-panel { border-radius: 14px 14px 10px 10px; }
+  .ab-panel__input { font-size: 16px; }
+
+  /* Music panel + tweaks already use min(…, 92vw); align the chat-era
+     panels that don't. */
+  .music-panel { width: min(380px, calc(100vw - 16px)); }
+
+  /* Variant rail: 6 chips can overflow tiny phones — let it scroll
+     within itself rather than pushing the page wider. */
+  .variant-rail {
+    max-width: calc(100vw - 88px); /* leave room for the Miku hub */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .variant-rail::-webkit-scrollbar { display: none; }
+
+  /* Stage scenes: lyric + song chip sized for a hand-held frame. */
+  .mstage__lyric { font-size: clamp(17px, 5.4vw, 26px); bottom: 16vh; max-width: 92vw; }
+  .mstage__song { top: 14px; font-size: 10px; max-width: 88vw; }
+  .mstage__hint { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Magazine: ghost numerals scale down with the page; the drop cap and
+     pull quote stay proportionate. */
+  .v-mag .folio::before,
+  .v-mag .feature::before,
+  .v-mag .index-table::before,
+  .v-mag .work-spread::before { font-size: clamp(80px, 30vw, 160px); }
+  .v-mag .feature__lead::first-letter { font-size: 2.6em; }
+
+  /* Atlas: plate numbers + detail title on a phone column. */
+  .v-atlas .atlas-hero::after { font-size: clamp(100px, 34vw, 200px); }
+  .v-atlas .zone-detail::after { font-size: clamp(70px, 26vw, 140px); }
+  .v-atlas .zone-detail__side h3 { font-size: clamp(40px, 11vw, 64px); }
+  .v-atlas .atlas-strips { padding: 28px 20px; }
+}
+
+@media (max-width: 400px) {
+  /* The hub's satellite arc needs a little more clearance on the
+     smallest phones; the fairy shrinks another notch. */
+  .miku-hub { right: 10px; }
+  .mfairy__rig { transform: scaleX(var(--mf-face)) rotate(var(--mf-rot, 0deg)) scale(0.72); }
+}

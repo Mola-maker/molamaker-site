@@ -23,7 +23,7 @@ const onVercel = Boolean(process.env.VERCEL);
 // --font-sans / --font-mono are defined in app/globals.css :root with
 // the Google font as primary and system fallbacks behind it.
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export const dynamic = 'force-dynamic';
 

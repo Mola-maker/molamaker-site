@@ -59,6 +59,8 @@ type GGBApi = GgbApiLike & {
   getLineStyle?: (name: string) => number;
   getVisible?: (name: string) => boolean;
   isDefined?: (name: string) => boolean;
+  getCaption?: (name: string) => string;
+  getLabelVisible?: (name: string) => boolean;
 };
 
 /** Read the live construction into the serialisable shape the transpiler wants. */
@@ -82,7 +84,12 @@ function readGgbConstruction(api: GGBApi): GgbObject[] {
         thickness: api.getLineThickness?.(name),
         dashed: api.getLineStyle ? api.getLineStyle(name) !== 0 : false,
       };
-      if (type === 'point') { o.x = api.getXcoord?.(name); o.y = api.getYcoord?.(name); }
+      if (type === 'point') {
+        o.x = api.getXcoord?.(name); o.y = api.getYcoord?.(name);
+        const caption = api.getCaption?.(name);
+        if (caption && caption !== name) o.caption = caption;
+        if (api.getLabelVisible) o.labelVisible = api.getLabelVisible(name);
+      }
       out.push(o);
     } catch { /* skip an object the bundle can't read */ }
   }

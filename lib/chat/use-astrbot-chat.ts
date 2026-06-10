@@ -61,26 +61,30 @@ export function getPanelPos(
   anchor: PanelAnchor = 'bottom-right',
 ): React.CSSProperties {
   if (typeof window === 'undefined') return {};
-  const W = 340;
+  // Phones: the panel becomes a near-full-width sheet instead of a 340px
+  // window that overflows or hugs one edge.
+  const W = Math.min(340, window.innerWidth - 16);
   const H = Math.min(480, window.innerHeight - 80);
   const BUBBLE = 52;
   const GAP = 8;
   const EDGE = 8;
+  const narrow = window.innerWidth < 560;
 
   if (anchor === 'bottom-left') {
     // Live2D character sits at bottom-left and occupies ~280px width.
     // Place the chat panel to its RIGHT so it never covers the character's face.
     // Also lift it ~60px from the very bottom so it floats above the character's head.
-    const CHAR_WIDTH = 280;
-    const CHAR_HEIGHT_OFFSET = 60;
+    // On narrow screens there is no "beside" — centre the sheet above the bottom.
+    const CHAR_WIDTH = narrow ? 0 : 280;
+    const CHAR_HEIGHT_OFFSET = narrow ? 16 : 60;
 
-    let left = EDGE + CHAR_WIDTH;
+    let left = narrow ? (window.innerWidth - W) / 2 : EDGE + CHAR_WIDTH;
     let top  = window.innerHeight - H - GAP - CHAR_HEIGHT_OFFSET;
 
     left = Math.max(EDGE, Math.min(left, window.innerWidth  - W - EDGE));
     top  = Math.max(EDGE, Math.min(top,  window.innerHeight - H - EDGE));
 
-    return { top, left, height: H };
+    return { top, left, height: H, width: W };
   }
 
   // bottom-right (existing bubble behaviour)
@@ -98,7 +102,7 @@ export function getPanelPos(
   left = Math.max(EDGE, Math.min(left, window.innerWidth  - W - EDGE));
   top  = Math.max(EDGE, Math.min(top,  window.innerHeight - H - EDGE));
 
-  return { top, left, height: H };
+  return { top, left, height: H, width: W };
 }
 
 // ── Hook ──────────────────────────────────────────────────────────

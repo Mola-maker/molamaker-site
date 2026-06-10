@@ -35,6 +35,12 @@ const SATELLITES: Satellite[] = [
 export function MikuHub() {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Touch screens have no hover: the first tap springs out the satellites,
+  // the second tap (or a tap with them already open) toggles the chat.
+  const coarse = useRef(false);
+  useEffect(() => {
+    try { coarse.current = window.matchMedia('(pointer: coarse)').matches; } catch { /* ignore */ }
+  }, []);
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
@@ -77,7 +83,10 @@ export function MikuHub() {
         className="miku-hub__main"
         aria-label="Open chat — hover for controls"
         aria-expanded={open}
-        onClick={() => fire('mola:chat-toggle')}
+        onClick={() => {
+          if (coarse.current && !open) { cancelClose(); setOpen(true); return; }
+          fire('mola:chat-toggle');
+        }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl('/redesign/miku-dance.gif')} alt="Miku" className="miku-hub__gif" />
