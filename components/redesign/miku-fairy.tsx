@@ -35,9 +35,13 @@ const H = 74;
 type Mode =
   | 'idle' | 'walk' | 'fly' | 'swim' | 'peek' | 'sit' | 'talk'
   | 'dance' | 'spin' | 'jump' | 'wave' | 'happy' | 'sleep' | 'startle'
-  | 'carry' | 'cozy';
+  | 'carry' | 'cozy'
+  | 'shy' | 'cry' | 'laugh' | 'kiss' | 'angry' | 'think' | 'cheer'
+  | 'dizzy' | 'wink' | 'stretch' | 'magic' | 'vibe' | 'bounce' | 'fish';
 
-type PlanKind = 'wander' | 'bar' | 'hide' | 'swim' | 'chat' | 'nap' | 'perform' | 'steal';
+type PlanKind =
+  | 'wander' | 'bar' | 'hide' | 'swim' | 'chat' | 'nap' | 'perform' | 'steal'
+  | 'chase' | 'fish' | 'doodle' | 'vibe' | 'bounce';
 
 interface Plan {
   kind: PlanKind;
@@ -68,6 +72,23 @@ const PHRASES = {
   poke: ['にゃ?', 'That tickles~', '干嘛呀~ ♪', '♪~'],
   steal: ['借一个字哦~', 'this one is mine now ✧', 'えへへ、もらった!'],
   cozy: ['ふぅ~ 好舒服', '*humming* ♪~', 'こ こ ち い い…', 'cozy ✧'],
+  chase: ['来抓我呀~!', 'catch me if you can ✧', '追上我有奖励哦~'],
+  caught: ['抓到你啦!', 'gotcha~ ❤', 'タッチ!'],
+  tired: ['はぁ、はぁ…', '好快…休息一下', '*pant pant*'],
+  fish: ['钓鱼时间~ 🎣', '嘘…鱼会被吓跑的', 'fishing time…'],
+  fished: ['钓到一个音符!', '上钩啦~!', '大丰收 ✧'],
+  doodle: ['看我画一个~', 'お絵描き time ✎', '画个爱心送你'],
+  vibe: ['这首歌不错~ ♪', '*跟着节奏*', 'いい曲~'],
+  cheer: ['加油加油~!', 'ファイト!', 'you can do it ✧'],
+  think: ['唔…让我想想', 'hmm…', '考え中…'],
+  shy: ['讨厌啦~', '/// ω ///', 'はずかしい…'],
+  cry: ['呜呜呜…', '嘤嘤嘤', '(  ; ω ; )'],
+  laugh: ['哈哈哈哈!', 'あはは!', 'XD'],
+  kiss: ['mua~ ❤', '飞吻送你!', 'ちゅっ♡'],
+  angry: ['哼!', '生气了!', 'ぷんぷん!'],
+  magic: ['见证奇迹的时刻~', '✧ abracadabra ✧', '魔法、発動!'],
+  photo: ['茄子~!', 'say cheese!', '咔嚓 ✧'],
+  stretch: ['嗯~~~伸个懒腰', 'んん~~', '*stretch*'],
 };
 
 function pick<T>(arr: T[]): T {
@@ -102,6 +123,10 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       behind: false,
       talking: false,
       fxClock: 0,
+      /** music player broadcast state — gates the "vibe" behavior */
+      music: false,
+      /** accumulated scroll speed — fast scrolling makes her dizzy */
+      scrollGust: 0,
     };
     const mouse = { x: -9999, y: -9999 };
     let plan: Plan = { kind: 'wander', step: 0, until: performance.now() + 1400, target: null };
@@ -176,6 +201,56 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         });
       }
     };
+    const tears = () => {
+      fx('mfx--tear', S.x + 22, S.y + 30, '💧');
+      fx('mfx--tear', S.x + 40, S.y + 30, '💧');
+    };
+    const angerMark = () => fx('mfx--puff', S.x + W - 10, S.y - 4, '💢');
+    /** Camera flash: a full-screen white blink (also drops a 📷 by her hand). */
+    const cameraFlash = () => {
+      const flash = document.createElement('span');
+      flash.className = 'mfx mfx--flash';
+      flash.addEventListener('animationend', () => flash.remove());
+      fxHost.appendChild(flash);
+      after(1200, () => flash.remove());
+      fx('mfx--spark', cx() + S.facing * 22, cy() - 6, '📷');
+    };
+    /** Dizzy stars orbiting her head (burst particles on a ring). */
+    const orbitStars = () => {
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6;
+        fx('mfx--burst', cx(), S.y + 10, '✦', {
+          '--dx': `${Math.cos(a) * 26}px`,
+          '--dy': `${Math.sin(a) * 14 - 8}px`,
+          '--c': '#ffd166',
+        });
+      }
+    };
+    /** A heart fx that flies from her toward the visitor's cursor. */
+    const kissHeart = () => {
+      const tx = mouse.x > 0 ? mouse.x : window.innerWidth / 2;
+      const ty = mouse.y > 0 ? mouse.y : window.innerHeight / 2;
+      fx('mfx--burst', cx() + S.facing * 14, cy(), '❤', {
+        '--dx': `${tx - cx()}px`,
+        '--dy': `${ty - cy()}px`,
+        '--c': '#f0879a',
+      });
+    };
+    // Fishing line: a persistent element (not animation-ended) — removed
+    // explicitly when the fishing plan finishes.
+    let fishLine: HTMLSpanElement | null = null;
+    const dropFishLine = () => {
+      removeFishLine();
+      fishLine = document.createElement('span');
+      fishLine.className = 'mfx-line';
+      fxHost.appendChild(fishLine);
+    };
+    const moveFishLine = (len: number) => {
+      if (!fishLine) return;
+      fishLine.style.transform = `translate(${(cx() + S.facing * 22).toFixed(1)}px, ${(S.y + 38).toFixed(1)}px)`;
+      fishLine.style.height = `${len.toFixed(0)}px`;
+    };
+    const removeFishLine = () => { fishLine?.remove(); fishLine = null; };
 
     // ── Movement ───────────────────────────────────────────────────
     const move = (tx: number, ty: number, speed: number, dt: number) => {
@@ -397,22 +472,58 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       stealState = { span, ghost: g, w };
       plan = { kind: 'steal', step: 0, until: 0, target: null, targets: findBlankPoints(1) };
     };
+    const startChase = () => {
+      // No cursor to chase (touch device / mouse parked) → wander instead.
+      if (mouse.x < 0) return startWander();
+      plan = { kind: 'chase', step: 0, until: performance.now() + 7000, target: null };
+      say(PHRASES.chase, 2000);
+    };
+    const startFish = () => {
+      const bar = findBar();
+      if (!bar) return startWander();
+      plan = { kind: 'fish', step: 0, until: 0, target: null, el: bar.el };
+    };
+    const startDoodle = () => {
+      const [c] = findBlankPoints(1);
+      // centre of the heart she's about to trace; keep it on screen.
+      const x = Math.max(110, Math.min(c.x, window.innerWidth - 110));
+      const y = Math.max(140, Math.min(c.y, window.innerHeight - 140));
+      plan = { kind: 'doodle', step: 0, until: 0, target: { x, y } };
+    };
+    const startVibe = (forced = false) => {
+      // `frac` doubles as the "asked for it" flag: a requested vibe runs its
+      // course even with no music playing; an autonomous one stops with it.
+      plan = { kind: 'vibe', step: 0, until: 0, target: null, frac: forced ? 1 : 0 };
+      say(PHRASES.vibe, 2200);
+    };
+    const startBounce = () => {
+      const bar = findBar();
+      if (!bar) return startWander();
+      plan = { kind: 'bounce', step: 0, until: 0, target: null, el: bar.el };
+    };
     const startPerform = (actions: string[]) => {
       const queue = actions.filter(isSpriteAction) as SpriteAction[];
       if (!queue.length) return;
       setBehind(false);
       if (plan.kind === 'steal') returnWord();
+      if (plan.kind === 'fish') removeFishLine();
       plan = { kind: 'perform', step: 0, until: 0, target: null, queue, started: false };
     };
 
     const nextPlan = () => {
       if (chatPanel()) return startChat();
+      // While music plays she mostly wants to vibe along.
+      if (S.music && Math.random() < 0.35) return startVibe();
       const roll = Math.random();
-      if (roll < 0.2) startHide();
-      else if (roll < 0.38) startSwim();
-      else if (roll < 0.56) startSteal();
-      else if (roll < 0.78) startBar();
-      else if (roll < 0.92) startWander();
+      if (roll < 0.16) startHide();
+      else if (roll < 0.3) startSwim();
+      else if (roll < 0.44) startSteal();
+      else if (roll < 0.62) startBar();
+      else if (roll < 0.7) startFish();
+      else if (roll < 0.76) startDoodle();
+      else if (roll < 0.81) startBounce();
+      else if (roll < 0.85) startChase();
+      else if (roll < 0.94) startWander();
       else startNap();
     };
 
@@ -593,6 +704,140 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       } else if (now > plan.until) nextPlan();
     };
 
+    const tickChase = (now: number, dt: number) => {
+      if (plan.step === 0) {
+        if (mouse.x < 0) return nextPlan();
+        setMode('fly');
+        const arrived = move(mouse.x - W / 2, mouse.y - H / 2, 230, dt);
+        if (arrived || Math.hypot(mouse.x - cx(), mouse.y - cy()) < 36) {
+          setMode('happy');
+          say(PHRASES.caught, 2200);
+          hearts(5);
+          plan.step = 1;
+          plan.until = now + 1600;
+        } else if (now > plan.until) {
+          // She gave it her best — cursor wins this round.
+          setMode('think');
+          say(PHRASES.tired, 2200);
+          fx('mfx--tear', S.x + 46, S.y + 8, '💧');
+          plan.step = 1;
+          plan.until = now + 1800;
+        }
+      } else if (now > plan.until) nextPlan();
+    };
+
+    const tickFish = (now: number, dt: number) => {
+      const surf = barSurface(plan.el ?? null);
+      if (!surf || surf.right <= surf.left) { removeFishLine(); return nextPlan(); }
+      const y = surf.top - H + 2;
+      if (plan.step === 0) {
+        setMode('fly');
+        const tx = surf.left + (surf.right - surf.left) * 0.5;
+        if (move(tx, y, 230, dt)) {
+          setMode('fish');
+          say(PHRASES.fish, 2200);
+          dropFishLine();
+          plan.step = 1;
+          plan.until = now + 4500 + Math.random() * 3000;
+        }
+      } else if (plan.step === 1) {
+        S.y = y; // stay seated on the bar even if the page scrolls
+        const maxLen = Math.max(30, Math.min(130, window.innerHeight - (S.y + 38) - 14));
+        moveFishLine(maxLen + Math.sin(S.t * 2.2) * 5);
+        if (now > plan.until) {
+          // a bite! the catch pops up the line into her hands.
+          removeFishLine();
+          fx('mfx--note', cx() + S.facing * 22, S.y + 30, pick(['♪', '🐟', '★']));
+          setMode('happy');
+          say(PHRASES.fished, 2200);
+          sparkles(cx(), cy(), 5);
+          plan.step = 2;
+          plan.until = now + 1700;
+        }
+      } else if (now > plan.until) nextPlan();
+    };
+
+    /** Trace a parametric heart, leaving a spark trail — her little gift. */
+    const heartPoint = (c: { x: number; y: number }, tt: number) => {
+      const s = 5.5;
+      return {
+        x: c.x + 16 * Math.sin(tt) ** 3 * s,
+        y: c.y - (13 * Math.cos(tt) - 5 * Math.cos(2 * tt) - 2 * Math.cos(3 * tt) - Math.cos(4 * tt)) * s,
+      };
+    };
+    const tickDoodle = (now: number, dt: number) => {
+      const c = plan.target;
+      if (!c) return nextPlan();
+      if (plan.step === 0) {
+        setMode('fly');
+        const p0 = heartPoint(c, 0);
+        if (move(p0.x - W / 2, p0.y - H / 2, 240, dt)) {
+          say(PHRASES.doodle, 2000);
+          plan.step = 1;
+          plan.cycles = 0; // reused as the parameter clock (×1000)
+        }
+      } else if (plan.step === 1) {
+        setMode('fly');
+        const tt = (plan.cycles ?? 0) / 1000 + dt * (Math.PI * 2 / 4.6);
+        plan.cycles = tt * 1000;
+        const p = heartPoint(c, Math.min(tt, Math.PI * 2));
+        face(p.x - W / 2 >= S.x ? 1 : -1);
+        S.x = p.x - W / 2;
+        S.y = p.y - H / 2;
+        S.fxClock += dt;
+        if (S.fxClock > 0.045) {
+          S.fxClock = 0;
+          fx('mfx--trail', p.x, p.y + H / 6, '•');
+        }
+        if (tt >= Math.PI * 2) {
+          setMode('happy');
+          say(PHRASES.done, 2000);
+          hearts(4);
+          plan.step = 2;
+          plan.until = now + 1800;
+        }
+      } else if (now > plan.until) nextPlan();
+    };
+
+    const tickVibe = (now: number, dt: number) => {
+      if (plan.step === 0) {
+        setMode('vibe');
+        plan.step = 1;
+        plan.until = now + 6500 + Math.random() * 2500;
+      } else {
+        S.fxClock += dt;
+        if (S.fxClock > 0.8) {
+          S.fxClock = 0;
+          fx('mfx--note', cx() + (Math.random() - 0.5) * 40, S.y - 6, pick(NOTES));
+        }
+        if ((plan.frac !== 1 && !S.music) || now > plan.until) nextPlan();
+      }
+    };
+
+    const tickBounce = (now: number, dt: number) => {
+      const surf = barSurface(plan.el ?? null);
+      if (!surf || surf.right <= surf.left) return nextPlan();
+      const y = surf.top - H + 2;
+      if (plan.step === 0) {
+        setMode('fly');
+        const tx = surf.left + (surf.right - surf.left) * (0.3 + Math.random() * 0.4);
+        if (move(tx, y, 230, dt)) {
+          setMode('bounce');
+          plan.step = 1;
+          plan.until = now + 3600;
+        }
+      } else if (plan.step === 1) {
+        S.y = y;
+        S.fxClock += dt;
+        if (S.fxClock > 0.55) { S.fxClock = 0; fx('mfx--spark', cx(), S.y + H - 6, '✦'); }
+        if (now > plan.until) {
+          setMode('happy');
+          plan.step = 2;
+          plan.until = now + 900;
+        }
+      } else if (now > plan.until) nextPlan();
+    };
+
     const tickChat = (now: number, dt: number) => {
       const panel = chatPanel();
       if (!panel) { setBehind(false); return nextPlan(); }
@@ -619,6 +864,10 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     const ACTION_DUR: Record<SpriteAction, number> = {
       dance: 3800, spin: 1400, jump: 1000, wave: 1800, hearts: 1900,
       sing: 3200, hide: 0, swim: 0, sleep: 4200, zoom: 0,
+      bounce: 0, chase: 0, fish: 0, doodle: 0, vibe: 0,
+      shy: 2600, cry: 3000, laugh: 2400, kiss: 1900, angry: 2400,
+      think: 3000, cheer: 2800, dizzy: 2800, wink: 1200, stretch: 2300,
+      magic: 3000, photo: 2100,
     };
 
     const tickPerform = (now: number, dt: number) => {
@@ -630,6 +879,11 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         // Plans-in-disguise hand control to their own behavior.
         if (action === 'hide') return startHide();
         if (action === 'swim') return startSwim();
+        if (action === 'fish') return startFish();
+        if (action === 'doodle') return startDoodle();
+        if (action === 'chase') return startChase();
+        if (action === 'vibe') return startVibe(true);
+        if (action === 'bounce') return startBounce();
         if (action === 'zoom') {
           plan.started = true;
           plan.target = {
@@ -649,6 +903,24 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
           case 'wave': setMode('wave'); break;
           case 'hearts': setMode('happy'); hearts(7); break;
           case 'sleep': setMode('sleep'); say(PHRASES.sleepy, 2200); break;
+          case 'shy': setMode('shy'); say(PHRASES.shy, 2200); break;
+          case 'cry': setMode('cry'); say(PHRASES.cry, 2400); tears(); break;
+          case 'laugh': setMode('laugh'); say(PHRASES.laugh, 2000); break;
+          case 'kiss':
+            setMode('kiss'); say(PHRASES.kiss, 1800);
+            kissHeart(); after(450, kissHeart); after(900, kissHeart);
+            break;
+          case 'angry': setMode('angry'); say(PHRASES.angry, 2000); angerMark(); break;
+          case 'think': setMode('think'); say(PHRASES.think, 2600); fx('mfx--note', S.x + W, S.y - 6, '?'); break;
+          case 'cheer': setMode('cheer'); say(PHRASES.cheer, 2400); sparkles(cx(), cy() - 14, 6); break;
+          case 'dizzy': setMode('dizzy'); orbitStars(); break;
+          case 'wink': setMode('wink'); fx('mfx--heart', S.x + W - 6, S.y + 16, '❤'); break;
+          case 'stretch': setMode('stretch'); say(PHRASES.stretch, 2000); break;
+          case 'magic': setMode('magic'); say(PHRASES.magic, 2400); break;
+          case 'photo':
+            setMode('happy'); say(PHRASES.photo, 1600);
+            after(650, cameraFlash);
+            break;
           default: setMode('idle');
         }
         return;
@@ -678,6 +950,26 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         S.fxClock += dt;
         if (S.fxClock > 1.1) { S.fxClock = 0; fx('mfx--zzz', cx() + 16, S.y, 'z'); }
       }
+      if (action === 'cry') {
+        S.fxClock += dt;
+        if (S.fxClock > 0.55) { S.fxClock = 0; tears(); }
+      }
+      if (action === 'dizzy') {
+        S.fxClock += dt;
+        if (S.fxClock > 0.9) { S.fxClock = 0; orbitStars(); }
+      }
+      if (action === 'magic') {
+        S.fxClock += dt;
+        if (S.fxClock > 0.4) {
+          S.fxClock = 0;
+          sparkles(cx() + S.facing * 24, S.y + 4, 3);
+          fx('mfx--note', cx() + (Math.random() - 0.5) * 70, S.y - 10, pick(['✦', '★', '❤', '♪']));
+        }
+      }
+      if (action === 'cheer') {
+        S.fxClock += dt;
+        if (S.fxClock > 0.7) { S.fxClock = 0; fx('mfx--spark', cx() + (Math.random() - 0.5) * 50, S.y - 8, '✧'); }
+      }
 
       if (now > plan.until) {
         queue.shift();
@@ -703,6 +995,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
           setBehind(false);
           // Mid-heist? Put the word back before reporting for chat duty.
           if (plan.kind === 'steal') returnWord();
+          if (plan.kind === 'fish') removeFishLine();
           startChat();
         }
       }
@@ -716,6 +1009,19 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         case 'chat': tickChat(now, dt); break;
         case 'perform': tickPerform(now, dt); break;
         case 'steal': tickSteal(now, dt); break;
+        case 'chase': tickChase(now, dt); break;
+        case 'fish': tickFish(now, dt); break;
+        case 'doodle': tickDoodle(now, dt); break;
+        case 'vibe': tickVibe(now, dt); break;
+        case 'bounce': tickBounce(now, dt); break;
+      }
+
+      // Fast scrolling whips the wind around her — a brief dizzy stagger.
+      S.scrollGust = Math.max(0, S.scrollGust - dt * 2400);
+      if (S.scrollGust > 2800 && plan.kind !== 'perform' && plan.kind !== 'chat' && plan.kind !== 'steal') {
+        S.scrollGust = 0;
+        setBehind(false);
+        plan = { kind: 'perform', step: 0, until: 0, target: null, queue: ['dizzy'], started: false };
       }
 
       clamp();
@@ -782,7 +1088,10 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (detail?.actions?.length) startPerform(detail.actions);
     };
     const onShuffle = () => {
-      startPerform([pick(['dance', 'spin', 'jump', 'wave', 'hearts'] as SpriteAction[])]);
+      startPerform([pick([
+        'dance', 'spin', 'jump', 'wave', 'hearts',
+        'laugh', 'wink', 'magic', 'cheer', 'photo', 'kiss', 'stretch',
+      ] as SpriteAction[])]);
     };
     const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
     const onClick = () => {
@@ -794,12 +1103,19 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     };
     const onDblClick = () => startPerform(['dance']);
     const onResize = () => clamp();
+    const onNowPlaying = (e: Event) => {
+      const d = (e as CustomEvent).detail as { playing?: boolean } | undefined;
+      if (d && typeof d.playing === 'boolean') S.music = d.playing;
+    };
+    const onWheel = (e: WheelEvent) => { S.scrollGust += Math.abs(e.deltaY); };
 
     window.addEventListener('mola:chat-update', onChatUpdate);
     window.addEventListener('miku:perform', onPerform);
     window.addEventListener('miku:shuffle', onShuffle);
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     window.addEventListener('resize', onResize);
+    window.addEventListener('mola:now-playing', onNowPlaying);
+    window.addEventListener('wheel', onWheel, { passive: true });
     rig.addEventListener('click', onClick);
     rig.addEventListener('dblclick', onDblClick);
 
@@ -829,11 +1145,14 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         ghost.remove();
         if (span.isConnected) span.replaceWith(document.createTextNode(span.textContent ?? ''));
       }
+      removeFishLine();
       window.removeEventListener('mola:chat-update', onChatUpdate);
       window.removeEventListener('miku:perform', onPerform);
       window.removeEventListener('miku:shuffle', onShuffle);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('mola:now-playing', onNowPlaying);
+      window.removeEventListener('wheel', onWheel);
       rig.removeEventListener('click', onClick);
       rig.removeEventListener('dblclick', onDblClick);
     };
@@ -955,6 +1274,13 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
               <g className="mfairy__eyes mfairy__eyes--closed">
                 <path d="M19.5,29 q4,3.6 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.2" strokeLinecap="round" />
                 <path d="M36.5,29 q4,3.6 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.2" strokeLinecap="round" />
+              </g>
+              {/* eyes — wink (left open, right squeezed shut ∩) */}
+              <g className="mfairy__eyes mfairy__eyes--wink">
+                <ellipse cx="23.5" cy="29" rx="4.6" ry="5.6" fill="#eafffd" stroke="#2fa7a4" strokeWidth="2.2" />
+                <ellipse cx="23.5" cy="29.6" rx="2.6" ry="3.4" fill="url(#mfgIris)" />
+                <circle cx="22.4" cy="27.6" r="1.1" fill="#fff" />
+                <path d="M36.5,30 q4,-5 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.4" strokeLinecap="round" />
               </g>
 
               {/* blush */}

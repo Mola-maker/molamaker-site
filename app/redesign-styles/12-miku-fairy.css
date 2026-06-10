@@ -65,6 +65,7 @@
 .mfairy__eyes--open { transform-origin: 50% 50%; animation: mfBlink 4.4s ease-in-out infinite; }
 .mfairy__eyes--happy,
 .mfairy__eyes--closed,
+.mfairy__eyes--wink,
 .mfairy__mouth--open,
 .mfairy__mouth--smile { visibility: hidden; }
 .mfairy__pupil { transform: translate(var(--mlx), var(--mly)); }
@@ -231,6 +232,153 @@
   60%      { transform: scaleX(var(--mf-face)) translate(2px, 0) rotate(4deg); }
 }
 
+/* ── New expression repertoire ───────────────────────────────────── */
+
+/* shy — hands to face, looking away, maximum blush */
+.mfairy[data-mode="shy"] .mfairy__arm--l { transform: rotate(152deg); }
+.mfairy[data-mode="shy"] .mfairy__arm--r { transform: rotate(-152deg); }
+.mfairy[data-mode="shy"] .mfairy__head { transform: rotate(6deg) translateY(1.5px); }
+.mfairy[data-mode="shy"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="shy"] .mfairy__eyes--closed { visibility: visible; }
+.mfairy[data-mode="shy"] .mfairy__blush { opacity: 1; transform: scale(1.5); }
+.mfairy[data-mode="shy"] .mfairy__rig { animation: mfSquirm 0.7s ease-in-out infinite; }
+@keyframes mfSquirm {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-1.6deg); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(1.6deg); }
+}
+
+/* cry — squeezed lids, trembling, hands to eyes */
+.mfairy[data-mode="cry"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="cry"] .mfairy__eyes--closed { visibility: visible; }
+.mfairy[data-mode="cry"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="cry"] .mfairy__mouth--open { visibility: visible; transform: scale(0.7); }
+.mfairy[data-mode="cry"] .mfairy__arm--l { transform: rotate(140deg); }
+.mfairy[data-mode="cry"] .mfairy__arm--r { transform: rotate(-140deg); }
+.mfairy[data-mode="cry"] .mfairy__rig { animation: mfSob 0.32s ease-in-out infinite; }
+@keyframes mfSob {
+  0%, 100% { transform: scaleX(var(--mf-face)) translateX(-1px); }
+  50%      { transform: scaleX(var(--mf-face)) translateX(1px) translateY(-1px); }
+}
+
+/* laugh — head thrown back, fast bouncing */
+.mfairy[data-mode="laugh"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="laugh"] .mfairy__eyes--happy { visibility: visible; }
+.mfairy[data-mode="laugh"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="laugh"] .mfairy__mouth--open { visibility: visible; transform-origin: 50% 20%; animation: mfTalk 0.26s ease-in-out infinite; }
+.mfairy[data-mode="laugh"] .mfairy__head { transform: rotate(-4deg) translateY(-1px); }
+.mfairy[data-mode="laugh"] .mfairy__rig { animation: mfHop 0.38s ease-in-out infinite; }
+
+/* kiss — hand to lips, leaning toward you */
+.mfairy[data-mode="kiss"] .mfairy__arm--r { transform: rotate(-122deg); }
+.mfairy[data-mode="kiss"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="kiss"] .mfairy__eyes--wink { visibility: visible; }
+.mfairy[data-mode="kiss"] .mfairy__mouth--small { visibility: visible; transform: scale(1.3); }
+.mfairy[data-mode="kiss"] .mfairy__blush { opacity: 1; }
+.mfairy[data-mode="kiss"] .mfairy__rig { transform: scaleX(var(--mf-face)) rotate(-3deg); }
+
+/* angry — stomping, puffed cheeks (blush doubles as the puff) */
+.mfairy[data-mode="angry"] .mfairy__eyes--open .mfairy__pupil { transform: translate(var(--mlx), 0.5px) scale(0.82); }
+.mfairy[data-mode="angry"] .mfairy__blush { opacity: 1; transform: scale(1.3) translateY(1px); }
+.mfairy[data-mode="angry"] .mfairy__arm--l { transform: rotate(30deg); }
+.mfairy[data-mode="angry"] .mfairy__arm--r { transform: rotate(-30deg); }
+.mfairy[data-mode="angry"] .mfairy__rig { animation: mfStomp 0.5s ease-in-out infinite; }
+.mfairy[data-mode="angry"] .mfairy__leg--l { animation: mfStepA 0.5s linear infinite; }
+@keyframes mfStomp {
+  0%, 100% { transform: scaleX(var(--mf-face)) translateY(0) scaleY(1); }
+  25%      { transform: scaleX(var(--mf-face)) translateY(1.5px) scaleY(0.96); }
+  50%      { transform: scaleX(var(--mf-face)) translateY(0) scaleY(1); }
+}
+
+/* think — chin in hand, eyes up, head tilted */
+.mfairy[data-mode="think"] .mfairy__arm--r { transform: rotate(-148deg); }
+.mfairy[data-mode="think"] .mfairy__head { transform: rotate(7deg); }
+.mfairy[data-mode="think"] .mfairy__eyes--open .mfairy__pupil { transform: translate(1px, -2px); }
+.mfairy[data-mode="think"] .mfairy__rig { animation: mfSitSway 4.6s ease-in-out infinite; }
+
+/* cheer — pom-pom arms, quick hops */
+.mfairy[data-mode="cheer"] .mfairy__arm--l { animation: mfArmUpA 0.32s ease-in-out infinite; }
+.mfairy[data-mode="cheer"] .mfairy__arm--r { animation: mfArmUpB 0.32s ease-in-out infinite; }
+.mfairy[data-mode="cheer"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="cheer"] .mfairy__eyes--happy { visibility: visible; }
+.mfairy[data-mode="cheer"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="cheer"] .mfairy__mouth--open { visibility: visible; }
+.mfairy[data-mode="cheer"] .mfairy__rig { animation: mfHop 0.45s ease-in-out infinite; }
+
+/* dizzy — wobbling, pupils orbiting */
+.mfairy[data-mode="dizzy"] .mfairy__rig { animation: mfWobble 0.9s ease-in-out infinite; }
+.mfairy[data-mode="dizzy"] .mfairy__eyes--open { animation: none; }
+.mfairy[data-mode="dizzy"] .mfairy__pupil { animation: mfPupilSpin 0.8s linear infinite; }
+@keyframes mfWobble {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-8deg) translateX(-3px); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(8deg) translateX(3px); }
+}
+@keyframes mfPupilSpin {
+  0%   { transform: translate(1.6px, 0); }
+  25%  { transform: translate(0, 1.6px); }
+  50%  { transform: translate(-1.6px, 0); }
+  75%  { transform: translate(0, -1.6px); }
+  100% { transform: translate(1.6px, 0); }
+}
+
+/* wink — one eye shut, pleased with herself */
+.mfairy[data-mode="wink"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="wink"] .mfairy__eyes--wink { visibility: visible; }
+.mfairy[data-mode="wink"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="wink"] .mfairy__mouth--smile { visibility: visible; }
+.mfairy[data-mode="wink"] .mfairy__head { transform: rotate(-4deg); }
+
+/* stretch — arms reaching up slowly, big yawn */
+.mfairy[data-mode="stretch"] .mfairy__arm--l { animation: mfReachA 2.2s ease-in-out both; }
+.mfairy[data-mode="stretch"] .mfairy__arm--r { animation: mfReachB 2.2s ease-in-out both; }
+.mfairy[data-mode="stretch"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="stretch"] .mfairy__eyes--closed { visibility: visible; }
+.mfairy[data-mode="stretch"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="stretch"] .mfairy__mouth--open { visibility: visible; }
+.mfairy[data-mode="stretch"] .mfairy__rig { animation: mfReachBody 2.2s ease-in-out both; }
+@keyframes mfReachA { 0% { transform: rotate(0); } 45%, 80% { transform: rotate(168deg); } 100% { transform: rotate(20deg); } }
+@keyframes mfReachB { 0% { transform: rotate(0); } 45%, 80% { transform: rotate(-168deg); } 100% { transform: rotate(-20deg); } }
+@keyframes mfReachBody {
+  0%       { transform: scaleX(var(--mf-face)) scaleY(1); }
+  45%, 80% { transform: scaleX(var(--mf-face)) scaleY(1.06) translateY(-2px); }
+  100%     { transform: scaleX(var(--mf-face)) scaleY(1); }
+}
+
+/* magic — wand arm raised, tails crackling */
+.mfairy[data-mode="magic"] .mfairy__arm--r { transform: rotate(-165deg); }
+.mfairy[data-mode="magic"] .mfairy__arm--l { transform: rotate(20deg); }
+.mfairy[data-mode="magic"] .mfairy__tail { animation-duration: 0.5s; }
+.mfairy[data-mode="magic"] .mfairy__rig { animation: mfSitSway 1.4s ease-in-out infinite; }
+
+/* vibe — bopping to the music */
+.mfairy[data-mode="vibe"] .mfairy__head { animation: mfHeadBang 0.52s ease-in-out infinite; }
+.mfairy[data-mode="vibe"] .mfairy__rig { animation: mfSitSway 1.04s ease-in-out infinite; }
+.mfairy[data-mode="vibe"] .mfairy__arm--l { animation: mfStepB 0.52s linear infinite; }
+.mfairy[data-mode="vibe"] .mfairy__arm--r { animation: mfStepA 0.52s linear infinite; }
+.mfairy[data-mode="vibe"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="vibe"] .mfairy__eyes--happy { visibility: visible; }
+@keyframes mfHeadBang {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-2.5px) rotate(2deg); }
+}
+
+/* bounce — trampoline loop with squash & stretch */
+.mfairy[data-mode="bounce"] .mfairy__rig { animation: mfBounce 0.55s cubic-bezier(0.35, 0, 0.65, 1) infinite; }
+.mfairy[data-mode="bounce"] .mfairy__tail { animation-duration: 0.55s; }
+.mfairy[data-mode="bounce"] .mfairy__shadow { animation: mfBounceShadow 0.55s ease-in-out infinite; }
+@keyframes mfBounce {
+  0%, 100% { transform: scaleX(var(--mf-face)) translateY(0) scaleY(0.88); }
+  40%, 60% { transform: scaleX(var(--mf-face)) translateY(-22px) scaleY(1.06); }
+}
+@keyframes mfBounceShadow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(0.6); opacity: 0.4; }
+}
+
+/* fish — seated, rod arm out over the edge */
+.mfairy[data-mode="fish"] .mfairy__leg { transform: rotate(74deg); }
+.mfairy[data-mode="fish"] .mfairy__arm--r { transform: rotate(-72deg); }
+.mfairy[data-mode="fish"] .mfairy__rig { animation: mfSitSway 4.4s ease-in-out infinite; }
+
 /* ── Shadow & speech bubble ──────────────────────────────────────── */
 .mfairy__shadow {
   position: absolute;
@@ -317,6 +465,62 @@
 .mfx--zzz { color: #8a93a1; font-family: var(--font-mono, monospace); animation: mfxRise 2.4s ease-out forwards; }
 .mfx--rain { animation: mfxRain var(--d, 3s) linear forwards; opacity: 0.85; }
 .mfx--burst { color: var(--c, #39c5bb); font-size: 11px; animation: mfxBurst 0.95s ease-out forwards; }
+.mfx--tear { font-size: 9px; animation: mfxTear 0.9s ease-in forwards; }
+.mfx--puff { font-size: 16px; color: #e8657f; animation: mfxPuff 1s ease-out forwards; }
+.mfx--trail { color: #f0879a; font-size: 13px; animation: mfxTrail 2.2s ease-out forwards; }
+.mfx--flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  animation: mfxFlash 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes mfxTear {
+  0%   { transform: translateY(0) scale(0.8); opacity: 0.95; }
+  100% { transform: translateY(26px) scale(1.05); opacity: 0; }
+}
+@keyframes mfxPuff {
+  0%   { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+  25%  { transform: scale(1.2) rotate(0); opacity: 1; }
+  100% { transform: scale(1) rotate(8deg) translateY(-8px); opacity: 0; }
+}
+@keyframes mfxTrail {
+  0%       { transform: scale(0.6); opacity: 0; }
+  12%, 70% { transform: scale(1); opacity: 0.95; }
+  100%     { transform: scale(0.8); opacity: 0; }
+}
+@keyframes mfxFlash {
+  0%   { opacity: 0; }
+  18%  { opacity: 0.92; }
+  100% { opacity: 0; }
+}
+
+/* fishing line — persistent while she fishes; bobber rides the tip */
+.mfx-line {
+  position: fixed;
+  top: 0; left: 0;
+  width: 1.5px;
+  height: 90px;
+  background: linear-gradient(180deg, rgba(57, 197, 187, 0.7), rgba(57, 197, 187, 0.35));
+  transform-origin: 50% 0;
+  pointer-events: none;
+  z-index: 8190;
+  animation: mfLineSway 2.6s ease-in-out infinite;
+}
+.mfx-line::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: -3px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff9fae, #e8657f);
+  box-shadow: 0 0 0 1.5px #fffdfa;
+}
+@keyframes mfLineSway {
+  0%, 100% { rotate: -2deg; }
+  50%      { rotate: 2.5deg; }
+}
 
 @keyframes mfxRise {
   0%   { transform: translate(0, 0) scale(0.6); opacity: 0; }
