@@ -43,7 +43,7 @@ async function tryAstrBot(
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(300_000), // 5 min — covers AstrBot MCP tool calls
     });
 
     if (!res.ok) return { ok: false, reason: `astrbot: ${res.status}` };
@@ -192,6 +192,7 @@ export async function POST(req: NextRequest) {
   const rawMessage = String(body.message ?? '').trim().slice(0, 2000);
   const sessionId = String(body.session_id ?? '').slice(0, 64) || undefined;
   const username  = String(body.username  ?? 'web-visitor').slice(0, 64);
+  const persona = String(body.persona ?? '').trim().slice(0, 800) || undefined;
 
   // Optional attachments — image/file/record/video referencing AstrBot
   // attachment_ids from POST /api/astrbot/upload. Coze/DeepSeek can't resolve
@@ -222,6 +223,7 @@ export async function POST(req: NextRequest) {
   // Attachment messages: build an AstrBot message chain, AstrBot only.
   if (attachments.length > 0) {
     const chain: Array<Record<string, unknown>> = [];
+    if (persona) chain.push({ type: 'plain', text: `[Roleplay as: ${persona}]` });
     if (text) chain.push({ type: 'plain', text });
     for (const a of attachments) chain.push({ type: a.type, attachment_id: a.attachment_id });
     const result = await tryAstrBot(chain, sessionId, username);

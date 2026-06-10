@@ -6,11 +6,9 @@
 // the left when the character is clicked. All chat logic is shared with the
 // standalone AstrbotChat via useAstrbotChat.
 
-import { useEffect, useRef, useCallback, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { useAstrbotChat, toMarkdown } from '@/lib/chat/use-astrbot-chat';
+import { useAstrbotChat } from '@/lib/chat/use-astrbot-chat';
 import {
   personaForModel,
   currentModelId,
@@ -18,6 +16,7 @@ import {
   DEFAULT_PERSONA,
   type Persona,
 } from '@/lib/chat/personas';
+import { ChatPanel } from './chat-panel';
 
 // ── Live2D autoload ────────────────────────────────────────────
 
@@ -126,42 +125,6 @@ function useWaifuClick(onClick: () => void) {
   }, [onClick]);
 }
 
-// ── Markdown renderer ──────────────────────────────────────────
-
-// Graceful image: AstrBot attachments are served through the same-origin proxy
-// (/api/astrbot/file). If that 404s — file gone from the ECS host, expired id,
-// path the proxy can't resolve — swap the broken <img> for a tappable link so
-// the visitor sees a fallback instead of a broken-image glyph.
-function MdImage({ src, alt }: { src?: string; alt?: string }) {
-  const [failed, setFailed] = useState(false);
-  if (!src) return null;
-  if (failed) {
-    return (
-      <a className="ab-md__img-fail" href={src} target="_blank" rel="noopener noreferrer">
-        🖼️ {alt?.trim() || 'image unavailable — tap to open'}
-      </a>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img className="ab-msg__img" src={src} alt={alt ?? ''} loading="lazy" onError={() => setFailed(true)} />
-  );
-}
-
-const MD_COMPONENTS: Components = {
-  img: ({ src, alt }) => (
-    <MdImage src={typeof src === 'string' ? src : undefined} alt={typeof alt === 'string' ? alt : undefined} />
-  ),
-};
-
-function BotMarkdown({ text }: { text: string }) {
-  return (
-    <div className="ab-md">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>{toMarkdown(text)}</ReactMarkdown>
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────
 
 export function Live2DChat({ autoLoad = true }: { autoLoad?: boolean } = {}) {
@@ -242,110 +205,35 @@ export function Live2DChat({ autoLoad = true }: { autoLoad?: boolean } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const panelPos = chat.panelStyle('bottom-left');
-  // Re-theme the dialog per Live2D character — the persona accent flows into the
-  // header gradient + body tint via CSS vars (see .ab-panel--live2d).
-  const panelStyle = { ...panelPos, '--ab-accent': persona.accent } as CSSProperties;
   const initial = persona.name.trim().charAt(0).toUpperCase();
 
-  return chat.open ? createPortal(
-    <div className="ab-panel ab-panel--live2d" style={panelStyle}>
-      <div className="ab-panel__header" onMouseDown={chat.onMouseDown}>
-        <div className="ab-panel__avatar ab-panel__avatar--mono" aria-hidden="true">
-          <span>{initial}</span>
-        </div>
-        <div className="ab-panel__title">
-          <span className="ab-panel__name">{persona.name}</span>
-          <span className="ab-panel__status">
-            <span className="ab-status-dot" />
-            {chat.configured ? 'online' : 'connecting…'}
-          </span>
-        </div>
-        <button
-          className="ab-panel__reset"
-          onClick={() => { chat.setMessages([{ id: `persona-${persona.id}`, role: 'bot', text: persona.greeting, ts: 0 }]); chat.setInput(''); }}
-          onMouseDown={(e) => e.stopPropagation()}
-          aria-label="Reset chat"
-          title="Reset chat"
-        >↺</button>
-        <button className="ab-panel__close" onClick={() => chat.setOpen(false)} onMouseDown={(e) => e.stopPropagation()} aria-label="Close">×</button>
-      </div>
-
-      <div className="ab-panel__body" ref={bodyRef}>
-        {chat.messages.map((msg) => (
-          <div key={msg.id} className={`ab-msg ab-msg--${msg.role}`}>
-            {msg.role === 'bot' && (
-              <span className="ab-msg__avatar" aria-hidden="true">✦</span>
-            )}
-            <div className="ab-msg__bubble">
-              {msg.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img className="ab-msg__img" src={msg.image} alt="" />
-              )}
-              {msg.text && (msg.role === 'bot'
-                ? <BotMarkdown text={msg.text} />
-                : <span className="ab-msg__usertext">{msg.text}</span>)}
-            </div>
-          </div>
-        ))}
-        {chat.loading && chat.messages[chat.messages.length - 1]?.role !== 'bot' && (
-          <div className="ab-msg ab-msg--bot">
-            <span className="ab-msg__avatar" aria-hidden="true">✦</span>
-            <div className="ab-msg__bubble ab-typing">
-              <span /><span /><span />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="ab-panel__footer">
-        {chat.attachment && (
-          <div className="ab-attach">
-            {chat.attachment.type === 'image' ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="ab-attach__thumb" src={chat.attachment.previewUrl} alt="" />
-            ) : (
-              <span className="ab-attach__file" aria-hidden="true">📄</span>
-            )}
-            <span className="ab-attach__name">{chat.attachment.file.name}</span>
-            <button className="ab-attach__remove" onClick={chat.clearAttachment} onMouseDown={(e) => e.stopPropagation()} aria-label="Remove attachment">×</button>
-          </div>
-        )}
-        <div className="ab-panel__input-row">
-          <button
-            className="ab-panel__attach"
-            onClick={() => chat.fileRef.current?.click()}
-            disabled={chat.loading || chat.uploading}
-            aria-label="Attach a photo or file"
-            title="Attach a photo or file"
-          >📎</button>
-          <input
-            ref={chat.fileRef}
-            type="file"
-            accept="image/*,application/pdf,text/plain"
-            hidden
-            onChange={chat.onPickFile}
-          />
-          <textarea
-            className="ab-panel__input"
-            value={chat.input}
-            onChange={(e) => chat.setInput(e.target.value)}
-            onKeyDown={chat.onKeyDown}
-            placeholder="Ask anything… (Enter to send)"
-            rows={1}
-            disabled={chat.loading}
-          />
-          <button
-            className="ab-panel__send"
-            onClick={chat.send}
-            disabled={chat.loading || chat.uploading || (!chat.input.trim() && !chat.attachment)}
-            aria-label="Send"
-          >
-            {chat.uploading ? '…' : '↑'}
-          </button>
-        </div>
-      </div>
-    </div>,
+  return chat.open && typeof document !== 'undefined' ? createPortal(
+    <ChatPanel
+      messages={chat.messages}
+      loading={chat.loading}
+      input={chat.input}
+      attachment={chat.attachment}
+      uploading={chat.uploading}
+      configured={chat.configured}
+      avatarContent={<span>{initial}</span>}
+      avatarClass="ab-panel__avatar--mono"
+      name={persona.name}
+      extraClass="ab-panel--live2d"
+      bodyRef={bodyRef}
+      fileRef={chat.fileRef}
+      style={{ ...chat.panelStyle('bottom-left'), '--ab-accent': persona.accent } as React.CSSProperties}
+      onMouseDown={chat.onMouseDown}
+      onReset={() => { chat.setMessages([{ id: `persona-${persona.id}`, role: 'bot', text: persona.greeting, ts: 0 }]); chat.setInput(''); }}
+      onClose={() => chat.setOpen(false)}
+      onAttachClick={() => chat.fileRef.current?.click()}
+      onPickFile={chat.onPickFile}
+      onClearAttachment={chat.clearAttachment}
+      onInputChange={(e) => chat.setInput(e.target.value)}
+      onKeyDown={chat.onKeyDown}
+      onSend={chat.send}
+      activeAnimation={chat.activeAnimation}
+      onDismissAnimation={chat.dismissAnimation}
+    />,
     document.body,
   ) : null;
 }

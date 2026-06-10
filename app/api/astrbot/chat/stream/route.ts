@@ -32,18 +32,48 @@ async function anyConfigured(): Promise<boolean> {
 }
 
 type Send = (token: string) => void;
+type ToolProgressFrame = { name: string; status: 'running' | 'done' | 'error'; summary?: string };
+type SendTool = (frame: ToolProgressFrame) => void;
 
-function makeSseStream(gen: (send: Send) => Promise<void>): Response {
+// ── Timeouts ───────────────────────────────────────────────────────
+// AstrBot MCP tools have a 120 s timeout each, and the agent may call
+// several tools sequentially.  A fixed total-timeout would kill the
+// proxy mid-tool-loop even when AstrBot is making progress (sending
+// tool_call frames every few seconds).  Instead we use a generous
+// overall timeout as a safety net, and a per-read idle timeout that
+// resets on every received SSE frame.
+
+/** Per-read idle timeout — just over AstrBot's 120 s MCP tool timeout. */
+const IDLE_TIMEOUT_MS = 130_000;
+
+/** Overall connection timeout — safety net for truly hung connections. */
+const OVERALL_TIMEOUT_MS = 600_000;
+
+function makeSseStream(gen: (send: Send, sendTool: SendTool) => Promise<void>): Response {
   const enc = new TextEncoder();
+  // Keep nginx (proxy_read_timeout 60 s default) and browser connections
+  // alive while AstrBot runs MCP tools — tool_call frames are skipped by
+  // our parser, so the SSE stream would otherwise be silent for up to
+  // 120 s per tool, triggering upstream timeouts.
+  const HEARTBEAT_MS = 25_000;
   const stream = new ReadableStream({
     async start(controller) {
       const send: Send = (token) => {
         try { controller.enqueue(enc.encode(`data: ${JSON.stringify({ token })}\n\n`)); }
         catch { /* client disconnected */ }
       };
+      const sendTool: SendTool = (frame) => {
+        try { controller.enqueue(enc.encode(`data: ${JSON.stringify({ tool: frame })}\n\n`)); }
+        catch { /* client disconnected */ }
+      };
+      const hb = setInterval(() => {
+        try { controller.enqueue(enc.encode(': heartbeat\n\n')); }
+        catch { clearInterval(hb); }
+      }, HEARTBEAT_MS);
       try {
-        await gen(send);
+        await gen(send, sendTool);
       } finally {
+        clearInterval(hb);
         try {
           controller.enqueue(enc.encode('data: [DONE]\n\n'));
           controller.close();
@@ -65,6 +95,7 @@ async function streamAstrBot(
   sessionId: string | undefined,
   username: string,
   send: Send,
+  sendTool: SendTool,
   persona?: string,
 ): Promise<void> {
   const { url, key } = getAstrbotEnv();
@@ -76,7 +107,8 @@ async function streamAstrBot(
   if (sessionId) payload.session_id = sessionId;
 
   const r = await fetch(`${url}/api/v1/chat`, {
-    method: 'POST', headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(60_000),
+    method: 'POST', headers, body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(OVERALL_TIMEOUT_MS),
   });
   if (!r.ok || !r.body) throw new Error(`astrbot: ${r.status}`);
 
@@ -92,8 +124,23 @@ async function streamAstrBot(
     sentText = clean;
   };
 
+  // Per-read idle timeout: if AstrBot sends no data for IDLE_TIMEOUT_MS
+  // the MCP server is likely dead; abort so the waterfall can try the next provider.
+  async function readNext(): Promise<ReadableStreamReadResult<Uint8Array>> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new DOMException('Idle timeout', 'TimeoutError')), IDLE_TIMEOUT_MS);
+    });
+    try {
+      const result = await Promise.race([reader.read(), timedOut]);
+      return result as ReadableStreamReadResult<Uint8Array>;
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+
   for (;;) {
-    const { done, value } = await reader.read();
+    const { done, value } = await readNext();
     if (done) break;
     buf += dec.decode(value, { stream: true });
     let nl: number;
@@ -109,8 +156,24 @@ async function streamAstrBot(
       const toolMd = toolCallMarkdown(j);
       if (toolMd) {
         send(toolMd);
-      } else if (j.chain_type === 'tool_call' || j.chain_type === 'tool_call_result') {
-        // Tool JSON is transport metadata; render only the user-facing result.
+      } else if (j.chain_type === 'tool_call' && typeof j.data === 'string') {
+        try {
+          const call = JSON.parse(j.data) as { name?: string };
+          const name = String(call.name ?? 'tool');
+          if (name !== 'send_message_to_user') {
+            sendTool({ name, status: 'running', summary: `Running ${name}…` });
+          }
+        } catch { /* malformed */ }
+      } else if (j.chain_type === 'tool_call_result' && typeof j.data === 'string') {
+        try {
+          const res = JSON.parse(j.data) as { name?: string; content?: string; result?: string };
+          const name = String(res.name ?? 'tool');
+          if (name !== 'send_message_to_user') {
+            const raw = typeof res.content === 'string' ? res.content : typeof res.result === 'string' ? res.result : '';
+            const summary = raw.slice(0, 100).replace(/\n/g, ' ') || 'done';
+            sendTool({ name, status: 'done', summary });
+          }
+        } catch { /* malformed */ }
       } else if (j.type === 'plain' && typeof j.data === 'string' && j.data) {
         plainBuf += j.data;
       } else if (j.type === 'complete' && typeof j.data === 'string') {
@@ -128,6 +191,7 @@ async function streamCoze(
   message: string,
   userId: string,
   send: Send,
+  _sendTool: SendTool,
   cfg: EffectiveProvider,
   persona?: string,
 ): Promise<void> {
@@ -143,7 +207,7 @@ async function streamCoze(
       auto_save_history: false,
       additional_messages: [{ role: 'user', content, content_type: 'text' }],
     }),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(OVERALL_TIMEOUT_MS),
   });
   if (!r.ok || !r.body) throw new Error(`coze: ${r.status}`);
 
@@ -173,6 +237,7 @@ async function streamCoze(
 async function streamDeepSeek(
   message: string,
   send: Send,
+  _sendTool: SendTool,
   cfg: EffectiveProvider,
   persona?: string,
 ): Promise<void> {
@@ -187,7 +252,7 @@ async function streamDeepSeek(
       messages,
       stream: true,
     }),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(OVERALL_TIMEOUT_MS),
   });
   if (!r.ok || !r.body) throw new Error(`deepseek: ${r.status}`);
 
@@ -257,25 +322,24 @@ export async function POST(req: NextRequest) {
     getEffectiveProvider('deepseek'),
   ]);
 
-  return makeSseStream(async (send) => {
+  return makeSseStream(async (send, sendTool) => {
     let emitted = false;
     const wrap: Send = (t) => { emitted = true; send(t); };
+    const wrapTool: SendTool = (f) => sendTool(f);
 
     const runners: Array<() => Promise<void>> = [];
-    if (getAstrbotEnv().configured) runners.push(() => streamAstrBot(message, sessionId, username, wrap, persona));
+    if (getAstrbotEnv().configured)
+      runners.push(() => streamAstrBot(message, sessionId, username, wrap, wrapTool, persona));
     if (!astrbotOnly) {
-      if (cozeCfg.configured) runners.push(() => streamCoze(message, sessionId ?? username, wrap, cozeCfg, persona));
-      if (deepseekCfg.configured) runners.push(() => streamDeepSeek(message, wrap, deepseekCfg, persona));
+      if (cozeCfg.configured)
+        runners.push(() => streamCoze(message, sessionId ?? username, wrap, () => {}, cozeCfg, persona));
+      if (deepseekCfg.configured)
+        runners.push(() => streamDeepSeek(message, wrap, () => {}, deepseekCfg, persona));
     }
     if (runners.length === 0) { send('AstrBot is not connected yet — start the AstrBot service to chat here.'); return; }
 
     for (const run of runners) {
-      try {
-        await run();
-        if (emitted) return;
-      } catch {
-        if (emitted) return;
-      }
+      try { await run(); if (emitted) return; } catch { if (emitted) return; }
     }
     if (!emitted) send('AI is temporarily unavailable — try again in a moment.');
   });

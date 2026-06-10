@@ -638,3 +638,73 @@
   text-transform: uppercase;
   margin-top: 4px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   EDITORIAL IMPACT — scroll breakpoints & genius.com visual weight
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Dark ink masthead — newspaper front-page feel */
+.v-mag .masthead {
+  background: var(--bg-ink);
+  border-color: transparent;
+}
+.v-mag .masthead__l,
+.v-mag .masthead__r { color: rgba(245,241,235,0.38); }
+.v-mag .masthead__c { color: rgba(245,241,235,0.88); font-size: 18px; }
+
+/* Ghost oversized section counters */
+.v-mag .folio,
+.v-mag .feature,
+.v-mag .index-table,
+.v-mag .work-spread { position: relative; overflow: hidden; }
+
+.v-mag .folio::before        { content: '§01'; }
+.v-mag .feature::before      { content: '§02'; }
+.v-mag .index-table::before  { content: '§03'; }
+.v-mag .work-spread::before  { content: '§04'; }
+
+.v-mag .folio::before,
+.v-mag .feature::before,
+.v-mag .index-table::before,
+.v-mag .work-spread::before {
+  position: absolute;
+  right: -0.06em; bottom: -0.2em;
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(120px, 18vw, 280px);
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0.042;
+  pointer-events: none; user-select: none;
+  letter-spacing: -0.06em;
+  z-index: 0;
+}
+.v-mag .folio > *,
+.v-mag .feature > *,
+.v-mag .index-table > *,
+.v-mag .work-spread > * { position: relative; z-index: 1; }
+
+/* Folio h1: slightly larger max */
+.v-mag .folio__h1 { font-size: clamp(40px, 7vw, 120px); }
+
+/* Feature pull quote — bigger, more dramatic */
+.v-mag .feature__pull {
+  font-size: clamp(26px, 3.4vw, 46px);
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  padding: 28px 0;
+}
+
+/* Index table row: full color inversion on hover */
+.v-mag .index-table__row:hover {
+  background: var(--bg-ink);
+  padding-left: 24px;
+}
+.v-mag .index-table__row:hover .index-table__title   { color: var(--bg-elev); }
+.v-mag .index-table__row:hover .index-table__date,
+.v-mag .index-table__row:hover .index-table__no,
+.v-mag .index-table__row:hover .index-table__excerpt,
+.v-mag .index-table__row:hover .index-table__meta    { color: rgba(245,241,235,0.42); }
+.v-mag .index-table__row:hover::before               { background: var(--accent); width: 6px; }
+
+/* Work card glyph — bolder presence */
+.v-mag .work-card__art .glyph { font-size: clamp(160px, 22vw, 280px); opacity: 0.11; }

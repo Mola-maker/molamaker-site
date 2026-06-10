@@ -7,6 +7,8 @@
 // API and supply their own JSX.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { detectMood } from '@/lib/chat/mood';
+import { detectTrigger, type AnimationType } from '@/lib/chat/trigger-words';
 import { extractMikuActions, stripMikuTags } from '@/lib/chat/miku-actions';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -17,6 +19,13 @@ export interface ChatMessage {
   text: string;
   ts: number;
   image?: string; // local preview URL for a photo the visitor sent
+  // Rich message kinds
+  kind?: 'text' | 'tool';
+  toolName?: string;
+  toolStatus?: 'running' | 'done' | 'error';
+  toolSummary?: string;
+  // Humanoid pacing
+  mood?: 'playful' | 'warm' | 'sharp' | 'neutral';
 }
 
 export type ChatAttachment = { file: File; previewUrl: string; type: 'image' | 'file' };
@@ -106,6 +115,9 @@ export function useAstrbotChat(options?: {
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Abort in-flight SSE stream on unmount so the reader loop doesn't
+  // continue calling setMessages on an unmounted component.
+  const abortRef = useRef<AbortController | null>(null);
 
   // Share session ID with the terminal chat so both talk to the same conversation
   const [sessionId, setSessionId] = useState(() => {
@@ -143,6 +155,13 @@ export function useAstrbotChat(options?: {
   const bodyRef = useRef<HTMLDivElement>(null);
 
   // ── Effects ────────────────────────────────────────────────────
+
+  // Abort any in-flight SSE stream when the hook unmounts.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // Probe whether AstrBot is configured (GET returns 200 if configured, 503 if not)
   useEffect(() => {
@@ -223,6 +242,12 @@ export function useAstrbotChat(options?: {
     const text = input.trim();
     if ((!text && !attachment) || loading || uploading) return;
 
+    // Create a fresh AbortController for this send; abort any stale one.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const signal = controller.signal;
+
     let attachPayload: { type: string; attachment_id: string } | null = null;
     let localImage: string | undefined;
 
@@ -232,17 +257,17 @@ export function useAstrbotChat(options?: {
       try {
         const fd = new FormData();
         fd.append('file', attachment.file);
-        const up = await fetch('/api/astrbot/upload', { method: 'POST', body: fd });
+        const up = await fetch('/api/astrbot/upload', { method: 'POST', body: fd, signal });
         const uj = await up.json().catch(() => ({})) as { data?: { attachment_id: string; type: string }; error?: { message?: string } };
         if (!up.ok || !uj.data) {
-          setMessages((m) => [...m, { id: uid(), role: 'bot', text: uj.error?.message ?? 'Upload failed — try a smaller file.', ts: Date.now() }]);
+          if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: uj.error?.message ?? 'Upload failed — try a smaller file.', ts: Date.now() }]);
           setUploading(false);
           return;
         }
         attachPayload = { type: uj.data.type, attachment_id: uj.data.attachment_id };
         if (attachment.type === 'image') localImage = attachment.previewUrl;
       } catch {
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Upload failed — please retry.', ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Upload failed — please retry.', ts: Date.now() }]);
         setUploading(false);
         return;
       }
@@ -262,18 +287,20 @@ export function useAstrbotChat(options?: {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: text, session_id: sessionId, attachments: [attachPayload] }),
+          signal,
         });
         if (!r.ok) {
           const j = await r.json().catch(() => ({})) as { error?: { message?: string } };
-          setMessages((m) => [...m, { id: uid(), role: 'bot', text: j.error?.message ?? 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+          if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: j.error?.message ?? 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
           return;
         }
         const json = await r.json() as { data?: { message?: string; reply?: string } };
         const reply = json.data?.message ?? json.data?.reply ?? 'AI is temporarily unavailable — try again in a moment.';
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: reply, ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: reply, ts: Date.now() }]);
       } catch {
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Connection lost — please retry.', ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Connection lost — please retry.', ts: Date.now() }]);
       } finally {
+        if (abortRef.current === controller) abortRef.current = null;
         setLoading(false);
       }
       return;
@@ -283,14 +310,49 @@ export function useAstrbotChat(options?: {
     const botId = uid();
     let acc = '';
     let started = false;
+    const TYPING_DELAY_MS = 300;
+    let pendingStart: ReturnType<typeof setTimeout> | null = null;
+
+    const flush = () => {
+      if (signal.aborted || started) return;
+      started = true;
+      setMessages((m) => [...m, {
+        id: botId, role: 'bot' as const, text: acc, ts: Date.now(),
+        mood: detectMood(acc),
+      }]);
+    };
+
     const pushToken = (tok: string) => {
+      if (signal.aborted) return;
       acc += tok;
       if (!started) {
-        started = true;
-        setMessages((m) => [...m, { id: botId, role: 'bot', text: acc, ts: Date.now() }]);
-      } else {
-        setMessages((m) => m.map((x) => (x.id === botId ? { ...x, text: acc } : x)));
+        if (pendingStart === null) pendingStart = setTimeout(flush, TYPING_DELAY_MS);
+        return;
       }
+      setMessages((m) => m.map((x) =>
+        x.id === botId ? { ...x, text: acc, mood: detectMood(acc) } : x
+      ));
+    };
+
+    const pushToolFrame = (frame: { name: string; status: 'running' | 'done' | 'error'; summary?: string }) => {
+      if (signal.aborted) return;
+      const toolId = `tool-${botId}-${frame.name}`;
+      setMessages((m) => {
+        const existing = m.find((x) => x.id === toolId);
+        if (existing) {
+          return m.map((x) => x.id === toolId
+            ? { ...x, toolStatus: frame.status, toolSummary: frame.summary }
+            : x
+          );
+        }
+        return [...m, {
+          id: toolId, role: 'bot' as const, text: '', ts: Date.now(),
+          kind: 'tool' as const,
+          toolName: frame.name,
+          toolStatus: frame.status,
+          toolSummary: frame.summary,
+        }];
+      });
     };
 
     try {
@@ -298,9 +360,10 @@ export function useAstrbotChat(options?: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, session_id: sessionId, persona, astrbot_only: astrbotOnly }),
+        signal,
       });
       if (!r.ok || !r.body) {
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+        if (!signal.aborted) setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
         return;
       }
       const reader = r.body.getReader();
@@ -318,13 +381,17 @@ export function useAstrbotChat(options?: {
           const raw = line.slice(5).trim();
           if (raw === '[DONE]') { buf = ''; break; }
           try {
-            const { token } = JSON.parse(raw) as { token?: string };
-            if (token) pushToken(token);
+            const j = JSON.parse(raw) as { token?: string; tool?: { name: string; status: 'running' | 'done' | 'error'; summary?: string } };
+            if (j.token) pushToken(j.token);
+            else if (j.tool) pushToolFrame(j.tool);
           } catch { /* skip malformed frame */ }
         }
       }
-      if (!started) {
+      if (!started && !signal.aborted) {
+        if (pendingStart) clearTimeout(pendingStart);
         setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+      } else if (started && acc) {
+        setMessages((m) => m.map((x) => x.id === botId ? { ...x, mood: detectMood(acc) } : x));
       } else {
         // Reply finished — pull any [miku:…] stage directions out of the final
         // text (so they never persist to storage) and hand them to the sprite.
@@ -335,12 +402,14 @@ export function useAstrbotChat(options?: {
         }
       }
     } catch {
-      if (started) {
+      if (signal.aborted) { /* unmounted — skip state update */ }
+      else if (started) {
         setMessages((m) => m.map((x) => (x.id === botId ? { ...x, text: `${acc} …(connection lost)` } : x)));
       } else {
         setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'Connection lost — please retry.', ts: Date.now() }]);
       }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setLoading(false);
     }
   }, [input, loading, uploading, attachment, sessionId, persona, astrbotOnly]);
@@ -380,6 +449,22 @@ export function useAstrbotChat(options?: {
     };
   }, []);
 
+  // ── Trigger animation ───────────────────────────────────────────
+  const [activeAnimation, setActiveAnimation] = useState<AnimationType | null>(null);
+  const lastTriggerMsgId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.id === lastTriggerMsgId.current) return;
+    const anim = detectTrigger(last.text);
+    if (anim) {
+      lastTriggerMsgId.current = last.id;
+      setActiveAnimation(anim);
+    }
+  }, [messages]);
+
+  const dismissAnimation = useCallback(() => setActiveAnimation(null), []);
+
   // ── Panel position helper ───────────────────────────────────────
 
   const panelStyle = useCallback((anchor: PanelAnchor = 'bottom-right') => {
@@ -405,6 +490,8 @@ export function useAstrbotChat(options?: {
     onMouseDown, pos,
     // Panel
     panelStyle,
+    // Animation
+    activeAnimation, dismissAnimation,
     // Constants
     INITIAL_MESSAGE,
   } as const;
