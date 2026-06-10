@@ -28,6 +28,7 @@ import {
   extractMikuActions,
   type SpriteAction,
 } from '@/lib/chat/miku-actions';
+import { motifById, randomMotif, saveGalleryItem, type PaintMotif } from '@/lib/miku/paintings';
 
 const W = 64;
 const H = 74;
@@ -37,11 +38,13 @@ type Mode =
   | 'dance' | 'spin' | 'jump' | 'wave' | 'happy' | 'sleep' | 'startle'
   | 'carry' | 'cozy'
   | 'shy' | 'cry' | 'laugh' | 'kiss' | 'angry' | 'think' | 'cheer'
-  | 'dizzy' | 'wink' | 'stretch' | 'magic' | 'vibe' | 'bounce' | 'fish';
+  | 'dizzy' | 'wink' | 'stretch' | 'magic' | 'vibe' | 'bounce' | 'fish'
+  | 'paint';
 
 type PlanKind =
   | 'wander' | 'bar' | 'hide' | 'swim' | 'chat' | 'nap' | 'perform' | 'steal'
-  | 'chase' | 'fish' | 'doodle' | 'vibe' | 'bounce';
+  | 'chase' | 'fish' | 'doodle' | 'vibe' | 'bounce'
+  | 'paint' | 'game';
 
 interface Plan {
   kind: PlanKind;
@@ -89,6 +92,12 @@ const PHRASES = {
   magic: ['见证奇迹的时刻~', '✧ abracadabra ✧', '魔法、発動!'],
   photo: ['茄子~!', 'say cheese!', '咔嚓 ✧'],
   stretch: ['嗯~~~伸个懒腰', 'んん~~', '*stretch*'],
+  paint: ['画画时间~ 🎨', '灵感来了!', 'inspiration ✧'],
+  painted: ['挂到画廊里啦!', 'to the gallery ✧', '新作完成~!'],
+  game: ['来玩捉迷藏吧! 找到我哦~', 'hide & seek! 3 rounds ✧', '我数到三就藏起来啦~'],
+  roundMiss: ['这里这里~ 没找到吧', 'I was here~!', '嘿嘿,我藏得好吧'],
+  gameWin: ['你赢啦! 画一幅画奖励你~', 'you win! a painting for you ✧', '好厉害…奖励时间!'],
+  gameLose: ['嘿嘿,这局我赢~', 'I win this round ~', '下次再来挑战哦'],
 };
 
 function pick<T>(arr: T[]): T {
@@ -251,6 +260,91 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       fishLine.style.height = `${len.toFixed(0)}px`;
     };
     const removeFishLine = () => { fishLine?.remove(); fishLine = null; };
+
+    // ── Atelier (painting) ─────────────────────────────────────────
+    // She paints onto a fixed SVG easel: flies the brush along each motif
+    // stroke, the polyline growing point by point. Finished pieces are
+    // archived to the gallery (lib/miku/paintings) for the magazine wall.
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    let lastMotif: string | undefined;
+    let paintSt: {
+      motif: PaintMotif;
+      svg: SVGSVGElement;
+      box: { x: number; y: number; size: number };
+      stroke: number;
+      pt: number;
+      line: SVGPolylineElement | null;
+    } | null = null;
+
+    const removePaint = () => { paintSt?.svg.remove(); paintSt = null; };
+
+    const beginPaint = (motif: PaintMotif) => {
+      removePaint();
+      const size = Math.max(150, Math.min(280, window.innerWidth - 90, window.innerHeight - 240));
+      const box = {
+        x: (window.innerWidth - size) / 2,
+        y: Math.max(80, (window.innerHeight - size) / 2 - 30),
+        size,
+      };
+      const svg = document.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('class', 'mfpaint');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.style.left = `${box.x}px`;
+      svg.style.top = `${box.y}px`;
+      svg.style.width = `${size}px`;
+      svg.style.height = `${size}px`;
+      fxHost.appendChild(svg);
+      paintSt = { motif, svg, box, stroke: 0, pt: 0, line: null };
+    };
+
+    /** Current brush target in viewport coords, or null when the piece is done. */
+    const brushTarget = (): { x: number; y: number } | null => {
+      const st = paintSt;
+      if (!st || st.stroke >= st.motif.strokes.length) return null;
+      const [mx, my] = st.motif.strokes[st.stroke].pts[st.pt];
+      return { x: st.box.x + (mx / 100) * st.box.size, y: st.box.y + (my / 100) * st.box.size };
+    };
+
+    /** Commit the point under the brush and advance; returns false when done. */
+    const brushAdvance = (): boolean => {
+      const st = paintSt;
+      if (!st) return false;
+      const strokeDef = st.motif.strokes[st.stroke];
+      if (!st.line) {
+        st.line = document.createElementNS(SVGNS, 'polyline');
+        st.line.setAttribute('fill', 'none');
+        st.line.setAttribute('stroke', strokeDef.color);
+        st.line.setAttribute('stroke-width', String(strokeDef.width ?? 3));
+        st.line.setAttribute('stroke-linecap', 'round');
+        st.line.setAttribute('stroke-linejoin', 'round');
+        st.svg.appendChild(st.line);
+      }
+      const [mx, my] = strokeDef.pts[st.pt];
+      const prev = st.line.getAttribute('points') ?? '';
+      st.line.setAttribute('points', `${prev}${prev ? ' ' : ''}${mx},${my}`);
+      st.pt++;
+      if (st.pt >= strokeDef.pts.length) { st.stroke++; st.pt = 0; st.line = null; }
+      return st.stroke < st.motif.strokes.length;
+    };
+
+    // ── Hide-and-seek game ─────────────────────────────────────────
+    let gameSt: { round: number; score: number; total: number; board: HTMLDivElement } | null = null;
+
+    const endGame = () => { gameSt?.board.remove(); gameSt = null; };
+
+    const beginGame = () => {
+      endGame();
+      const board = document.createElement('div');
+      board.className = 'mfgame-score';
+      fxHost.appendChild(board);
+      gameSt = { round: 0, score: 0, total: 3, board };
+      updateBoard();
+    };
+    const updateBoard = (msg?: string) => {
+      const g = gameSt;
+      if (!g) return;
+      g.board.textContent = msg ?? `🙈 ${Math.min(g.round, g.total)}/${g.total} · ★ ${g.score}`;
+    };
 
     // ── Movement ───────────────────────────────────────────────────
     const move = (tx: number, ty: number, speed: number, dt: number) => {
@@ -501,12 +595,27 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (!bar) return startWander();
       plan = { kind: 'bounce', step: 0, until: 0, target: null, el: bar.el };
     };
+    const startPaint = (motifId?: string) => {
+      const motif = (motifId && motifById(motifId)) || randomMotif(lastMotif);
+      lastMotif = motif.id;
+      beginPaint(motif);
+      say(PHRASES.paint, 2000);
+      plan = { kind: 'paint', step: 0, until: 0, target: null };
+    };
+    const startGame = () => {
+      beginGame();
+      say(PHRASES.game, 2400);
+      setMode('cheer');
+      plan = { kind: 'game', step: 0, until: performance.now() + 1900, target: null };
+    };
     const startPerform = (actions: string[]) => {
       const queue = actions.filter(isSpriteAction) as SpriteAction[];
       if (!queue.length) return;
       setBehind(false);
       if (plan.kind === 'steal') returnWord();
       if (plan.kind === 'fish') removeFishLine();
+      if (plan.kind === 'paint') removePaint();
+      if (plan.kind === 'game') endGame();
       plan = { kind: 'perform', step: 0, until: 0, target: null, queue, started: false };
     };
 
@@ -515,9 +624,10 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       // While music plays she mostly wants to vibe along.
       if (S.music && Math.random() < 0.35) return startVibe();
       const roll = Math.random();
-      if (roll < 0.16) startHide();
-      else if (roll < 0.3) startSwim();
-      else if (roll < 0.44) startSteal();
+      if (roll < 0.04) startPaint();           // the muse strikes, occasionally
+      else if (roll < 0.18) startHide();
+      else if (roll < 0.31) startSwim();
+      else if (roll < 0.45) startSteal();
       else if (roll < 0.62) startBar();
       else if (roll < 0.7) startFish();
       else if (roll < 0.76) startDoodle();
@@ -838,6 +948,110 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       } else if (now > plan.until) nextPlan();
     };
 
+    const tickPaint = (now: number, dt: number) => {
+      const st = paintSt;
+      if (!st) return nextPlan();
+      if (plan.step === 0 || plan.step === 1) {
+        const target = brushTarget();
+        if (!target) {
+          // last stroke finished → sign it, archive it, admire it.
+          st.svg.classList.add('is-done');
+          sparkles(st.box.x + st.box.size / 2, st.box.y + st.box.size / 2, 8);
+          saveGalleryItem(st.motif.id);
+          say(PHRASES.painted, 2400);
+          setMode('happy');
+          plan.step = 2;
+          plan.until = now + 2400;
+          return;
+        }
+        // brush rides under her right hand (fixed offset — a facing-dependent
+        // one would flip mid-approach and make her orbit the point forever).
+        const startingStroke = st.pt === 0;
+        setMode(startingStroke && plan.step === 0 ? 'fly' : 'paint');
+        const arrived = move(target.x - W / 2 - 14, target.y - 46, startingStroke ? 250 : 190, dt);
+        if (arrived) {
+          brushAdvance();
+          plan.step = 1;
+          if (Math.random() < 0.12) fx('mfx--spark', target.x, target.y, '✦');
+        }
+      } else if (now > plan.until) {
+        st.svg.classList.add('is-fade');
+        after(650, removePaint);
+        plan.step = 3;
+        plan.until = now + 700;
+      }
+      if (plan.step === 3 && now > plan.until) nextPlan();
+    };
+
+    const tickGame = (now: number, dt: number) => {
+      const g = gameSt;
+      if (!g) return nextPlan();
+      if (plan.step === 0) {
+        // announcement beat, then the first round
+        if (now > plan.until) { plan.step = 1; g.round++; updateBoard(); plan.el = findHideSpot(); plan.frac = 0.1 + 0.8 * Math.random(); }
+      } else if (plan.step === 1) {
+        // travel to the hiding spot (a fresh one each round)
+        const el = plan.el;
+        if (!el) { plan.el = findHideSpot(); if (!plan.el) { endGame(); return nextPlan(); } return; }
+        const r = el.getBoundingClientRect();
+        if (!inView(r)) { plan.el = findHideSpot(); return; }
+        const hx = r.left + (plan.frac ?? 0.5) * Math.max(1, r.width - W);
+        setMode('fly');
+        if (move(hx, r.bottom - H + 8, 300, dt)) {
+          setBehind(true);
+          setMode('peek');
+          plan.step = 2;
+          plan.until = now + 9000;
+        }
+      } else if (plan.step === 2) {
+        // hiding — the window click handler scores the find
+        if (now > plan.until) {
+          setBehind(false);
+          setMode('happy');
+          say(PHRASES.roundMiss, 2000);
+          plan.step = 3;
+          plan.until = now + 1500;
+        }
+      } else if (plan.step === 3) {
+        if (now > plan.until) {
+          if (g.round < g.total) {
+            plan.step = 1;
+            g.round++;
+            updateBoard();
+            plan.el = findHideSpot();
+            plan.frac = 0.1 + 0.8 * Math.random();
+          } else {
+            const won = g.score >= 2;
+            updateBoard(won ? `★ ${g.score}/${g.total} — WIN!` : `★ ${g.score}/${g.total}`);
+            say(won ? PHRASES.gameWin : PHRASES.gameLose, 2600);
+            setMode(won ? 'cheer' : 'wink');
+            if (won) sparkles(cx(), cy(), 8); else hearts(2);
+            plan.step = 4;
+            plan.until = now + 2300;
+          }
+        }
+      } else if (now > plan.until) {
+        const won = g.score >= 2;
+        endGame();
+        if (won) startPaint();
+        else nextPlan();
+      }
+    };
+
+    /** Window-level click: during a hiding round, a click near her counts. */
+    const onSeekClick = (e: MouseEvent) => {
+      if (plan.kind !== 'game' || plan.step !== 2 || !gameSt) return;
+      if (Math.hypot(e.clientX - cx(), e.clientY - cy()) > 95) return;
+      gameSt.score++;
+      setBehind(false);
+      setMode('startle');
+      say(PHRASES.found, 2000);
+      hearts(4);
+      updateBoard();
+      plan.step = 3;
+      plan.until = performance.now() + 1500;
+    };
+
     const tickChat = (now: number, dt: number) => {
       const panel = chatPanel();
       if (!panel) { setBehind(false); return nextPlan(); }
@@ -864,7 +1078,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     const ACTION_DUR: Record<SpriteAction, number> = {
       dance: 3800, spin: 1400, jump: 1000, wave: 1800, hearts: 1900,
       sing: 3200, hide: 0, swim: 0, sleep: 4200, zoom: 0,
-      bounce: 0, chase: 0, fish: 0, doodle: 0, vibe: 0,
+      bounce: 0, chase: 0, fish: 0, doodle: 0, vibe: 0, paint: 0, seek: 0,
       shy: 2600, cry: 3000, laugh: 2400, kiss: 1900, angry: 2400,
       think: 3000, cheer: 2800, dizzy: 2800, wink: 1200, stretch: 2300,
       magic: 3000, photo: 2100,
@@ -884,6 +1098,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         if (action === 'chase') return startChase();
         if (action === 'vibe') return startVibe(true);
         if (action === 'bounce') return startBounce();
+        if (action === 'paint') return startPaint();
+        if (action === 'seek') return startGame();
         if (action === 'zoom') {
           plan.started = true;
           plan.target = {
@@ -991,7 +1207,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       chatCheck += dt;
       if (chatCheck > 0.4) {
         chatCheck = 0;
-        if (plan.kind !== 'chat' && plan.kind !== 'perform' && chatPanel()) {
+        if (plan.kind !== 'chat' && plan.kind !== 'perform' && plan.kind !== 'game' && plan.kind !== 'paint' && chatPanel()) {
           setBehind(false);
           // Mid-heist? Put the word back before reporting for chat duty.
           if (plan.kind === 'steal') returnWord();
@@ -1014,6 +1230,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         case 'doodle': tickDoodle(now, dt); break;
         case 'vibe': tickVibe(now, dt); break;
         case 'bounce': tickBounce(now, dt); break;
+        case 'paint': tickPaint(now, dt); break;
+        case 'game': tickGame(now, dt); break;
       }
 
       // Fast scrolling whips the wind around her — a brief dizzy stagger.
@@ -1094,8 +1312,13 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       ] as SpriteAction[])]);
     };
     const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+    const onPaintReq = (e: Event) => {
+      const motif = ((e as CustomEvent).detail?.motif as string | undefined);
+      if (plan.kind !== 'paint') startPaint(motif);
+    };
+    const onGameReq = () => { if (plan.kind !== 'game') startGame(); };
     const onClick = () => {
-      if (plan.kind === 'perform') return;
+      if (plan.kind === 'perform' || plan.kind === 'game' || plan.kind === 'paint') return;
       setMode('wave');
       say(PHRASES.poke, 1800);
       hearts(2);
@@ -1116,6 +1339,9 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     window.addEventListener('resize', onResize);
     window.addEventListener('mola:now-playing', onNowPlaying);
     window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('miku:paint', onPaintReq);
+    window.addEventListener('miku:game', onGameReq);
+    window.addEventListener('click', onSeekClick);
     rig.addEventListener('click', onClick);
     rig.addEventListener('dblclick', onDblClick);
 
@@ -1146,6 +1372,11 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         if (span.isConnected) span.replaceWith(document.createTextNode(span.textContent ?? ''));
       }
       removeFishLine();
+      removePaint();
+      endGame();
+      window.removeEventListener('miku:paint', onPaintReq);
+      window.removeEventListener('miku:game', onGameReq);
+      window.removeEventListener('click', onSeekClick);
       window.removeEventListener('mola:chat-update', onChatUpdate);
       window.removeEventListener('miku:perform', onPerform);
       window.removeEventListener('miku:shuffle', onShuffle);

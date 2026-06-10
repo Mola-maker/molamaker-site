@@ -39,6 +39,9 @@ export const SPRITE_ACTIONS = [
   'fish',
   'doodle',
   'vibe',
+  'paint',
+  // the hide-and-seek game (3 rounds; winning earns a painting)
+  'seek',
 ] as const;
 
 /** Fullscreen cinematic scenes rendered by MikuStage: page dims, the Live2D
@@ -101,6 +104,8 @@ const USER_COMMANDS: Array<[RegExp, MikuAction]> = [
   [/\bsnow\b|下雪|雪花/i, 'snow'],
   [/confetti|撒花|庆祝|celebrate|恭喜|congrats/i, 'confetti'],
   // hobbies & props (before the generic moves so "画个爱心" beats "爱心")
+  [/hide.?and.?seek|捉迷藏|玩个?游戏|play\s*(a\s*)?game|来玩/i, 'seek'],
+  [/paint|画一?幅|作画|画张画|油画/i, 'paint'],
   [/magic|魔法|变个?魔术|变个戏法/i, 'magic'],
   [/photo|拍照|咔嚓|selfie|自拍/i, 'photo'],
   [/\bfish(ing)?\b|钓鱼|垂钓/i, 'fish'],
@@ -126,7 +131,7 @@ const USER_COMMANDS: Array<[RegExp, MikuAction]> = [
   [/\bwave\b|挥手|打个招呼/i, 'wave'],
   [/比心|爱你|love you|❤|💕|发个爱心/i, 'hearts'],
   [/\bsing\b|唱歌|唱首歌|唱个歌/i, 'sing'],
-  [/hide|捉迷藏|躲猫猫|藏起来/i, 'hide'],
+  [/hide|躲猫猫|藏起来/i, 'hide'],
   [/\bswim\b|游泳|游个泳/i, 'swim'],
   [/晚安|睡觉|go to sleep|good\s*night/i, 'sleep'],
   [/\bzoom\b|\bfly\b|飞一个|冲刺/i, 'zoom'],
@@ -151,5 +156,8 @@ export const MIKU_ACTIONS_PROMPT =
   '[miku:hearts] [miku:sing] [miku:hide] [miku:swim] [miku:sleep] [miku:zoom] [miku:bounce] [miku:chase] ' +
   '[miku:shy] [miku:cry] [miku:laugh] [miku:kiss] [miku:angry] [miku:think] [miku:cheer] [miku:dizzy] ' +
   '[miku:wink] [miku:stretch] [miku:magic] [miku:photo] [miku:fish] [miku:doodle] [miku:vibe]. ' +
+  'Special: [miku:paint] she paints a small artwork live, brushstroke by brushstroke, and hangs it in the ' +
+  "magazine gallery; [miku:seek] starts a 3-round hide-and-seek game (find her with the cursor — winning " +
+  'earns a painting). ' +
   'Pick the one that best matches the mood; use a fullscreen spectacle whenever the visitor explicitly asks ' +
   'for an animation, show, or celebration. Never mention or explain the tag itself.';
