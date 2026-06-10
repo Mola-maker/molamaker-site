@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { detectMood } from '@/lib/chat/mood';
 import { detectTrigger, type AnimationType } from '@/lib/chat/trigger-words';
+import { extractMikuActions, stripMikuTags } from '@/lib/chat/miku-actions';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ function uid() {
 }
 
 export function toMarkdown(text: string): string {
-  return text.replace(
+  return stripMikuTags(text).replace(
     /(^|[^(\]])(https?:\/\/[^\s)]+\.(?:png|jpe?g|gif|webp|svg)(?:\?\S*)?)/gi,
     '$1![]($2)',
   );
@@ -391,6 +392,14 @@ export function useAstrbotChat(options?: {
         setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
       } else if (started && acc) {
         setMessages((m) => m.map((x) => x.id === botId ? { ...x, mood: detectMood(acc) } : x));
+      } else {
+        // Reply finished — pull any [miku:…] stage directions out of the final
+        // text (so they never persist to storage) and hand them to the sprite.
+        const { actions, cleaned } = extractMikuActions(acc);
+        if (actions.length) {
+          setMessages((m) => m.map((x) => (x.id === botId ? { ...x, text: cleaned } : x)));
+          try { window.dispatchEvent(new CustomEvent('miku:perform', { detail: { actions } })); } catch { /* ignore */ }
+        }
       }
     } catch {
       if (signal.aborted) { /* unmounted — skip state update */ }
