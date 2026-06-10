@@ -64,6 +64,20 @@ export type RenderWithRepairOptions = {
   transientDelayMs?: number;
   /** Max transient re-runs per attempt (default 0 = off). */
   maxTransientRetries?: number;
+  /**
+   * Deterministic repair tier: patch the failing script mechanically (e.g.
+   * flip an Intersect index) — tried BEFORE each LLM round, costs nothing.
+   * `attempt` walks candidate lists across local rounds.
+   */
+  localRepair?: (commands: string[], failures: CommandFailure[], attempt: number) => string[] | null;
+  /** Max local-repair rounds (default 2). */
+  maxLocalRepairs?: number;
+  /**
+   * Semantic lint, run only after a CLEAN engine pass: degeneracies (undefined
+   * intersections, coincident points, collinear polygons) come back as repair-
+   * ready failures so "succeeded but wrong" figures enter the repair loop too.
+   */
+  lint?: (commands: string[]) => CommandFailure[];
 };
 
 export type RenderOutcome = {
@@ -90,6 +104,14 @@ async function runOnce(opts: RenderWithRepairOptions, commands: string[]): Promi
     res = runGeometryScript(opts.api, commands, opts.fallbacks);
     t += 1;
   }
+  // A clean engine pass still has to survive the geometry lint: degenerate
+  // figures are failures the repair tiers can act on.
+  if (res.failures.length === 0 && opts.lint) {
+    try {
+      const semantic = opts.lint(commands);
+      if (semantic.length > 0) res = { ...res, failures: semantic };
+    } catch { /* lint must never break rendering */ }
+  }
   return res;
 }
 
@@ -102,6 +124,7 @@ async function runOnce(opts: RenderWithRepairOptions, commands: string[]): Promi
  */
 export async function renderWithRepair(opts: RenderWithRepairOptions): Promise<RenderOutcome> {
   const maxRepairs = opts.maxRepairs ?? 2;
+  const maxLocal = opts.maxLocalRepairs ?? 2;
   /** Failures the LLM could actually fix (excludes transient races). */
   const repairable = (r: RunResult) => r.failures.filter((f) => !(opts.isTransient?.(f.error)));
 
@@ -109,7 +132,31 @@ export async function renderWithRepair(opts: RenderWithRepairOptions): Promise<R
   let bestResult = await runOnce(opts, bestCommands);
   let bestIsOnCanvas = true;
   let repairs = 0;
+  let localRounds = 0;
 
+  // Tier 1 — deterministic local repair: zero latency, zero tokens. Each round
+  // patches the failing lines mechanically and keeps the result only when it
+  // strictly improves.
+  while (
+    opts.localRepair
+    && localRounds < maxLocal
+    && repairable(bestResult).length > 0
+  ) {
+    const patched = opts.localRepair(bestCommands, repairable(bestResult), localRounds);
+    localRounds += 1;
+    if (!patched) break;
+    const result = await runOnce(opts, patched);
+    if (result.failures.length < bestResult.failures.length) {
+      bestCommands = patched;
+      bestResult = result;
+      bestIsOnCanvas = true;
+    } else {
+      bestIsOnCanvas = false;
+    }
+    if (repairable(bestResult).length === 0) break;
+  }
+
+  // Tier 2 — LLM repair, bounded as before.
   while (repairable(bestResult).length > 0 && repairs < maxRepairs) {
     const fixed = await opts.repair(bestCommands, repairable(bestResult));
     if (fixed.length === 0) break;

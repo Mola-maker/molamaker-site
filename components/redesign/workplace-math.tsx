@@ -33,6 +33,8 @@ import {
 import { formatMetaCommandResponse } from '@/lib/workplace/math-drawing/meta-responses';
 import { ggbToTikz, type GgbObject, type TikzMode } from '@/lib/workplace/tikz-export/ggb-to-tikz';
 import { parseGgbScript } from '@/lib/workplace/tikz-export/ggb-script';
+import { localRepair } from '@/lib/workplace/geometry-render/preflight';
+import { lintGeometry } from '@/lib/workplace/geometry-render/lint';
 
 type Provider = 'anthropic' | 'deepseek' | 'coze' | 'dashscope';
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -429,6 +431,24 @@ export function WorkplaceMath() {
     const batchId = fallbackBatchRef.current;
     const fallbacks = (cmd: string) => triangleCenterFallbacks(cmd, batchId);
 
+    // Live canvas snapshot for state-aware repair: the model sees the
+    // evaluated geometry, not just the script it wrote.
+    const snapshotCanvasState = (): string[] => {
+      try {
+        const names = api.getAllObjectNames?.() ?? [];
+        return names.slice(0, 48).map((n) => {
+          const type = api.getObjectType?.(n) ?? 'object';
+          if (type === 'point') {
+            const x = api.getXcoord?.(n);
+            const y = api.getYcoord?.(n);
+            const ok = api.isDefined ? api.isDefined(n) : true;
+            return `${n}: point @ (${x?.toFixed(3)}, ${y?.toFixed(3)})${ok ? '' : ' — UNDEFINED'}`;
+          }
+          return `${n}: ${type}`;
+        });
+      } catch { return []; }
+    };
+
     const outcome = await renderWithRepair({
       api,
       commands,
@@ -439,10 +459,20 @@ export function WorkplaceMath() {
       isTransient: isGgbModuleRaceError,
       transientDelayMs: 1200,
       maxTransientRetries: 3,
+      // Tier 1: mechanical fixes (Intersect indices, bare pair names) — free.
+      localRepair,
+      maxLocalRepairs: 2,
+      // Semantic lint after clean passes: undefined intersections, coincident
+      // points and collinear polygons enter the repair loop with precise hints.
+      lint: (cmds) => lintGeometry(api, cmds),
       repair: async (cmds: string[], failures: CommandFailure[]) => {
         try {
           const res = await streamMath(
-            { mode: 'repair', commands: cmds, failures, provider, model: selectedModel, drawingCommand: ctx.drawingCommand, problem: ctx.problem },
+            {
+              mode: 'repair', commands: cmds, failures, provider, model: selectedModel,
+              drawingCommand: ctx.drawingCommand, problem: ctx.problem,
+              canvasState: snapshotCanvasState(),
+            },
             () => {},
             false,
           );

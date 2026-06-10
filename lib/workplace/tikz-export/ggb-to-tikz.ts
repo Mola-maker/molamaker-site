@@ -184,12 +184,23 @@ interface DerivedLine {
   base: string[];
 }
 
+/** A circular arc: Semicircle(A,B) · CircularArc(C,A,B) · CircumcircularArc(A,B,C). */
+interface ArcInfo {
+  kind: 'semi' | 'central' | 'circum';
+  /** semi=[A,B] · central=[C,A,B] · circum=[A,B,C] */
+  p: string[];
+  cx: number; cy: number; r: number;
+  /** circum arcs: triangle orientation decides the sweep direction */
+  ccw: boolean;
+}
+
 interface Index {
   pts: Map<string, { x: number; y: number }>;
   linePts: Map<string, [string, string]>;  // line/segment/ray → its 2 defining points
   derived: Map<string, DerivedLine>;       // lines that need a \tkzDefLine first
   vectors: Map<string, [string, string]>;  // vector name → (from, to)
   conics: Map<string, ConicInfo>;
+  arcs: Map<string, ArcInfo>;
 }
 
 function buildIndex(objects: GgbObject[]): Index {
@@ -202,6 +213,7 @@ function buildIndex(objects: GgbObject[]): Index {
   const derived = new Map<string, DerivedLine>();
   const vectors = new Map<string, [string, string]>();
   const conics = new Map<string, ConicInfo>();
+  const arcs = new Map<string, ArcInfo>();
 
   /** Resolve a line argument to its 2 base points: named simple line, inline
    *  Line/Segment/Ray(P,Q), or a previously registered derived line's pair is
@@ -241,6 +253,26 @@ function buildIndex(objects: GgbObject[]): Index {
       derived.set(o.name, { kind: 'bisector', anchor: args[1], base: [args[0], args[1], args[2]] });
     } else if (fn === 'Vector' && args.length === 2 && pts.has(args[0]) && pts.has(args[1])) {
       vectors.set(o.name, [args[0], args[1]]);
+    } else if (fn === 'Semicircle' && args.length === 2 && args.every((a) => pts.has(a))) {
+      const a = pts.get(args[0])!; const b = pts.get(args[1])!;
+      arcs.set(o.name, {
+        kind: 'semi', p: [args[0], args[1]],
+        cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, r: dist(a, b) / 2, ccw: true,
+      });
+    } else if (fn === 'CircularArc' && args.length === 3 && args.every((a) => pts.has(a))) {
+      const c = pts.get(args[0])!;
+      arcs.set(o.name, {
+        kind: 'central', p: [args[0], args[1], args[2]],
+        cx: c.x, cy: c.y, r: dist(c, pts.get(args[1])!), ccw: true,
+      });
+    } else if (fn === 'CircumcircularArc' && args.length === 3 && args.every((a) => pts.has(a))) {
+      const [a, b, c] = args.map((n) => pts.get(n)!);
+      const cc = circumcircle(a, b, c);
+      const cross = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+      arcs.set(o.name, {
+        kind: 'circum', p: [args[0], args[1], args[2]],
+        cx: cc.x, cy: cc.y, r: cc.r, ccw: cross > 0,
+      });
     } else if (fn === 'Circle' || fn === 'Circumcircle' || fn === 'Incircle') {
       const info: ConicInfo = {};
       if (fn !== 'Incircle' && args.length === 2 && pts.has(args[0]) && pts.has(args[1])) {
@@ -260,7 +292,7 @@ function buildIndex(objects: GgbObject[]): Index {
       conics.set(o.name, info);
     }
   }
-  return { pts, linePts, derived, vectors, conics };
+  return { pts, linePts, derived, vectors, conics, arcs };
 }
 
 /** A line/segment/ray argument → its 2 defining points (named object OR inline). */
@@ -505,6 +537,24 @@ function renderTkz(objects: GgbObject[], idx: Index): TikzExportResult {
       } else {
         fallbacks.push(parseCommand(o.command)?.fn ?? o.type);
       }
+    } else if (idx.arcs.has(o.name)) {
+      // Semicircle / CircularArc / CircumcircularArc → \tkzDrawArc(center,from)(to)
+      // (tkz arcs sweep counterclockwise from the second operand to the third).
+      const arc = idx.arcs.get(o.name)!;
+      const dash = o.dashed ? '[dashed]' : '';
+      if (arc.kind === 'semi') {
+        const m = `${N(o.name)}m`;
+        defs.push(`    \\tkzDefMidPoint(${N(arc.p[0])},${N(arc.p[1])})\\tkzGetPoint{${m}} %半圆心`);
+        circleDraws.push(`    \\tkzDrawArc${dash}(${m},${N(arc.p[1])})(${N(arc.p[0])})`);
+      } else if (arc.kind === 'central') {
+        circleDraws.push(`    \\tkzDrawArc${dash}(${N(arc.p[0])},${N(arc.p[1])})(${N(arc.p[2])})`);
+      } else {
+        const oName = `${N(o.name)}o`;
+        defs.push(`    \\tkzDefCircle[circum](${N(arc.p[0])},${N(arc.p[1])},${N(arc.p[2])})\\tkzGetPoint{${oName}} %弧心`);
+        circleDraws.push(arc.ccw
+          ? `    \\tkzDrawArc${dash}(${oName},${N(arc.p[0])})(${N(arc.p[2])})`
+          : `    \\tkzDrawArc${dash}(${oName},${N(arc.p[2])})(${N(arc.p[0])})`);
+      }
     } else if (o.type === 'conic') {
       const c = idx.conics.get(o.name);
       if (!c) { fallbacks.push(parseCommand(o.command)?.fn ?? 'conic'); continue; }
@@ -677,6 +727,19 @@ function renderRaw(objects: GgbObject[], idx: Index): TikzExportResult {
         x2 = p.x + ux; y2 = p.y + uy;
       }
       draws.push(`\\draw [${style}] (${fmt(x1)},${fmt(y1)})-- (${fmt(x2)},${fmt(y2)});`);
+    } else if (idx.arcs.has(o.name)) {
+      const arc = idx.arcs.get(o.name)!;
+      // sweep counterclockwise from `from` to `to` around the centre
+      const fromName = arc.kind === 'semi' ? arc.p[1] : arc.kind === 'central' ? arc.p[1] : (arc.ccw ? arc.p[0] : arc.p[2]);
+      const toName = arc.kind === 'semi' ? arc.p[0] : arc.kind === 'central' ? arc.p[2] : (arc.ccw ? arc.p[2] : arc.p[0]);
+      const from = idx.pts.get(fromName); const to = idx.pts.get(toName);
+      if (!from || !to || arc.r <= 0) continue;
+      const deg = (p: { x: number; y: number }) => (Math.atan2(p.y - arc.cy, p.x - arc.cx) * 180) / Math.PI;
+      const a1 = deg(from);
+      let a2 = deg(to);
+      while (a2 <= a1 + 1e-9) a2 += 360;
+      draws.push(`\\draw [${style}] (${fmt(from.x)},${fmt(from.y)}) arc (${fmt(a1)}:${fmt(a2)}:${fmt(arc.r)}cm);`);
+      grow(arc.cx - arc.r, arc.cy - arc.r); grow(arc.cx + arc.r, arc.cy + arc.r);
     } else if (o.type === 'conic') {
       const c = idx.conics.get(o.name);
       if (!c || c.cx == null || c.cy == null || c.r == null) continue;

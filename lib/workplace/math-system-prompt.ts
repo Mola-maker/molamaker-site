@@ -132,16 +132,25 @@ export function buildGgbRepairSystemPrompt(
 }
 
 /** User message for the repair call: the script plus per-command GeoGebra errors. */
-export function formatRepairUserContent(commands: string[], failures: CommandFailure[]): string {
+export function formatRepairUserContent(
+  commands: string[],
+  failures: CommandFailure[],
+  canvasState?: string[],
+): string {
   const script = commands.join('\n');
   const errors = failures.map((f) => `- \`${f.cmd}\` → ${f.error}`).join('\n');
+  // Live canvas snapshot (label: type @ coords) — lets the model reason about
+  // the actual evaluated geometry instead of guessing from the script alone.
+  const state = canvasState && canvasState.length
+    ? `\n\nObjects currently on the canvas (evaluated by the engine):\n${canvasState.slice(0, 48).map((l) => `  ${l}`).join('\n')}`
+    : '';
   return `Script that was run:
 \`\`\`geogebra
 ${script}
 \`\`\`
 
 GeoGebra reported these errors:
-${errors}
+${errors}${state}
 
 Return the full corrected script as ONE \`\`\`geogebra block.`;
 }
