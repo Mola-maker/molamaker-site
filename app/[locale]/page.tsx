@@ -17,6 +17,7 @@ import '../redesign-styles/09-astrbot.css';
 import '../redesign-styles/10-v-workplace.css';
 import '../redesign-styles/11-v-notebook.css';
 import '../redesign-styles/12-miku-fairy.css';
+import '../redesign-styles/13-miku-stage.css';
 
 export const dynamic = 'force-dynamic';
 

@@ -1,17 +1,19 @@
 // Miku stage directions — the shared vocabulary between the chat LLM and the
-// on-page MikuFairy sprite. Bot replies may end with a tag like [miku:dance];
-// the chat hook strips it from the visible text and dispatches a
-// `miku:perform` CustomEvent that the sprite acts out. Visitor messages are
-// scanned for command keywords so Miku reacts the instant you hit send,
-// before the model has replied.
+// page's two performers: the Live2D mascot + fullscreen stage scenes
+// (MikuStage) and the tiny wandering sprite (MikuFairy). Bot replies may end
+// with a tag like [miku:concert]; the chat hook strips it from the visible
+// text and dispatches a `miku:perform` CustomEvent that the performers act
+// out. Visitor messages are scanned for command keywords so the page reacts
+// the instant you hit send, before the model has replied.
 
-export const MIKU_ACTIONS = [
+/** Small actions performed by the chibi sprite (and echoed by the Live2D
+ *  mascot when it's on stage). */
+export const SPRITE_ACTIONS = [
   'dance',
   'spin',
   'jump',
   'wave',
   'hearts',
-  'fireworks',
   'sing',
   'hide',
   'swim',
@@ -19,12 +21,33 @@ export const MIKU_ACTIONS = [
   'zoom',
 ] as const;
 
+/** Fullscreen cinematic scenes rendered by MikuStage: page dims, the Live2D
+ *  model takes center stage, and a canvas particle system runs the show. */
+export const SCENE_ACTIONS = [
+  'concert',
+  'fireworks',
+  'sakura',
+  'stars',
+  'snow',
+  'confetti',
+] as const;
+
+export const MIKU_ACTIONS = [...SPRITE_ACTIONS, ...SCENE_ACTIONS] as const;
+
+export type SpriteAction = (typeof SPRITE_ACTIONS)[number];
+export type SceneAction = (typeof SCENE_ACTIONS)[number];
 export type MikuAction = (typeof MIKU_ACTIONS)[number];
 
 const TAG_RE = /\[(?:miku|mola):\s*([a-z-]+)\s*\]/gi;
 
 export function isMikuAction(name: string): name is MikuAction {
   return (MIKU_ACTIONS as readonly string[]).includes(name);
+}
+export function isSpriteAction(name: string): name is SpriteAction {
+  return (SPRITE_ACTIONS as readonly string[]).includes(name);
+}
+export function isSceneAction(name: string): name is SceneAction {
+  return (SCENE_ACTIONS as readonly string[]).includes(name);
 }
 
 /** Pull `[miku:…]` tags out of a bot reply: returns the recognised actions and
@@ -48,14 +71,20 @@ export function stripMikuTags(text: string): string {
 }
 
 // Visitor-message keyword commands (en + zh). Only the first match fires so
-// "dance and sing!" doesn't queue a double performance.
+// "dance and sing!" doesn't queue a double performance. Big-production scenes
+// are matched before small sprite moves.
 const USER_COMMANDS: Array<[RegExp, MikuAction]> = [
+  [/concert|演唱会|开唱|开个?\s*live|live\s*show|舞台|stage\s*time/i, 'concert'],
+  [/firework|烟花|放个?烟火/i, 'fireworks'],
+  [/sakura|樱花|花瓣|花吹雪/i, 'sakura'],
+  [/meteor|流星|星空|shooting\s*star|银河|stars?\b/i, 'stars'],
+  [/\bsnow\b|下雪|雪花/i, 'snow'],
+  [/confetti|撒花|庆祝|celebrate|恭喜|congrats/i, 'confetti'],
   [/dance|跳舞|跳支舞|跳个舞|💃/i, 'dance'],
   [/spin|twirl|转圈|旋转/i, 'spin'],
   [/\bjump\b|\bhop\b|跳一下|蹦一个/i, 'jump'],
   [/\bwave\b|挥手|打个招呼/i, 'wave'],
   [/比心|爱你|love you|❤|💕|发个爱心/i, 'hearts'],
-  [/firework|烟花|庆祝|celebrate/i, 'fireworks'],
   [/\bsing\b|唱歌|唱首歌|唱个歌/i, 'sing'],
   [/hide|捉迷藏|躲猫猫|藏起来/i, 'hide'],
   [/\bswim\b|游泳|游个泳/i, 'swim'],
@@ -71,11 +100,14 @@ export function actionsFromUserText(text: string): MikuAction[] {
 }
 
 /** Appended to every Live2D persona system prompt so the model can direct the
- *  sprite. Kept terse — it rides along on every request. */
+ *  performers. Kept terse — it rides along on every request. */
 export const MIKU_ACTIONS_PROMPT =
-  'A tiny animated Miku sprite lives on this page and performs stage directions. ' +
-  'When the visitor asks for an animation/performance, or a strong emotion fits your reply, ' +
-  'append exactly one tag at the very END of your reply, chosen from: ' +
-  '[miku:dance] [miku:spin] [miku:jump] [miku:wave] [miku:hearts] [miku:fireworks] ' +
-  '[miku:sing] [miku:hide] [miku:swim] [miku:sleep] [miku:zoom]. ' +
-  'Use a tag only when it adds delight, never more than one, and never mention or explain the tag itself.';
+  'You can also direct live animations on this page by appending ONE tag at the very END of a reply. ' +
+  'Fullscreen spectacles (use when the visitor asks for a show, a surprise, or the moment is big): ' +
+  '[miku:concert] full stage-live with spotlights and penlights, [miku:fireworks] night-sky firework show, ' +
+  '[miku:sakura] cherry-blossom petal storm, [miku:stars] starfield with shooting stars, ' +
+  '[miku:snow] gentle snowfall, [miku:confetti] confetti celebration. ' +
+  'Small gestures (everyday emotional beats): [miku:dance] [miku:spin] [miku:jump] [miku:wave] ' +
+  '[miku:hearts] [miku:sing] [miku:hide] [miku:swim] [miku:sleep] [miku:zoom]. ' +
+  'Pick the one that best matches the mood; use a fullscreen spectacle whenever the visitor explicitly asks ' +
+  'for an animation, show, or celebration. Never mention or explain the tag itself.';
