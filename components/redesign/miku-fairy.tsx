@@ -14,8 +14,14 @@
 //
 // All motion runs in one rAF loop writing transforms straight to the DOM —
 // React renders the rig once and never re-renders per frame.
+//
+// The "steal" behavior lifts a real word off the page (wrapped via Range,
+// measured with @chenglou/pretext so the carried ghost is sized without
+// layout reflow), hauls it to a blank spot while humming, drops it, then
+// sits cross-legged beside it, cozy and smiling, until the word flies home.
 
 import { useEffect, useRef } from 'react';
+import { prepareWithSegments, measureNaturalWidth } from '@chenglou/pretext';
 import {
   actionsFromUserText,
   isSpriteAction,
@@ -28,9 +34,10 @@ const H = 74;
 
 type Mode =
   | 'idle' | 'walk' | 'fly' | 'swim' | 'peek' | 'sit' | 'talk'
-  | 'dance' | 'spin' | 'jump' | 'wave' | 'happy' | 'sleep' | 'startle';
+  | 'dance' | 'spin' | 'jump' | 'wave' | 'happy' | 'sleep' | 'startle'
+  | 'carry' | 'cozy';
 
-type PlanKind = 'wander' | 'bar' | 'hide' | 'swim' | 'chat' | 'nap' | 'perform';
+type PlanKind = 'wander' | 'bar' | 'hide' | 'swim' | 'chat' | 'nap' | 'perform' | 'steal';
 
 interface Plan {
   kind: PlanKind;
@@ -59,6 +66,8 @@ const PHRASES = {
   sleepy: ['zzz…', '梦里也有歌声~'],
   swim: ['~( ˘▽˘)~', '游泳时间！'],
   poke: ['にゃ?', 'That tickles~', '干嘛呀~ ♪', '♪~'],
+  steal: ['借一个字哦~', 'this one is mine now ✧', 'えへへ、もらった!'],
+  cozy: ['ふぅ~ 好舒服', '*humming* ♪~', 'こ こ ち い い…', 'cozy ✧'],
 };
 
 function pick<T>(arr: T[]): T {
@@ -256,6 +265,98 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
 
     const chatPanel = () => document.querySelector('.ab-panel');
 
+    // ── Word stealing ──────────────────────────────────────────────
+    // She lifts a real word off the page: the original is wrapped in a span
+    // (gap stays in the layout), a fixed-position ghost rides in her hands.
+
+    let stealState: { span: HTMLElement; ghost: HTMLDivElement; w: number } | null = null;
+
+    /** Pick a steal-able word: walk text nodes of visible prose, choose a
+     *  3–12 letter word (or a short CJK run) and wrap it in a span. */
+    const stealTarget = (): HTMLElement | null => {
+      const els = Array.from(document.querySelectorAll(
+        '.variant-stage h1, .variant-stage h2, .variant-stage h3, .variant-stage p',
+      )).filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top > 130 && r.bottom < window.innerHeight - 70 &&
+          (el.textContent ?? '').trim().length > 6 && !el.closest('a, button');
+      });
+      if (!els.length) return null;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const el = pick(els);
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const words: Array<{ node: Text; start: number; end: number }> = [];
+        let n: Node | null;
+        while ((n = walker.nextNode())) {
+          if ((n.parentElement)?.closest('.mfword, a, button, code')) continue;
+          const text = n.textContent ?? '';
+          const re = /[A-Za-z]{3,12}|[一-鿿]{2,4}/g;
+          let m: RegExpExecArray | null;
+          while ((m = re.exec(text))) words.push({ node: n as Text, start: m.index, end: m.index + m[0].length });
+        }
+        if (!words.length) continue;
+        const wd = pick(words);
+        const range = document.createRange();
+        range.setStart(wd.node, wd.start);
+        range.setEnd(wd.node, wd.end);
+        const r = range.getBoundingClientRect();
+        if (r.width < 14 || r.width > 240 || r.top < 120 || r.bottom > window.innerHeight - 80) continue;
+        const span = document.createElement('span');
+        span.className = 'mfword';
+        try { range.surroundContents(span); } catch { continue; }
+        return span;
+      }
+      return null;
+    };
+
+    const makeGhost = (span: HTMLElement) => {
+      const r = span.getBoundingClientRect();
+      const cs = getComputedStyle(span);
+      const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const word = span.textContent ?? '';
+      // pretext measures the word with the browser's font engine but without
+      // touching layout — no reflow while she's mid-flight.
+      let w = r.width;
+      try { w = measureNaturalWidth(prepareWithSegments(word, font)); } catch { /* fallback: live rect */ }
+      const g = document.createElement('div');
+      g.className = 'mfword-ghost';
+      g.textContent = word;
+      g.style.font = font;
+      g.style.color = cs.color;
+      g.style.transform = `translate(${r.left}px, ${r.top}px)`;
+      g.addEventListener('click', () => returnWord());
+      document.body.appendChild(g);
+      return { g, w: Math.max(14, w) };
+    };
+
+    /** Word flies back to its gap (the span is still holding the space). */
+    const returnWord = (instant = false) => {
+      const st = stealState;
+      if (!st) return;
+      stealState = null;
+      const { span, ghost } = st;
+      const finish = () => {
+        ghost.remove();
+        // Restore the original text node so the DOM shape React rendered
+        // comes back exactly (the span was our insertion).
+        if (span.isConnected) span.replaceWith(document.createTextNode(span.textContent ?? ''));
+      };
+      if (instant || !span.isConnected) { finish(); return; }
+      const r = span.getBoundingClientRect();
+      ghost.classList.remove('is-carried');
+      ghost.classList.add('is-return');
+      ghost.style.transform = `translate(${r.left}px, ${r.top}px) rotate(0deg)`;
+      after(680, finish);
+    };
+
+    const carryGhost = () => {
+      const st = stealState;
+      if (!st) return;
+      st.ghost.style.transform =
+        `translate(${S.x + W / 2 - st.w / 2}px, ${S.y - 20 + Math.sin(S.t * 5) * 2}px) ` +
+        `rotate(${(Math.sin(S.t * 3) * 4).toFixed(2)}deg)`;
+    };
+
     // ── Plan constructors ──────────────────────────────────────────
     const startWander = () => {
       plan = {
@@ -289,19 +390,28 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     const startChat = () => {
       plan = { kind: 'chat', step: 0, until: 0, target: null };
     };
+    const startSteal = () => {
+      const span = stealTarget();
+      if (!span) return startWander();
+      const { g, w } = makeGhost(span);
+      stealState = { span, ghost: g, w };
+      plan = { kind: 'steal', step: 0, until: 0, target: null, targets: findBlankPoints(1) };
+    };
     const startPerform = (actions: string[]) => {
       const queue = actions.filter(isSpriteAction) as SpriteAction[];
       if (!queue.length) return;
       setBehind(false);
+      if (plan.kind === 'steal') returnWord();
       plan = { kind: 'perform', step: 0, until: 0, target: null, queue, started: false };
     };
 
     const nextPlan = () => {
       if (chatPanel()) return startChat();
       const roll = Math.random();
-      if (roll < 0.24) startHide();
-      else if (roll < 0.46) startSwim();
-      else if (roll < 0.74) startBar();
+      if (roll < 0.2) startHide();
+      else if (roll < 0.38) startSwim();
+      else if (roll < 0.56) startSteal();
+      else if (roll < 0.78) startBar();
       else if (roll < 0.92) startWander();
       else startNap();
     };
@@ -433,6 +543,56 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       }
     };
 
+    const tickSteal = (now: number, dt: number) => {
+      const st = stealState;
+      if (!st && plan.step < 3) return nextPlan();
+      if (plan.step === 0 && st) {
+        // Sneak up to the word.
+        const r = st.span.getBoundingClientRect();
+        if (!st.span.isConnected || !inView(r)) { returnWord(true); return nextPlan(); }
+        st.ghost.style.transform = `translate(${r.left}px, ${r.top}px)`;
+        setMode('fly');
+        if (move(r.left + r.width / 2 - W / 2, r.top - H + 24, 240, dt)) {
+          st.span.classList.add('mfword--gone');
+          st.ghost.classList.add('is-carried');
+          setMode('carry');
+          say(PHRASES.steal, 1700);
+          sparkles(cx(), cy(), 4);
+          plan.step = 1;
+        }
+      } else if (plan.step === 1 && st) {
+        // Haul it to the vacancy, humming all the way.
+        setMode('carry');
+        carryGhost();
+        S.fxClock += dt;
+        if (S.fxClock > 0.7) { S.fxClock = 0; fx('mfx--note', cx() + S.facing * 12, S.y - 8, pick(NOTES)); }
+        const dest = plan.targets?.[0];
+        if (!dest || move(dest.x, dest.y, 150, dt)) {
+          // Set the word down beside her…
+          const dropX = S.facing > 0 ? S.x + W + 6 : S.x - st.w - 6;
+          const dropY = S.y + H - 16;
+          st.ghost.classList.remove('is-carried');
+          st.ghost.classList.add('is-drop');
+          st.ghost.style.transform = `translate(${dropX}px, ${dropY}px) rotate(${(Math.random() * 12 - 6).toFixed(1)}deg)`;
+          // …then settle in, cross-legged and pleased with herself.
+          setMode('cozy');
+          face(dropX > S.x ? 1 : -1);
+          say(PHRASES.cozy, 2600);
+          plan.step = 2;
+          plan.until = now + 7000 + Math.random() * 2500;
+        }
+      } else if (plan.step === 2) {
+        S.fxClock += dt;
+        if (S.fxClock > 1.5) { S.fxClock = 0; fx('mfx--note', cx() + S.facing * 14, S.y + 2, pick(['♪', '♡', '~'])); }
+        if (now > plan.until) {
+          returnWord();
+          setMode('happy');
+          plan.step = 3;
+          plan.until = now + 900;
+        }
+      } else if (now > plan.until) nextPlan();
+    };
+
     const tickChat = (now: number, dt: number) => {
       const panel = chatPanel();
       if (!panel) { setBehind(false); return nextPlan(); }
@@ -541,6 +701,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         chatCheck = 0;
         if (plan.kind !== 'chat' && plan.kind !== 'perform' && chatPanel()) {
           setBehind(false);
+          // Mid-heist? Put the word back before reporting for chat duty.
+          if (plan.kind === 'steal') returnWord();
           startChat();
         }
       }
@@ -553,6 +715,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         case 'nap': tickNap(now, dt); break;
         case 'chat': tickChat(now, dt); break;
         case 'perform': tickPerform(now, dt); break;
+        case 'steal': tickSteal(now, dt); break;
       }
 
       clamp();
@@ -560,7 +723,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       // Render: float-bob for airborne modes, then one transform write.
       const bob =
         S.mode === 'fly' ? Math.sin(S.t * 6) * 4 :
-        S.mode === 'swim' ? Math.sin(S.t * 3) * 9 : 0;
+        S.mode === 'swim' ? Math.sin(S.t * 3) * 9 :
+        S.mode === 'carry' ? Math.sin(S.t * 5) * 3 : 0;
       root.style.transform = `translate3d(${S.x}px, ${S.y + bob}px, 0)`;
 
       // Eyes track the cursor.
@@ -658,6 +822,13 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (bubbleTimer) clearTimeout(bubbleTimer);
       if (botSettle) clearTimeout(botSettle);
       timers.forEach(clearTimeout);
+      // Give any stolen word back before leaving the page.
+      if (stealState) {
+        const { span, ghost } = stealState;
+        stealState = null;
+        ghost.remove();
+        if (span.isConnected) span.replaceWith(document.createTextNode(span.textContent ?? ''));
+      }
       window.removeEventListener('mola:chat-update', onChatUpdate);
       window.removeEventListener('miku:perform', onPerform);
       window.removeEventListener('miku:shuffle', onShuffle);
@@ -675,24 +846,134 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       <div ref={rootRef} className="mfairy" data-mode="idle" aria-hidden="true">
         <div ref={bubbleRef} className="mfairy__bubble" />
         <div ref={rigRef} className="mfairy__rig">
-          <span className="mfairy__tail mfairy__tail--l" />
-          <span className="mfairy__tail mfairy__tail--r" />
-          <span className="mfairy__arm mfairy__arm--l" />
-          <span className="mfairy__arm mfairy__arm--r" />
-          <span className="mfairy__leg mfairy__leg--l" />
-          <span className="mfairy__leg mfairy__leg--r" />
-          <span className="mfairy__torso" />
-          <span className="mfairy__skirt" />
-          <span className="mfairy__head">
-            <span className="mfairy__bud mfairy__bud--l" />
-            <span className="mfairy__bud mfairy__bud--r" />
-            <span className="mfairy__bangs" />
-            <span className="mfairy__eye mfairy__eye--l" />
-            <span className="mfairy__eye mfairy__eye--r" />
-            <span className="mfairy__blush mfairy__blush--l" />
-            <span className="mfairy__blush mfairy__blush--r" />
-            <span className="mfairy__mouth" />
-          </span>
+          {/* Anime-style chibi rig — one SVG, parts grouped + class-tagged so
+              the CSS mode animations rotate/sway them like puppet joints. */}
+          <svg className="mfairy__svg" viewBox="0 0 64 78" width="64" height="78">
+            <defs>
+              <linearGradient id="mfgHair" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#86ecdf" />
+                <stop offset="0.65" stopColor="#39c5bb" />
+                <stop offset="1" stopColor="#2aa39c" />
+              </linearGradient>
+              <linearGradient id="mfgTail" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#6fdcd2" />
+                <stop offset="0.6" stopColor="#39c5bb" />
+                <stop offset="1" stopColor="#258f8b" />
+              </linearGradient>
+              <radialGradient id="mfgIris" cx="0.5" cy="0.42" r="0.62">
+                <stop offset="0" stopColor="#bdf3ef" />
+                <stop offset="0.55" stopColor="#2fa7a4" />
+                <stop offset="1" stopColor="#10646c" />
+              </radialGradient>
+              <linearGradient id="mfgTorso" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#5a5f68" />
+                <stop offset="1" stopColor="#41464e" />
+              </linearGradient>
+            </defs>
+
+            {/* twin-tails (behind everything) */}
+            <g className="mfairy__tail mfairy__tail--l">
+              <path d="M9,16 C3,26 2,40 7,54 C9,59 13,58 14,52 C16,40 15,27 14,17 Z" fill="url(#mfgTail)" stroke="#fffdfa" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M11,22 C8,32 8,42 10,50" fill="none" stroke="#9ff0e7" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+            </g>
+            <g className="mfairy__tail mfairy__tail--r">
+              <path d="M55,16 C61,26 62,40 57,54 C55,59 51,58 50,52 C48,40 49,27 50,17 Z" fill="url(#mfgTail)" stroke="#fffdfa" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M53,22 C56,32 56,42 54,50" fill="none" stroke="#9ff0e7" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+            </g>
+
+            {/* arms (behind torso) */}
+            <g className="mfairy__arm mfairy__arm--l">
+              <rect x="20.5" y="42" width="5" height="13" rx="2.5" fill="#4a4f57" stroke="#fffdfa" strokeWidth="1.6" />
+              <circle cx="23" cy="55" r="2.4" fill="#ffe9de" stroke="#fffdfa" strokeWidth="1.2" />
+            </g>
+            <g className="mfairy__arm mfairy__arm--r">
+              <rect x="38.5" y="42" width="5" height="13" rx="2.5" fill="#4a4f57" stroke="#fffdfa" strokeWidth="1.6" />
+              <circle cx="41" cy="55" r="2.4" fill="#ffe9de" stroke="#fffdfa" strokeWidth="1.2" />
+            </g>
+
+            {/* legs */}
+            <g className="mfairy__leg mfairy__leg--l">
+              <rect x="26" y="59" width="5.4" height="8" rx="2.4" fill="#ffe9de" stroke="#fffdfa" strokeWidth="1.4" />
+              <rect x="25.6" y="65" width="6.2" height="10" rx="2.6" fill="#2f9d98" stroke="#fffdfa" strokeWidth="1.4" />
+            </g>
+            <g className="mfairy__leg mfairy__leg--r">
+              <rect x="32.6" y="59" width="5.4" height="8" rx="2.4" fill="#ffe9de" stroke="#fffdfa" strokeWidth="1.4" />
+              <rect x="32.2" y="65" width="6.2" height="10" rx="2.6" fill="#2f9d98" stroke="#fffdfa" strokeWidth="1.4" />
+            </g>
+
+            {/* torso + skirt */}
+            <g className="mfairy__torso">
+              <path d="M24,44 q8,-4 16,0 l-1,12 q-7,3 -14,0 Z" fill="url(#mfgTorso)" stroke="#fffdfa" strokeWidth="1.8" strokeLinejoin="round" />
+              <path d="M25,45.5 q7,-3.4 14,0" fill="none" stroke="#39c5bb" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M32,46 l-2.6,3.4 2.6,6 2.6,-6 Z" fill="#39c5bb" stroke="#1f8a84" strokeWidth="0.6" />
+              <path d="M22.5,55 h19 l2.5,7 q-12,4 -24,0 Z" fill="#2c3138" stroke="#fffdfa" strokeWidth="1.8" strokeLinejoin="round" />
+              <path d="M27,56 l-1,5 M32,56.4 l0,5.4 M37,56 l1,5" stroke="rgba(57,197,187,0.55)" strokeWidth="1" />
+            </g>
+
+            {/* head — oversized, reference-photo proportions */}
+            <g className="mfairy__head">
+              <ellipse cx="32" cy="26" rx="21" ry="19" fill="#ffe9de" stroke="#fffdfa" strokeWidth="2.4" />
+              {/* bangs: soft cap with scalloped fringe + side locks */}
+              <path d="M11,28 C10,8 54,8 53,28 C50,21 47,25 43,19 C39,26 33,24 30,18 C26,26 19,22 16,27 C14,25 12,26 11,28 Z" fill="url(#mfgHair)" stroke="#fffdfa" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M12,26 q-2,9 1,15 q3,-2 3,-7" fill="url(#mfgHair)" stroke="#fffdfa" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M52,26 q2,9 -1,15 q-3,-2 -3,-7" fill="url(#mfgHair)" stroke="#fffdfa" strokeWidth="1.6" strokeLinejoin="round" />
+              {/* ahoge */}
+              <path d="M30,8 q2,-7 9,-5 q-5,0 -6,6" fill="none" stroke="#39c5bb" strokeWidth="2" strokeLinecap="round" />
+              {/* pink hair buds */}
+              <circle className="mfairy__bud" cx="10" cy="14" r="4.4" fill="#e76b7c" stroke="#fffdfa" strokeWidth="1.8" />
+              <circle className="mfairy__bud" cx="54" cy="14" r="4.4" fill="#e76b7c" stroke="#fffdfa" strokeWidth="1.8" />
+              <circle cx="8.8" cy="12.6" r="1.3" fill="#f8a9b4" />
+              <circle cx="52.8" cy="12.6" r="1.3" fill="#f8a9b4" />
+
+              {/* eyes — open: big teal-ringed anime eyes, pupils track cursor */}
+              <g className="mfairy__eyes mfairy__eyes--open">
+                <g className="mfairy__eye">
+                  <ellipse cx="23.5" cy="29" rx="4.6" ry="5.6" fill="#eafffd" stroke="#2fa7a4" strokeWidth="2.2" />
+                  <g className="mfairy__pupil">
+                    <ellipse cx="23.5" cy="29.6" rx="2.6" ry="3.4" fill="url(#mfgIris)" />
+                    <circle cx="22.4" cy="27.6" r="1.1" fill="#fff" />
+                    <circle cx="24.6" cy="31" r="0.55" fill="#d9fffb" />
+                  </g>
+                  <path d="M19,24.6 q4,-2.8 9,-1" fill="none" stroke="#1f8a84" strokeWidth="1.4" strokeLinecap="round" />
+                </g>
+                <g className="mfairy__eye">
+                  <ellipse cx="40.5" cy="29" rx="4.6" ry="5.6" fill="#eafffd" stroke="#2fa7a4" strokeWidth="2.2" />
+                  <g className="mfairy__pupil">
+                    <ellipse cx="40.5" cy="29.6" rx="2.6" ry="3.4" fill="url(#mfgIris)" />
+                    <circle cx="39.4" cy="27.6" r="1.1" fill="#fff" />
+                    <circle cx="41.6" cy="31" r="0.55" fill="#d9fffb" />
+                  </g>
+                  <path d="M36,24.6 q4,-2.8 9,-1" fill="none" stroke="#1f8a84" strokeWidth="1.4" strokeLinecap="round" />
+                </g>
+              </g>
+              {/* eyes — happy ∩∩ (dance / hearts / cozy) */}
+              <g className="mfairy__eyes mfairy__eyes--happy">
+                <path d="M19.5,30 q4,-5 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M36.5,30 q4,-5 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.4" strokeLinecap="round" />
+              </g>
+              {/* eyes — closed (sleep) */}
+              <g className="mfairy__eyes mfairy__eyes--closed">
+                <path d="M19.5,29 q4,3.6 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.2" strokeLinecap="round" />
+                <path d="M36.5,29 q4,3.6 8,0" fill="none" stroke="#2fa7a4" strokeWidth="2.2" strokeLinecap="round" />
+              </g>
+
+              {/* blush */}
+              <ellipse className="mfairy__blush" cx="17.5" cy="34.5" rx="3.1" ry="1.7" fill="#ffb1bb" opacity="0.85" />
+              <ellipse className="mfairy__blush" cx="46.5" cy="34.5" rx="3.1" ry="1.7" fill="#ffb1bb" opacity="0.85" />
+
+              {/* mouths — tiny pink blob / open singing oval / cozy smile */}
+              <g className="mfairy__mouth mfairy__mouth--small">
+                <ellipse cx="32" cy="36.6" rx="1.8" ry="1.4" fill="#f0879a" />
+              </g>
+              <g className="mfairy__mouth mfairy__mouth--open">
+                <ellipse cx="32" cy="37" rx="2.6" ry="3" fill="#e8657f" stroke="#d8536e" strokeWidth="0.6" />
+                <ellipse cx="32" cy="38.4" rx="1.5" ry="1.2" fill="#ff9fae" />
+              </g>
+              <g className="mfairy__mouth mfairy__mouth--smile">
+                <path d="M28.5,36 q3.5,3.6 7,0" fill="none" stroke="#e8657f" strokeWidth="1.8" strokeLinecap="round" />
+              </g>
+            </g>
+          </svg>
           <span className="mfairy__shadow" />
         </div>
       </div>

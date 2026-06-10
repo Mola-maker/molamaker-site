@@ -640,19 +640,29 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   EDITORIAL IMPACT — scroll breakpoints & genius.com visual weight
+   EDITORIAL IMPACT — refined. One ghost-numeral system, one motion
+   grammar: ease-out-expo entrances, 240ms hovers, ink inversions
+   that keep their contrast. Drama from scale + restraint, not noise.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Dark ink masthead — newspaper front-page feel */
+/* Dark ink masthead — newspaper front-page feel, finished with a
+   hairline accent rule so the band reads as set type, not a void. */
 .v-mag .masthead {
   background: var(--bg-ink);
   border-color: transparent;
+  border-bottom: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
 }
 .v-mag .masthead__l,
-.v-mag .masthead__r { color: rgba(245,241,235,0.38); }
-.v-mag .masthead__c { color: rgba(245,241,235,0.88); font-size: 18px; }
+.v-mag .masthead__r { color: rgba(245,241,235,0.52); }
+.v-mag .masthead__c {
+  color: rgba(245,241,235,0.92);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
 
-/* Ghost oversized section counters */
+/* Ghost oversized section counters — alternating corners so the eye
+   zigzags down the page instead of meeting the same wallpaper four
+   times; §02 is outlined rather than filled for a second voice. */
 .v-mag .folio,
 .v-mag .feature,
 .v-mag .index-table,
@@ -673,38 +683,127 @@
   font-size: clamp(120px, 18vw, 280px);
   line-height: 1;
   color: var(--ink);
-  opacity: 0.042;
+  opacity: 0.045;
   pointer-events: none; user-select: none;
   letter-spacing: -0.06em;
   z-index: 0;
 }
+.v-mag .feature::before {
+  right: auto; left: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in oklab, var(--ink) 14%, transparent);
+  opacity: 1;
+}
+.v-mag .work-spread::before { right: auto; left: -0.04em; }
 .v-mag .folio > *,
 .v-mag .feature > *,
 .v-mag .index-table > *,
 .v-mag .work-spread > * { position: relative; z-index: 1; }
 
-/* Folio h1: slightly larger max */
-.v-mag .folio__h1 { font-size: clamp(40px, 7vw, 120px); }
+/* Folio h1: poster scale, balanced rag */
+.v-mag .folio__h1 {
+  font-size: clamp(40px, 7vw, 120px);
+  text-wrap: balance;
+}
 
-/* Feature pull quote — bigger, more dramatic */
+/* Feature: drop cap opens the essay; pull quote hangs its own quote
+   mark and carries a short accent rule like a printed callout. */
+.v-mag .feature__lead::first-letter {
+  font-family: var(--font-display);
+  font-size: 3.1em;
+  line-height: 0.82;
+  float: left;
+  padding: 0.04em 0.12em 0 0;
+  color: var(--accent);
+}
 .v-mag .feature__pull {
   font-size: clamp(26px, 3.4vw, 46px);
   letter-spacing: -0.025em;
   line-height: 1.25;
-  padding: 28px 0;
+  padding: 28px 0 28px 0.6em;
+  position: relative;
+  text-wrap: balance;
+}
+.v-mag .feature__pull::before {
+  content: '“';
+  position: absolute;
+  left: -0.12em; top: 0.32em;
+  font-family: var(--font-display);
+  font-size: 1.7em;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.v-mag .feature__pull::after {
+  content: '';
+  display: block;
+  width: 64px; height: 2px;
+  margin-top: 22px;
+  background: var(--accent);
 }
 
-/* Index table row: full color inversion on hover */
-.v-mag .index-table__row:hover {
+/* Index table row: full ink inversion on hover — eased, not snapped,
+   and the indent comes from a sliding accent bar instead of a layout
+   jump. Keyboard focus gets the same treatment as hover. */
+.v-mag .index-table__row {
+  transition:
+    background 240ms ease,
+    padding-left 240ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    border-color 240ms ease;
+}
+.v-mag .index-table__row .index-table__title,
+.v-mag .index-table__row .index-table__date,
+.v-mag .index-table__row .index-table__no,
+.v-mag .index-table__row .index-table__excerpt,
+.v-mag .index-table__row .index-table__meta { transition: color 240ms ease; }
+.v-mag .index-table__row:hover,
+.v-mag .index-table__row:focus-within {
   background: var(--bg-ink);
+  border-color: var(--bg-ink);
   padding-left: 24px;
 }
-.v-mag .index-table__row:hover .index-table__title   { color: var(--bg-elev); }
+.v-mag .index-table__row:hover .index-table__title,
+.v-mag .index-table__row:focus-within .index-table__title   { color: var(--bg-elev); }
 .v-mag .index-table__row:hover .index-table__date,
 .v-mag .index-table__row:hover .index-table__no,
 .v-mag .index-table__row:hover .index-table__excerpt,
-.v-mag .index-table__row:hover .index-table__meta    { color: rgba(245,241,235,0.42); }
-.v-mag .index-table__row:hover::before               { background: var(--accent); width: 6px; }
+.v-mag .index-table__row:hover .index-table__meta,
+.v-mag .index-table__row:focus-within .index-table__date,
+.v-mag .index-table__row:focus-within .index-table__no,
+.v-mag .index-table__row:focus-within .index-table__excerpt,
+.v-mag .index-table__row:focus-within .index-table__meta    { color: rgba(245,241,235,0.58); }
+.v-mag .index-table__row:hover::before,
+.v-mag .index-table__row:focus-within::before               { background: var(--accent); width: 6px; }
 
-/* Work card glyph — bolder presence */
-.v-mag .work-card__art .glyph { font-size: clamp(160px, 22vw, 280px); opacity: 0.11; }
+/* Work card — bolder glyph plus a quiet lift; the art pane zooms a
+   touch so the card feels alive under the cursor. */
+.v-mag .work-card { transition: transform 280ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)), box-shadow 280ms ease; }
+.v-mag .work-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px -22px rgba(40, 32, 22, 0.35);
+}
+.v-mag .work-card__art { overflow: hidden; }
+.v-mag .work-card__art .glyph {
+  font-size: clamp(160px, 22vw, 280px);
+  opacity: 0.11;
+  transition: transform 600ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)), opacity 600ms ease;
+}
+.v-mag .work-card:hover .work-card__art .glyph {
+  transform: scale(1.06) rotate(-2deg);
+  opacity: 0.16;
+}
+
+/* Ink (dark) mode: the masthead band and inversions hold their own
+   contrast when the whole page is already dark. */
+body.ink-mode .v-mag .masthead { border-bottom-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+body.ink-mode .v-mag .index-table__row:hover,
+body.ink-mode .v-mag .index-table__row:focus-within { background: rgba(245, 241, 235, 0.07); }
+body.ink-mode .v-mag .index-table__row:hover .index-table__title,
+body.ink-mode .v-mag .index-table__row:focus-within .index-table__title { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .v-mag .index-table__row,
+  .v-mag .work-card,
+  .v-mag .work-card__art .glyph { transition: none; }
+  .v-mag .work-card:hover { transform: none; }
+}

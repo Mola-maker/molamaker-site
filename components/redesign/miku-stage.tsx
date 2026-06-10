@@ -13,14 +13,17 @@
 //                             echoed onto the Live2D model when it's on stage
 //   miku:scene {scene}      → direct trigger
 //   mola:chat-update        → lip-sync while the bot streams; reaction motions
+//   mola:now-playing / mola:time-update → the concert syncs to the real
+//                             NetEase track: timed LRC lyric bubbles, lyric
+//                             pop-line on stage, bursts on every line
 // Exit: click anywhere, Esc, or the scene's own curtain call.
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  extractMikuActions,
   isSceneAction,
   isSpriteAction,
+  extractMikuActions,
   type SceneAction,
 } from '@/lib/chat/miku-actions';
 import {
@@ -32,6 +35,14 @@ import {
   stopLipSync,
   summonLive2d,
 } from '@/lib/live2d/director';
+
+interface NowPlayingDetail {
+  id: number;
+  title: string;
+  artist: string;
+  lyrics?: Array<{ time: number; text: string }>;
+  playing?: boolean;
+}
 
 // ── Particle engine ──────────────────────────────────────────────
 
@@ -69,8 +80,14 @@ export function MikuStage() {
   const [scene, setScene] = useState<SceneAction | null>(null);
   const [closing, setClosing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lyricRef = useRef<HTMLDivElement>(null);
+  const songRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneAction | null>(null);
   sceneRef.current = scene;
+  // Live view of the music player, fed by its broadcast events — the concert
+  // reads these to sync lyrics with the actual audio clock.
+  const npRef = useRef<NowPlayingDetail | null>(null);
+  const timeRef = useRef(0);
 
   // ── Global listeners: open scenes, echo gestures, chat lip-sync ──
   useEffect(() => {
@@ -137,13 +154,27 @@ export function MikuStage() {
       }
     };
 
+    // Track the music player's broadcast state for concert sync.
+    const onNowPlaying = (e: Event) => {
+      const d = (e as CustomEvent).detail as (NowPlayingDetail & { playing?: boolean }) | undefined;
+      if (!d) return;
+      npRef.current = { id: d.id, title: d.title, artist: d.artist, lyrics: d.lyrics ?? [], playing: d.playing };
+    };
+    const onTime = (e: Event) => {
+      timeRef.current = ((e as CustomEvent).detail?.time as number) ?? 0;
+    };
+
     window.addEventListener('miku:perform', onPerform);
     window.addEventListener('miku:scene', onScene);
     window.addEventListener('mola:chat-update', onChat);
+    window.addEventListener('mola:now-playing', onNowPlaying);
+    window.addEventListener('mola:time-update', onTime);
     return () => {
       window.removeEventListener('miku:perform', onPerform);
       window.removeEventListener('miku:scene', onScene);
       window.removeEventListener('mola:chat-update', onChat);
+      window.removeEventListener('mola:now-playing', onNowPlaying);
+      window.removeEventListener('mola:time-update', onTime);
       if (settle) clearTimeout(settle);
       stopLipSync();
     };
@@ -249,10 +280,46 @@ export function MikuStage() {
         try { window.dispatchEvent(new CustomEvent('miku:perform', { detail: { actions: ['dance'] } })); } catch { /* ignore */ }
       }
     });
+    // Concert ↔ NetEase: start (or adopt) a real track. While a song with LRC
+    // lyrics is playing, the show syncs to the audio clock — lyric pop-line on
+    // stage, bubble on the model, a burst per line. Without music it falls
+    // back to the canned humming rotation.
+    let musicMode = false;
+    let lyricIdx = -1;
     if (scene === 'concert') {
+      const playById = (id: number, title: string, artist: string) => {
+        try {
+          window.dispatchEvent(new CustomEvent('mola:play-song', { detail: { id, title, artist } }));
+        } catch { /* ignore */ }
+      };
+      const startMusic = async () => {
+        const np = npRef.current;
+        if (np?.playing) { musicMode = true; return; }
+        try {
+          if (np?.id) {
+            playById(np.id, np.title, np.artist);
+          } else {
+            const r = await fetch('/api/music/nowplaying');
+            const j = await r.json().catch(() => ({})) as { data?: { id: string; title: string; artist: string } | null };
+            if (j.data?.id) {
+              playById(Number(j.data.id), j.data.title, j.data.artist);
+            } else {
+              const s = await fetch(`/api/music/search?q=${encodeURIComponent('初音ミク')}`);
+              const sj = await s.json().catch(() => ({})) as { data?: { songs?: Array<{ id: number; name: string; artists?: Array<{ name: string }> }> } };
+              const song = sj.data?.songs?.[0];
+              if (song) playById(song.id, song.name, song.artists?.map((a) => a.name).join(', ') ?? '');
+            }
+          }
+        } catch { /* no music backend — canned lyrics carry the show */ }
+        // Confirm playback actually started (autoplay can be blocked).
+        after(1600, () => { if (npRef.current?.playing) musicMode = true; });
+        after(4500, () => { if (npRef.current?.playing) musicMode = true; });
+      };
+      startMusic();
+
       every(1700, () => { if (summoned) playMotion('tap_body'); });
       every(4100, () => { if (summoned) playExpression(); });
-      every(3400, () => { if (summoned) mascotSay(pick(LYRICS), 2800, 11); });
+      every(3400, () => { if (summoned && !musicMode) mascotSay(pick(LYRICS), 2800, 11); });
     } else {
       every(3600, () => { if (summoned && Math.random() < 0.6) playMotion('idle'); });
     }
@@ -360,6 +427,34 @@ export function MikuStage() {
       const t = (now - t0) / 1000;
 
       ctx.clearRect(0, 0, Wv(), Hv());
+
+      // Concert lyric sync — follow the real audio clock through the LRC
+      // lines: pop the stage lyric, bubble it on the model, burst per line.
+      if (scene === 'concert' && musicMode) {
+        const np = npRef.current;
+        const lyrics = np?.lyrics ?? [];
+        if (lyrics.length) {
+          const tm = timeRef.current;
+          let idx = -1;
+          for (let i = 0; i < lyrics.length && lyrics[i].time <= tm; i++) idx = i;
+          if (idx !== lyricIdx && idx >= 0) {
+            lyricIdx = idx;
+            const line = lyrics[idx].text;
+            const el = lyricRef.current;
+            if (el) {
+              el.textContent = line;
+              el.classList.remove('is-pop');
+              void el.offsetWidth; // restart the pop animation
+              el.classList.add('is-pop');
+            }
+            mascotSay(`♪ ${line}`, 3400, 11);
+            explode(rnd(0.25, 0.75) * Wv(), rnd(0.1, 0.32) * Hv(), pick(FESTIVAL), 22);
+          }
+        }
+        if (songRef.current && np?.title) {
+          songRef.current.textContent = `♪ ${np.title} — ${np.artist}`;
+        }
+      }
 
       // Twinkling backdrop stars
       if (twinkles.length) {
@@ -503,12 +598,28 @@ export function MikuStage() {
       // longer so the model glides back to its corner instead of snapping.
       document.body.classList.remove('mstage-live', `mstage-${scene}`);
       setTimeout(() => document.body.classList.remove('mstage-on'), 1200);
+      window.removeEventListener('mola:now-playing', onSongState);
       setClosing(true);
       setTimeout(() => { setScene(null); setClosing(false); }, 500);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
-    after(SCENE_DUR[scene], close);
+    // A music-driven concert runs with the song: curtain falls when the track
+    // ends or pauses (4-minute cap). Everything else keeps its fixed runtime;
+    // the concert's fixed runtime only applies if no track ever started.
+    const onSongState = (e: Event) => {
+      const d = (e as CustomEvent).detail as { playing?: boolean } | undefined;
+      if (scene === 'concert' && musicMode && d && d.playing === false) {
+        setTimeout(() => { if (alive) close(); }, 1400);
+      }
+    };
+    if (scene === 'concert') {
+      window.addEventListener('mola:now-playing', onSongState);
+      after(SCENE_DUR.concert, () => { if (!musicMode) close(); });
+      after(240000, close);
+    } else {
+      after(SCENE_DUR[scene], close);
+    }
 
     // The overlay click handler needs the same close — stash it on the canvas
     // element so the JSX handler can reach the current scene's closure.
@@ -522,6 +633,7 @@ export function MikuStage() {
         intervals.forEach(clearInterval);
         window.removeEventListener('resize', fit);
         window.removeEventListener('keydown', onKey);
+        window.removeEventListener('mola:now-playing', onSongState);
         document.body.classList.remove('mstage-live', `mstage-${scene}`);
         setTimeout(() => document.body.classList.remove('mstage-on'), 1200);
       }
@@ -548,6 +660,12 @@ export function MikuStage() {
       )}
       {scene === 'stars' && <div className="mstage__moon" aria-hidden="true" />}
       <canvas ref={canvasRef} className="mstage__canvas" />
+      {scene === 'concert' && (
+        <>
+          <div ref={songRef} className="mstage__song" aria-hidden="true" />
+          <div ref={lyricRef} className="mstage__lyric" aria-hidden="true" />
+        </>
+      )}
       <span className="mstage__hint">esc / click to exit ✦</span>
     </div>,
     document.body,
