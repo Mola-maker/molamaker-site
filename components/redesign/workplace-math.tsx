@@ -35,6 +35,12 @@ import { ggbToTikz, type GgbObject, type TikzMode } from '@/lib/workplace/tikz-e
 import { parseGgbScript } from '@/lib/workplace/tikz-export/ggb-script';
 import { localRepair } from '@/lib/workplace/geometry-render/preflight';
 import { lintGeometry } from '@/lib/workplace/geometry-render/lint';
+import { runGeometryScript } from '@/lib/workplace/geometry-render/run-script';
+import {
+  buildConstructionSteps,
+  formatConstructionProtocol,
+  type ConstructionStep,
+} from '@/lib/workplace/geometry-render/steps';
 
 type Provider = 'anthropic' | 'deepseek' | 'coze' | 'dashscope';
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -214,6 +220,15 @@ export function WorkplaceMath() {
   const [tikzMode, setTikzMode] = useState<TikzMode>('tkz');
   const [tikzObjects, setTikzObjects] = useState<GgbObject[] | null>(null);
   const [tikzCopied, setTikzCopied] = useState(false);
+
+  // Pure mode — the canvas takes the whole screen, chrome fades away.
+  const [pureMode, setPureMode] = useState(false);
+  // Construction protocol — the figure broken into rigorous numbered steps,
+  // each replayable as a prefix of the successful script.
+  const [stepsOpen, setStepsOpen] = useState(false);
+  const [steps, setSteps] = useState<ConstructionStep[]>([]);
+  const [stepIndex, setStepIndex] = useState<number | null>(null);
+  const [protocolCopied, setProtocolCopied] = useState(false);
 
   const slashQuery = useMemo(() => {
     const t = input;
@@ -637,14 +652,34 @@ export function WorkplaceMath() {
     };
   }, [studioOpen, sidebarOpen, ggbReady, fitApplet, perfMode]);
 
+  const pureModeRef = useRef(false);
+  const stepsOpenRef = useRef(false);
+  useEffect(() => { pureModeRef.current = pureMode; }, [pureMode]);
+  useEffect(() => { stepsOpenRef.current = stepsOpen; }, [stepsOpen]);
+
   useEffect(() => {
     if (!studioOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setStudioOpen(false); };
+    // Esc unwinds one layer at a time: pure mode → steps panel → studio.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (pureModeRef.current) { setPureMode(false); return; }
+      if (stepsOpenRef.current) { setStepsOpen(false); return; }
+      setStudioOpen(false);
+    };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
   }, [studioOpen]);
+
+  // Pure mode resizes the stage to the viewport — refit the applet after the
+  // CSS transition settles (both directions).
+  useEffect(() => {
+    if (!studioOpen) return;
+    fitApplet();
+    const bumps = [90, 240, 480].map((ms) => setTimeout(fitApplet, ms));
+    return () => bumps.forEach(clearTimeout);
+  }, [pureMode, studioOpen, fitApplet]);
 
   const resetCanvas = useCallback(() => {
     const api = apiRef.current;
@@ -687,6 +722,45 @@ export function WorkplaceMath() {
     const ok = await copyTextToClipboard(tikzResult.code);
     if (ok) { setTikzCopied(true); setTimeout(() => setTikzCopied(false), 1500); }
   }, [tikzResult]);
+
+  // ── Construction protocol (rigorous steps) ───────────────────────
+  // Steps come from the exact successful script, so the protocol can never
+  // drift from the figure; selecting step k replays the script prefix [0..k].
+
+  const openSteps = useCallback(() => {
+    const script = lastSuccessfulRef.current;
+    if (!script.length) return;
+    setSteps(buildConstructionSteps(script));
+    setStepIndex(null);  // null = full figure
+    setStepsOpen(true);
+  }, []);
+
+  const replayPrefix = useCallback((prefix: string[]) => {
+    const api = apiRef.current;
+    if (!api) return;
+    clearGgbConstruction(api);
+    runGeometryScript(api, prefix);
+    api.recalculateEnvironments?.();
+  }, []);
+
+  const goToStep = useCallback((k: number | null) => {
+    setStepIndex(k);
+    if (k === null) replayPrefix(lastSuccessfulRef.current);
+    else if (steps[k]) replayPrefix(steps[k].prefix);
+  }, [steps, replayPrefix]);
+
+  const closeSteps = useCallback(() => {
+    setStepsOpen(false);
+    // leave the full figure on the canvas, whatever step was showing
+    if (stepIndex !== null) replayPrefix(lastSuccessfulRef.current);
+    setStepIndex(null);
+  }, [stepIndex, replayPrefix]);
+
+  const copyProtocol = useCallback(async () => {
+    if (!steps.length) return;
+    const ok = await copyTextToClipboard(formatConstructionProtocol(steps));
+    if (ok) { setProtocolCopied(true); setTimeout(() => setProtocolCopied(false), 1500); }
+  }, [steps]);
 
   const send = useCallback(async () => {
     const raw = input.trim();
@@ -1008,10 +1082,27 @@ export function WorkplaceMath() {
             </div>
           </aside>
 
-          <div ref={stageRef} className="wp-studio__stage">
+          <div
+            ref={stageRef}
+            className={`wp-studio__stage${pureMode ? ' is-pure' : ''}`}
+            onDoubleClick={(e) => {
+              // double-click on the stage chrome (bar / padding, not the live
+              // applet which owns its own gestures) toggles pure mode
+              if ((e.target as HTMLElement).closest('button, .wp-ggb-host')) return;
+              setPureMode((v) => !v);
+            }}
+          >
             <div className="wp-studio__stage-bar">
-              <span className="wp-studio__stage-label">GeoGebra</span>
+              <span className="wp-studio__stage-label">GeoGebra{pureMode ? ' · 纯净模式' : ''}</span>
               <span className="wp-studio__stage-tools">
+                <button
+                  type="button"
+                  className={`wp-studio__steps-toggle${stepsOpen ? ' is-on' : ''}`}
+                  onClick={() => (stepsOpen ? closeSteps() : openSteps())}
+                  disabled={!ggbReady || lastSuccessfulRef.current.length === 0}
+                  title="把当前作图分解为严谨的步骤（可逐步回放）"
+                  aria-label="Construction steps"
+                >≡ 步骤</button>
                 <button
                   type="button"
                   className="wp-studio__magic"
@@ -1027,6 +1118,13 @@ export function WorkplaceMath() {
                   title={katexPanelOpen ? '关闭公式面板' : '打开公式面板（KaTeX）'}
                   aria-label="Toggle KaTeX panel"
                 >∑</button>
+                <button
+                  type="button"
+                  className={`wp-studio__pure-toggle${pureMode ? ' is-on' : ''}`}
+                  onClick={() => setPureMode((v) => !v)}
+                  title={pureMode ? '退出纯净模式 (Esc)' : '纯净模式 — 画布全屏（双击画布边缘也可）'}
+                  aria-label="Toggle pure fullscreen canvas"
+                >⛶</button>
                 <button
                   className="wp-studio__close"
                   onClick={() => setStudioOpen(false)}
@@ -1045,6 +1143,40 @@ export function WorkplaceMath() {
               )}
               <div id={GGB_CONTAINER_ID} className="wp-ggb-host" />
             </main>
+
+            {stepsOpen && (
+              <aside className="wp-steps" aria-label="作图步骤">
+                <div className="wp-steps__bar">
+                  <span className="wp-steps__title">作图步骤 · {steps.length}</span>
+                  <button type="button" className="wp-steps__copy" onClick={copyProtocol} disabled={!steps.length}>
+                    {protocolCopied ? '已复制 ✓' : '复制'}
+                  </button>
+                  <button type="button" className="wp-steps__close" onClick={closeSteps} aria-label="Close steps">×</button>
+                </div>
+                <ol className="wp-steps__list">
+                  {steps.map((s, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        className={`wp-steps__item${stepIndex === i ? ' is-active' : ''}${stepIndex !== null && i > stepIndex ? ' is-future' : ''}`}
+                        onClick={() => goToStep(i)}
+                        title={s.cmd}
+                      >
+                        <span className="wp-steps__num">{s.n}</span>
+                        <span className="wp-steps__text">{s.text}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                <div className="wp-steps__nav">
+                  <button type="button" onClick={() => goToStep(0)} disabled={!steps.length || stepIndex === 0} aria-label="First step">⏮</button>
+                  <button type="button" onClick={() => goToStep(Math.max(0, (stepIndex ?? steps.length) - 1))} disabled={!steps.length || stepIndex === 0} aria-label="Previous step">◀</button>
+                  <span className="wp-steps__pos">{stepIndex === null ? '完整图形' : `${stepIndex + 1} / ${steps.length}`}</span>
+                  <button type="button" onClick={() => (stepIndex === null || stepIndex >= steps.length - 1 ? goToStep(null) : goToStep(stepIndex + 1))} disabled={!steps.length || stepIndex === null} aria-label="Next step">▶</button>
+                  <button type="button" onClick={() => goToStep(null)} disabled={stepIndex === null} aria-label="Full figure">⏭</button>
+                </div>
+              </aside>
+            )}
           </div>
 
           <aside className={`wp-studio__katex${katexPanelOpen ? ' is-open' : ''}`} aria-hidden={!katexPanelOpen}>

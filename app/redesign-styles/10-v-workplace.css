@@ -2475,3 +2475,172 @@ body.wp-studio-ggb-open {
   .wp-math__status--busy .wp-math__status-dot { animation: none; }
   .wp-math__pill--active { animation: none; }
 }
+
+/* ── Pure mode: the canvas takes the whole screen ─────────────────── */
+.wp-studio__stage { transition: none; }
+.wp-studio__stage.is-pure {
+  position: fixed !important;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg, #f5f1eb);
+  isolation: isolate;
+  animation: wpPureIn 0.25s ease both;
+}
+@keyframes wpPureIn {
+  from { opacity: 0.6; transform: scale(0.985); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* slimmer, quieter chrome while in pure mode — the figure is the page */
+.wp-studio__stage.is-pure .wp-studio__stage-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 2;
+  background: color-mix(in oklab, var(--bg, #f5f1eb) 82%, transparent);
+  backdrop-filter: blur(8px);
+  opacity: 0.35;
+  transition: opacity 0.25s ease;
+}
+.wp-studio__stage.is-pure .wp-studio__stage-bar:hover,
+.wp-studio__stage.is-pure .wp-studio__stage-bar:focus-within { opacity: 1; }
+.wp-studio__stage.is-pure .wp-studio__canvas {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+
+.wp-studio__pure-toggle,
+.wp-studio__steps-toggle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wp-studio__pure-toggle:hover,
+.wp-studio__steps-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.wp-studio__pure-toggle.is-on,
+.wp-studio__steps-toggle.is-on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.wp-studio__steps-toggle:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Construction protocol panel ─────────────────────────────────── */
+.wp-steps {
+  position: absolute;
+  top: 46px;
+  right: 10px;
+  bottom: 10px;
+  width: min(340px, calc(100% - 20px));
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in oklab, var(--bg, #f5f1eb) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 14px 38px -18px rgba(30, 25, 18, 0.4);
+  overflow: hidden;
+  animation: wpPureIn 0.2s ease both;
+}
+.wp-steps__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.wp-steps__title {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.wp-steps__copy,
+.wp-steps__close {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.wp-steps__copy:hover, .wp-steps__close:hover { border-color: var(--accent); color: var(--accent); }
+.wp-steps__list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+}
+.wp-steps__item {
+  display: flex;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+.wp-steps__item:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+.wp-steps__item.is-active {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+.wp-steps__item.is-future { opacity: 0.42; }
+.wp-steps__num {
+  flex: none;
+  width: 22px; height: 22px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent);
+  border-radius: 50%;
+}
+.wp-steps__text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.wp-steps__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rule);
+}
+.wp-steps__nav button {
+  font-size: 13px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.wp-steps__nav button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.wp-steps__nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+.wp-steps__pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  min-width: 72px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .wp-steps { top: 44px; right: 6px; bottom: 6px; width: calc(100% - 12px); }
+}
