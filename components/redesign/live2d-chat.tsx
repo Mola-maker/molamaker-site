@@ -9,6 +9,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAstrbotChat } from '@/lib/chat/use-astrbot-chat';
+import { initLive2dLife } from '@/lib/live2d/interactions';
 import {
   personaForModel,
   currentModelId,
@@ -144,6 +145,12 @@ export function Live2DChat({ autoLoad = true }: { autoLoad?: boolean } = {}) {
 
   // Load Live2D widget script once the mascot is enabled
   useLive2DLoader(widgetOn);
+
+  // Ambient life: greetings, petting, sing-along, board hosting (one init).
+  useEffect(() => {
+    if (!widgetOn) return;
+    return initLive2dLife();
+  }, [widgetOn]);
 
   // Toggle chat on Live2D character click
   const toggleChat = useCallback(() => chat.setOpen((v) => !v), [chat]);

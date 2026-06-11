@@ -171,6 +171,7 @@ export function VStream({ t, locale }: Props) {
     const message = (form.elements.namedItem('message') as HTMLInputElement)?.value.trim();
     if (!name || !message) return;
     form.reset();
+    try { window.dispatchEvent(new CustomEvent('mola:guest-posted', { detail: { name, message } })); } catch { /* ignore */ }
     fetch('/api/guestbook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

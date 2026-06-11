@@ -58,7 +58,11 @@ export async function POST(req: NextRequest) {
   upstream.append('file', file, file.name || 'upload');
 
   const headers: Record<string, string> = {};
-  if (key) headers['Authorization'] = `Bearer ${key}`;
+  if (key) {
+    // canonical Open API scheme is X-API-Key; Bearer covers newer builds
+    headers['X-API-Key'] = key;
+    headers['Authorization'] = `Bearer ${key}`;
+  }
 
   try {
     const res = await fetch(`${url}/api/v1/file`, {

@@ -385,9 +385,15 @@ export function useAstrbotChat(options?: {
           const raw = line.slice(5).trim();
           if (raw === '[DONE]') { buf = ''; break; }
           try {
-            const j = JSON.parse(raw) as { token?: string; tool?: { name: string; status: 'running' | 'done' | 'error'; summary?: string } };
+            const j = JSON.parse(raw) as { token?: string; session_id?: string; tool?: { name: string; status: 'running' | 'done' | 'error'; summary?: string } };
             if (j.token) pushToken(j.token);
             else if (j.tool) pushToolFrame(j.tool);
+            // AstrBot mints a session when ours is missing/expired — adopt it
+            // so the conversation keeps its memory across turns.
+            if (j.session_id && j.session_id !== sessionId) {
+              try { sessionStorage.setItem('mola:chat-sid', j.session_id); } catch { /* ignore */ }
+              setSessionId(j.session_id);
+            }
           } catch { /* skip malformed frame */ }
         }
       }

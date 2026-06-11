@@ -33,7 +33,11 @@ async function tryAstrBot(
   if (!url) return { ok: false, reason: 'astrbot: not configured' };
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (key) headers['Authorization'] = `Bearer ${key}`;
+  if (key) {
+    // canonical Open API scheme is X-API-Key; Bearer covers newer builds
+    headers['X-API-Key'] = key;
+    headers['Authorization'] = `Bearer ${key}`;
+  }
 
   try {
     const payload: Record<string, unknown> = { message, username, enable_streaming: false };
