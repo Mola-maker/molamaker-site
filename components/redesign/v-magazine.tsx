@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import type { I18nBlock, Locale, Post } from './data';
 import { molaData } from './data';
 import { HoverText, useReveal } from './atoms';
+import { MagGallery } from './mag-gallery';
 
 type Props = { t: I18nBlock; locale: Locale; posts?: Post[] };
 
@@ -214,6 +215,9 @@ export function VMagazine({ t, locale, posts }: Props) {
           ))}
         </section>
       </div>
+
+      {/* §05 — Miku's gallery: her paintings + the live-emoji wall */}
+      <MagGallery locale={locale} />
     </div>
   );
 }

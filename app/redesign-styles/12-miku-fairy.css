@@ -1,17 +1,17 @@
-/* ── MikuFairy — the wandering chibi sprite ─────────────────────────
-   Pure-CSS chibi Miku in the soft pixel-sticker style of the reference
-   art: oversized head, huge teal-ringed eyes, tiny pink mouth, pink
-   hair buds, long swaying twin-tails, creamy white outline.
-   Position is driven from JS (translate3d on .mfairy); everything else
-   — walk cycles, swims, dances, peeks — is keyframed here and switched
-   via [data-mode="…"]. `.is-behind` drops her under the page's text
-   layer (negative z-index) for hide-and-seek. */
+/* ── MikuFairy — the wandering anime chibi sprite ───────────────────
+   The rig is one inline SVG (miku-fairy.tsx): twin-tails, joints and
+   facial features are class-tagged groups that CSS rotates and swaps
+   like a paper puppet. Position comes from JS (translate3d on .mfairy);
+   everything else — walk cycles, swims, dances, the cozy cross-legged
+   sit — is keyframed here and switched via [data-mode="…"].
+   `.is-behind` drops her under the page's text layer for hide-and-seek;
+   `.mfword*` styles the word she steals off the page. */
 
 .mfairy {
   position: fixed;
   top: 0; left: 0;
   width: 64px;
-  height: 74px;
+  height: 78px;
   z-index: 8200;
   pointer-events: none;
   will-change: transform;
@@ -34,259 +34,83 @@
   transform-origin: 50% 78%;
   transition: transform 0.35s ease;
 }
-
-/* ── Body parts ──────────────────────────────────────────────────── */
-
-/* Twin-tails — long, soft, always gently swaying */
-.mfairy__tail {
-  position: absolute;
-  top: 12px;
-  width: 13px;
-  height: 42px;
-  background: linear-gradient(180deg, #6fdcd2, #39c5bb 55%, #2da39c);
-  border-radius: 7px 7px 11px 11px;
-  box-shadow: 0 0 0 2px #fffdfa, inset -2px -3px 0 rgba(23, 110, 112, 0.25);
-  transform-origin: 50% 4px;
-  z-index: 1;
-  animation: mfSway 2.4s ease-in-out infinite alternate;
+.mfairy__svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(30, 60, 60, 0.18));
 }
-.mfairy__tail--l { left: -3px; }
-.mfairy__tail--r { right: -3px; animation-delay: -1.2s; }
+
+/* Every articulated SVG group rotates about its own joint. */
+.mfairy__tail,
+.mfairy__arm,
+.mfairy__leg,
+.mfairy__head,
+.mfairy__eyes,
+.mfairy__pupil,
+.mfairy__mouth {
+  transform-box: fill-box;
+}
+.mfairy__tail { transform-origin: 50% 6%; animation: mfSway 2.4s ease-in-out infinite alternate; }
+.mfairy__tail--r { animation-delay: -1.2s; }
+.mfairy__arm { transform-origin: 50% 10%; }
+.mfairy__leg { transform-origin: 50% 6%; }
+.mfairy__head { transform-origin: 50% 80%; }
 @keyframes mfSway {
-  from { transform: rotate(5deg); }
-  to   { transform: rotate(-5deg); }
+  from { transform: rotate(4.5deg); }
+  to   { transform: rotate(-4.5deg); }
 }
 
-/* Arms */
-.mfairy__arm {
-  position: absolute;
-  top: 40px;
-  width: 7px;
-  height: 15px;
-  background: #4a4f57;
-  border-radius: 4px;
-  box-shadow: 0 0 0 2px #fffdfa;
-  transform-origin: 50% 3px;
-  z-index: 2;
-}
-.mfairy__arm::after {
-  content: '';
-  position: absolute;
-  bottom: -2px; left: 1px;
-  width: 5px; height: 5px;
-  background: #ffe9de;
-  border-radius: 50%;
-}
-.mfairy__arm--l { left: 16px; }
-.mfairy__arm--r { right: 16px; }
-
-/* Legs — skin thigh + teal boot */
-.mfairy__leg {
-  position: absolute;
-  top: 58px;
-  width: 8px;
-  height: 16px;
-  background: linear-gradient(180deg, #ffe9de 0 42%, #2f9d98 42%);
-  border-radius: 3px 3px 4px 4px;
-  box-shadow: 0 0 0 2px #fffdfa;
-  transform-origin: 50% 2px;
-  z-index: 2;
-}
-.mfairy__leg--l { left: 23px; }
-.mfairy__leg--r { left: 33px; }
-
-/* Torso — grey top, teal tie */
-.mfairy__torso {
-  position: absolute;
-  top: 38px; left: 21px;
-  width: 22px;
-  height: 16px;
-  background: linear-gradient(180deg, #565b63, #444951);
-  border-radius: 7px 7px 4px 4px;
-  box-shadow: 0 0 0 2px #fffdfa, inset 0 2px 0 #39c5bb;
-  z-index: 3;
-}
-.mfairy__torso::after {
-  content: '';
-  position: absolute;
-  top: 3px; left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top: 8px solid #39c5bb;
-}
-
-/* Skirt with faint teal pleats */
-.mfairy__skirt {
-  position: absolute;
-  top: 51px; left: 18px;
-  width: 28px;
-  height: 9px;
-  background: #2c3138;
-  background-image: repeating-linear-gradient(
-    90deg, transparent 0 5px, rgba(57, 197, 187, 0.45) 5px 6px);
-  border-radius: 3px 3px 9px 9px;
-  box-shadow: 0 0 0 2px #fffdfa;
-  z-index: 3;
-}
-
-/* Head — oversized, chibi */
-.mfairy__head {
-  position: absolute;
-  top: 0; left: 10px;
-  width: 44px;
-  height: 41px;
-  background: #ffe9de;
-  border-radius: 50% 50% 46% 46%;
-  box-shadow: 0 0 0 2px #fffdfa;
-  z-index: 4;
-}
-
-/* Bangs — teal cap with scalloped fringe */
-.mfairy__bangs {
-  position: absolute;
-  top: -2px; left: -2px; right: -2px;
-  height: 24px;
-  background: linear-gradient(180deg, #7ce3d8, #39c5bb 75%);
-  border-radius: 52% 52% 38% 38%;
-}
-/* Side locks framing the face, like the reference art */
-.mfairy__bangs::before,
-.mfairy__bangs::after {
-  content: '';
-  position: absolute;
-  top: 14px;
-  width: 8px;
-  height: 17px;
-  background: linear-gradient(180deg, #39c5bb, #2da39c);
-  border-radius: 0 0 60% 60%;
-}
-.mfairy__bangs::before { left: 1px; }
-.mfairy__bangs::after { right: 1px; }
-
-/* Pink hair buds where the tails attach */
-.mfairy__bud {
-  position: absolute;
-  top: -3px;
-  width: 9px;
-  height: 9px;
-  background: radial-gradient(circle at 35% 35%, #f592a0, #e76b7c);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px #fffdfa;
-  z-index: 5;
-}
-.mfairy__bud--l { left: -1px; }
-.mfairy__bud--r { right: -1px; }
-
-/* Eyes — huge ovals with a thick teal ring, glint, cursor-tracking pupils */
-.mfairy__eye {
-  position: absolute;
-  top: 17px;
-  width: 11px;
-  height: 13px;
-  background: #d9f6f4;
-  border: 2.5px solid #2fa7a4;
-  border-radius: 50%;
-  z-index: 6;
-  animation: mfBlink 4.4s ease-in-out infinite;
-}
-.mfairy__eye::before {
-  content: '';
-  position: absolute;
-  top: 2px; left: 1.5px;
-  width: 5px; height: 6px;
-  background: #15777d;
-  border-radius: 50%;
-  transform: translate(var(--mlx), var(--mly));
-}
-.mfairy__eye::after {
-  content: '';
-  position: absolute;
-  top: 1px; left: 1px;
-  width: 3px; height: 3px;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0.95;
-}
-.mfairy__eye--l { left: 6px; }
-.mfairy__eye--r { right: 6px; }
+/* ── Facial state machine ────────────────────────────────────────── */
+/* Default face: open eyes (blinking, pupils tracking the cursor) and
+   the tiny pink mouth. Other variants are revealed per mode. */
+.mfairy__eyes--open { transform-origin: 50% 50%; animation: mfBlink 4.4s ease-in-out infinite; }
+.mfairy__eyes--happy,
+.mfairy__eyes--closed,
+.mfairy__eyes--wink,
+.mfairy__mouth--open,
+.mfairy__mouth--smile { visibility: hidden; }
+.mfairy__pupil { transform: translate(var(--mlx), var(--mly)); }
 @keyframes mfBlink {
   0%, 93%, 100% { transform: scaleY(1); }
-  95.5%         { transform: scaleY(0.12); }
+  95.5%         { transform: scaleY(0.1); }
 }
 
-.mfairy__blush {
-  position: absolute;
-  top: 28px;
-  width: 6px;
-  height: 3.5px;
-  background: #ffb1bb;
-  border-radius: 50%;
-  opacity: 0.85;
-  z-index: 6;
-}
-.mfairy__blush--l { left: 3px; }
-.mfairy__blush--r { right: 3px; }
+/* happy face — dance · hearts · post-performance glow */
+.mfairy[data-mode="happy"] .mfairy__eyes--open,
+.mfairy[data-mode="dance"] .mfairy__eyes--open,
+.mfairy[data-mode="cozy"]  .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="happy"] .mfairy__eyes--happy,
+.mfairy[data-mode="dance"] .mfairy__eyes--happy,
+.mfairy[data-mode="cozy"]  .mfairy__eyes--happy { visibility: visible; }
+.mfairy[data-mode="happy"] .mfairy__mouth--small,
+.mfairy[data-mode="cozy"]  .mfairy__mouth--small,
+.mfairy[data-mode="carry"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="happy"] .mfairy__mouth--smile,
+.mfairy[data-mode="cozy"]  .mfairy__mouth--smile,
+.mfairy[data-mode="carry"] .mfairy__mouth--smile { visibility: visible; }
+.mfairy[data-mode="happy"] .mfairy__blush,
+.mfairy[data-mode="cozy"]  .mfairy__blush { opacity: 1; }
 
-/* Tiny pink mouth */
-.mfairy__mouth {
-  position: absolute;
-  top: 29px; left: 50%;
-  width: 6px;
-  height: 4px;
-  margin-left: -3px;
-  background: #f0879a;
-  border-radius: 40% 40% 60% 60%;
-  z-index: 6;
-  transition: all 0.2s ease;
-}
-
-.mfairy__shadow {
-  position: absolute;
-  bottom: -3px; left: 16px;
-  width: 32px;
-  height: 6px;
-  background: rgba(25, 50, 50, 0.16);
-  border-radius: 50%;
-  filter: blur(1px);
-  z-index: 0;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+/* singing / talking — open mouth flutters */
+.mfairy[data-mode="talk"]  .mfairy__mouth--small,
+.mfairy[data-mode="dance"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="talk"]  .mfairy__mouth--open,
+.mfairy[data-mode="dance"] .mfairy__mouth--open { visibility: visible; transform-origin: 50% 20%; animation: mfTalk 0.34s ease-in-out infinite; }
+@keyframes mfTalk {
+  0%, 100% { transform: scaleY(0.55); }
+  50%      { transform: scaleY(1); }
 }
 
-/* ── Speech bubble ───────────────────────────────────────────────── */
-.mfairy__bubble {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) scale(0.6);
-  white-space: nowrap;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  color: var(--ink, #2c2620);
-  background: rgba(255, 253, 250, 0.95);
-  border: 1px solid var(--rule, #d8d0c4);
-  border-radius: 11px;
-  padding: 4px 10px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 7;
-}
-.mfairy__bubble::after {
-  content: '';
-  position: absolute;
-  top: 100%; left: 50%;
-  margin-left: -4px;
-  border: 4px solid transparent;
-  border-top-color: rgba(255, 253, 250, 0.95);
-}
-.mfairy__bubble.is-on {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
+/* sleeping — closed lids */
+.mfairy[data-mode="sleep"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="sleep"] .mfairy__eyes--closed { visibility: visible; }
 
-/* ── Mode animations ─────────────────────────────────────────────── */
+/* wide eyes when peeking or startled */
+.mfairy[data-mode="peek"] .mfairy__eyes--open,
+.mfairy[data-mode="startle"] .mfairy__eyes--open { animation: none; transform: scale(1.12); }
 
-/* walk — alternating legs + arm swing + body bob */
+/* ── Mode animations (whole-body) ────────────────────────────────── */
+
+/* walk — alternating legs + arm swing + head bob */
 .mfairy[data-mode="walk"] .mfairy__leg--l { animation: mfStepA 0.46s linear infinite; }
 .mfairy[data-mode="walk"] .mfairy__leg--r { animation: mfStepB 0.46s linear infinite; }
 .mfairy[data-mode="walk"] .mfairy__arm--l { animation: mfStepB 0.46s linear infinite; }
@@ -310,16 +134,13 @@
 .mfairy[data-mode="swim"] .mfairy__arm--r { animation: mfStroke 0.8s ease-in-out infinite 0.4s; }
 .mfairy[data-mode="swim"] .mfairy__tail { animation-duration: 1.1s; }
 .mfairy[data-mode="swim"] .mfairy__shadow { opacity: 0; }
-.mfairy[data-mode="swim"] .mfairy__mouth { width: 5px; height: 5px; border-radius: 50%; }
 @keyframes mfKickA { 0%,100% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } }
 @keyframes mfKickB { 0%,100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
 @keyframes mfStroke { 0%,100% { transform: rotate(-60deg); } 50% { transform: rotate(40deg); } }
 
-/* peek — wide sparkling eyes, hands up like the reference art */
-.mfairy[data-mode="peek"] .mfairy__eye { animation: none; transform: scale(1.12); }
+/* peek — hands up beside the face, like the reference art */
 .mfairy[data-mode="peek"] .mfairy__arm--l { transform: rotate(150deg); }
 .mfairy[data-mode="peek"] .mfairy__arm--r { transform: rotate(-150deg); }
-.mfairy[data-mode="peek"] .mfairy__mouth { width: 4px; height: 3px; }
 .mfairy[data-mode="peek"] .mfairy__shadow { opacity: 0; }
 
 /* sit / talk — perched on the chat panel */
@@ -330,11 +151,29 @@
   0%, 100% { transform: scaleX(var(--mf-face)) rotate(-1.5deg); }
   50%      { transform: scaleX(var(--mf-face)) rotate(1.5deg); }
 }
-.mfairy[data-mode="talk"] .mfairy__mouth { animation: mfTalk 0.34s ease-in-out infinite; }
 .mfairy[data-mode="talk"] .mfairy__head { animation: mfHeadBob 0.68s ease-in-out infinite; }
-@keyframes mfTalk {
-  0%, 100% { height: 3px; width: 5px; }
-  50%      { height: 6px; width: 6px; border-radius: 50%; }
+
+/* carry — both arms overhead holding the stolen word, gentle drift */
+.mfairy[data-mode="carry"] .mfairy__arm--l { transform: rotate(158deg); }
+.mfairy[data-mode="carry"] .mfairy__arm--r { transform: rotate(-158deg); }
+.mfairy[data-mode="carry"] .mfairy__leg { transform: rotate(10deg); }
+.mfairy[data-mode="carry"] .mfairy__tail { animation-duration: 1.1s; }
+.mfairy[data-mode="carry"] .mfairy__shadow { opacity: 0.3; transform: scale(0.6); }
+
+/* cozy — cross-legged on the floor, swaying, utterly pleased */
+.mfairy[data-mode="cozy"] .mfairy__leg--l { transform: rotate(76deg) translateY(-1px); }
+.mfairy[data-mode="cozy"] .mfairy__leg--r { transform: rotate(102deg) translateY(-2.5px); }
+.mfairy[data-mode="cozy"] .mfairy__arm--l { transform: rotate(24deg); }
+.mfairy[data-mode="cozy"] .mfairy__arm--r { transform: rotate(-24deg); }
+.mfairy[data-mode="cozy"] .mfairy__rig { animation: mfCozySway 4.2s ease-in-out infinite; }
+.mfairy[data-mode="cozy"] .mfairy__head { animation: mfCozyTilt 4.2s ease-in-out infinite; }
+@keyframes mfCozySway {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-1deg); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(1.6deg); }
+}
+@keyframes mfCozyTilt {
+  0%, 100% { transform: rotate(-2.4deg); }
+  50%      { transform: rotate(2.4deg); }
 }
 
 /* dance — bouncing twirl, arms up */
@@ -342,7 +181,6 @@
 .mfairy[data-mode="dance"] .mfairy__arm--l { animation: mfArmUpA 0.62s ease-in-out infinite; }
 .mfairy[data-mode="dance"] .mfairy__arm--r { animation: mfArmUpB 0.62s ease-in-out infinite; }
 .mfairy[data-mode="dance"] .mfairy__tail { animation-duration: 0.62s; }
-.mfairy[data-mode="dance"] .mfairy__mouth { width: 7px; height: 5px; border-radius: 50%; }
 @keyframes mfDance {
   0%, 100% { transform: scaleX(var(--mf-face)) translateY(0) rotate(-7deg); }
   25%      { transform: scaleX(var(--mf-face)) translateY(-9px) rotate(0deg); }
@@ -375,48 +213,298 @@
 .mfairy[data-mode="wave"] .mfairy__rig { animation: mfSitSway 1.6s ease-in-out infinite; }
 @keyframes mfWave { 0%,100% { transform: rotate(-150deg); } 50% { transform: rotate(-110deg); } }
 
-/* happy — bigger blush, ∪∪ eyes, little hops */
+/* happy hops */
 .mfairy[data-mode="happy"] .mfairy__rig { animation: mfHop 0.5s ease-in-out infinite; }
-.mfairy[data-mode="happy"] .mfairy__eye {
-  animation: none;
-  height: 4px;
-  border-radius: 0 0 10px 10px;
-  border-top-color: transparent;
-  background: transparent;
-  top: 21px;
-}
-.mfairy[data-mode="happy"] .mfairy__eye::before,
-.mfairy[data-mode="happy"] .mfairy__eye::after { display: none; }
-.mfairy[data-mode="happy"] .mfairy__blush { opacity: 1; transform: scale(1.3); }
-.mfairy[data-mode="happy"] .mfairy__mouth { width: 8px; height: 5px; border-radius: 0 0 8px 8px; }
 @keyframes mfHop {
   0%, 100% { transform: scaleX(var(--mf-face)) translateY(0); }
   50%      { transform: scaleX(var(--mf-face)) translateY(-6px); }
 }
 
-/* sleep — closed eyes, tilt */
+/* sleep — tilted, slow tails */
 .mfairy[data-mode="sleep"] .mfairy__rig { --mf-rot: 7deg; }
-.mfairy[data-mode="sleep"] .mfairy__eye {
-  animation: none;
-  height: 2.5px;
-  border-radius: 2px;
-  border-color: transparent;
-  background: #2fa7a4;
-  top: 23px;
-}
-.mfairy[data-mode="sleep"] .mfairy__eye::before,
-.mfairy[data-mode="sleep"] .mfairy__eye::after { display: none; }
-.mfairy[data-mode="sleep"] .mfairy__mouth { width: 4px; height: 4px; border-radius: 50%; }
 .mfairy[data-mode="sleep"] .mfairy__tail { animation-duration: 5s; }
 
 /* startle — jitter */
 .mfairy[data-mode="startle"] .mfairy__rig { animation: mfStartle 0.4s ease-in-out 2; }
-.mfairy[data-mode="startle"] .mfairy__eye { animation: none; transform: scale(1.25); }
-.mfairy[data-mode="startle"] .mfairy__mouth { width: 5px; height: 6px; border-radius: 50%; }
 @keyframes mfStartle {
   0%, 100% { transform: scaleX(var(--mf-face)) translate(0, 0) rotate(0); }
   25%      { transform: scaleX(var(--mf-face)) translate(-2px, -7px) rotate(-5deg); }
   60%      { transform: scaleX(var(--mf-face)) translate(2px, 0) rotate(4deg); }
+}
+
+/* ── New expression repertoire ───────────────────────────────────── */
+
+/* shy — hands to face, looking away, maximum blush */
+.mfairy[data-mode="shy"] .mfairy__arm--l { transform: rotate(152deg); }
+.mfairy[data-mode="shy"] .mfairy__arm--r { transform: rotate(-152deg); }
+.mfairy[data-mode="shy"] .mfairy__head { transform: rotate(6deg) translateY(1.5px); }
+.mfairy[data-mode="shy"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="shy"] .mfairy__eyes--closed { visibility: visible; }
+.mfairy[data-mode="shy"] .mfairy__blush { opacity: 1; transform: scale(1.5); }
+.mfairy[data-mode="shy"] .mfairy__rig { animation: mfSquirm 0.7s ease-in-out infinite; }
+@keyframes mfSquirm {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-1.6deg); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(1.6deg); }
+}
+
+/* cry — squeezed lids, trembling, hands to eyes */
+.mfairy[data-mode="cry"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="cry"] .mfairy__eyes--closed { visibility: visible; }
+.mfairy[data-mode="cry"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="cry"] .mfairy__mouth--open { visibility: visible; transform: scale(0.7); }
+.mfairy[data-mode="cry"] .mfairy__arm--l { transform: rotate(140deg); }
+.mfairy[data-mode="cry"] .mfairy__arm--r { transform: rotate(-140deg); }
+.mfairy[data-mode="cry"] .mfairy__rig { animation: mfSob 0.32s ease-in-out infinite; }
+@keyframes mfSob {
+  0%, 100% { transform: scaleX(var(--mf-face)) translateX(-1px); }
+  50%      { transform: scaleX(var(--mf-face)) translateX(1px) translateY(-1px); }
+}
+
+/* laugh — head thrown back, fast bouncing */
+.mfairy[data-mode="laugh"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="laugh"] .mfairy__eyes--happy { visibility: visible; }
+.mfairy[data-mode="laugh"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="laugh"] .mfairy__mouth--open { visibility: visible; transform-origin: 50% 20%; animation: mfTalk 0.26s ease-in-out infinite; }
+.mfairy[data-mode="laugh"] .mfairy__head { transform: rotate(-4deg) translateY(-1px); }
+.mfairy[data-mode="laugh"] .mfairy__rig { animation: mfHop 0.38s ease-in-out infinite; }
+
+/* kiss — hand to lips, leaning toward you */
+.mfairy[data-mode="kiss"] .mfairy__arm--r { transform: rotate(-122deg); }
+.mfairy[data-mode="kiss"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="kiss"] .mfairy__eyes--wink { visibility: visible; }
+.mfairy[data-mode="kiss"] .mfairy__mouth--small { visibility: visible; transform: scale(1.3); }
+.mfairy[data-mode="kiss"] .mfairy__blush { opacity: 1; }
+.mfairy[data-mode="kiss"] .mfairy__rig { transform: scaleX(var(--mf-face)) rotate(-3deg); }
+
+/* angry — stomping, puffed cheeks (blush doubles as the puff) */
+.mfairy[data-mode="angry"] .mfairy__eyes--open .mfairy__pupil { transform: translate(var(--mlx), 0.5px) scale(0.82); }
+.mfairy[data-mode="angry"] .mfairy__blush { opacity: 1; transform: scale(1.3) translateY(1px); }
+.mfairy[data-mode="angry"] .mfairy__arm--l { transform: rotate(30deg); }
+.mfairy[data-mode="angry"] .mfairy__arm--r { transform: rotate(-30deg); }
+.mfairy[data-mode="angry"] .mfairy__rig { animation: mfStomp 0.5s ease-in-out infinite; }
+.mfairy[data-mode="angry"] .mfairy__leg--l { animation: mfStepA 0.5s linear infinite; }
+@keyframes mfStomp {
+  0%, 100% { transform: scaleX(var(--mf-face)) translateY(0) scaleY(1); }
+  25%      { transform: scaleX(var(--mf-face)) translateY(1.5px) scaleY(0.96); }
+  50%      { transform: scaleX(var(--mf-face)) translateY(0) scaleY(1); }
+}
+
+/* think — chin in hand, eyes up, head tilted */
+.mfairy[data-mode="think"] .mfairy__arm--r { transform: rotate(-148deg); }
+.mfairy[data-mode="think"] .mfairy__head { transform: rotate(7deg); }
+.mfairy[data-mode="think"] .mfairy__eyes--open .mfairy__pupil { transform: translate(1px, -2px); }
+.mfairy[data-mode="think"] .mfairy__rig { animation: mfSitSway 4.6s ease-in-out infinite; }
+
+/* cheer — pom-pom arms, quick hops */
+.mfairy[data-mode="cheer"] .mfairy__arm--l { animation: mfArmUpA 0.32s ease-in-out infinite; }
+.mfairy[data-mode="cheer"] .mfairy__arm--r { animation: mfArmUpB 0.32s ease-in-out infinite; }
+.mfairy[data-mode="cheer"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="cheer"] .mfairy__eyes--happy { visibility: visible; }
+.mfairy[data-mode="cheer"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="cheer"] .mfairy__mouth--open { visibility: visible; }
+.mfairy[data-mode="cheer"] .mfairy__rig { animation: mfHop 0.45s ease-in-out infinite; }
+
+/* dizzy — wobbling, pupils orbiting */
+.mfairy[data-mode="dizzy"] .mfairy__rig { animation: mfWobble 0.9s ease-in-out infinite; }
+.mfairy[data-mode="dizzy"] .mfairy__eyes--open { animation: none; }
+.mfairy[data-mode="dizzy"] .mfairy__pupil { animation: mfPupilSpin 0.8s linear infinite; }
+@keyframes mfWobble {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-8deg) translateX(-3px); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(8deg) translateX(3px); }
+}
+@keyframes mfPupilSpin {
+  0%   { transform: translate(1.6px, 0); }
+  25%  { transform: translate(0, 1.6px); }
+  50%  { transform: translate(-1.6px, 0); }
+  75%  { transform: translate(0, -1.6px); }
+  100% { transform: translate(1.6px, 0); }
+}
+
+/* wink — one eye shut, pleased with herself */
+.mfairy[data-mode="wink"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="wink"] .mfairy__eyes--wink { visibility: visible; }
+.mfairy[data-mode="wink"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="wink"] .mfairy__mouth--smile { visibility: visible; }
+.mfairy[data-mode="wink"] .mfairy__head { transform: rotate(-4deg); }
+
+/* stretch — arms reaching up slowly, big yawn */
+.mfairy[data-mode="stretch"] .mfairy__arm--l { animation: mfReachA 2.2s ease-in-out both; }
+.mfairy[data-mode="stretch"] .mfairy__arm--r { animation: mfReachB 2.2s ease-in-out both; }
+.mfairy[data-mode="stretch"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="stretch"] .mfairy__eyes--closed { visibility: visible; }
+.mfairy[data-mode="stretch"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="stretch"] .mfairy__mouth--open { visibility: visible; }
+.mfairy[data-mode="stretch"] .mfairy__rig { animation: mfReachBody 2.2s ease-in-out both; }
+@keyframes mfReachA { 0% { transform: rotate(0); } 45%, 80% { transform: rotate(168deg); } 100% { transform: rotate(20deg); } }
+@keyframes mfReachB { 0% { transform: rotate(0); } 45%, 80% { transform: rotate(-168deg); } 100% { transform: rotate(-20deg); } }
+@keyframes mfReachBody {
+  0%       { transform: scaleX(var(--mf-face)) scaleY(1); }
+  45%, 80% { transform: scaleX(var(--mf-face)) scaleY(1.06) translateY(-2px); }
+  100%     { transform: scaleX(var(--mf-face)) scaleY(1); }
+}
+
+/* magic — wand arm raised, tails crackling */
+.mfairy[data-mode="magic"] .mfairy__arm--r { transform: rotate(-165deg); }
+.mfairy[data-mode="magic"] .mfairy__arm--l { transform: rotate(20deg); }
+.mfairy[data-mode="magic"] .mfairy__tail { animation-duration: 0.5s; }
+.mfairy[data-mode="magic"] .mfairy__rig { animation: mfSitSway 1.4s ease-in-out infinite; }
+
+/* vibe — bopping to the music */
+.mfairy[data-mode="vibe"] .mfairy__head { animation: mfHeadBang 0.52s ease-in-out infinite; }
+.mfairy[data-mode="vibe"] .mfairy__rig { animation: mfSitSway 1.04s ease-in-out infinite; }
+.mfairy[data-mode="vibe"] .mfairy__arm--l { animation: mfStepB 0.52s linear infinite; }
+.mfairy[data-mode="vibe"] .mfairy__arm--r { animation: mfStepA 0.52s linear infinite; }
+.mfairy[data-mode="vibe"] .mfairy__eyes--open { visibility: hidden; animation: none; }
+.mfairy[data-mode="vibe"] .mfairy__eyes--happy { visibility: visible; }
+@keyframes mfHeadBang {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-2.5px) rotate(2deg); }
+}
+
+/* bounce — trampoline loop with squash & stretch */
+.mfairy[data-mode="bounce"] .mfairy__rig { animation: mfBounce 0.55s cubic-bezier(0.35, 0, 0.65, 1) infinite; }
+.mfairy[data-mode="bounce"] .mfairy__tail { animation-duration: 0.55s; }
+.mfairy[data-mode="bounce"] .mfairy__shadow { animation: mfBounceShadow 0.55s ease-in-out infinite; }
+@keyframes mfBounce {
+  0%, 100% { transform: scaleX(var(--mf-face)) translateY(0) scaleY(0.88); }
+  40%, 60% { transform: scaleX(var(--mf-face)) translateY(-22px) scaleY(1.06); }
+}
+@keyframes mfBounceShadow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(0.6); opacity: 0.4; }
+}
+
+/* fish — seated, rod arm out over the edge */
+.mfairy[data-mode="fish"] .mfairy__leg { transform: rotate(74deg); }
+.mfairy[data-mode="fish"] .mfairy__arm--r { transform: rotate(-72deg); }
+.mfairy[data-mode="fish"] .mfairy__rig { animation: mfSitSway 4.4s ease-in-out infinite; }
+
+/* balance — tightrope walk along a headline's top edge: arms out, wobble */
+.mfairy[data-mode="balance"] .mfairy__arm--l { transform: rotate(78deg); }
+.mfairy[data-mode="balance"] .mfairy__arm--r { transform: rotate(-78deg); }
+.mfairy[data-mode="balance"] .mfairy__leg--l { animation: mfTiptoeA 0.9s ease-in-out infinite; }
+.mfairy[data-mode="balance"] .mfairy__leg--r { animation: mfTiptoeB 0.9s ease-in-out infinite; }
+.mfairy[data-mode="balance"] .mfairy__rig { animation: mfWobbleSoft 1.1s ease-in-out infinite; }
+.mfairy[data-mode="balance"] .mfairy__eyes--open { animation: none; }
+.mfairy[data-mode="balance"] .mfairy__mouth--small { transform: scale(0.8); }
+@keyframes mfTiptoeA { 0%,100% { transform: rotate(8deg); } 50% { transform: rotate(-8deg); } }
+@keyframes mfTiptoeB { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@keyframes mfWobbleSoft {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-3.5deg); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(3.5deg); }
+}
+
+/* push — bracing into a word block: lean, arms forward, digging feet */
+.mfairy[data-mode="push"] .mfairy__rig {
+  transform-origin: 50% 95%;
+  animation: mfShove 0.7s ease-in-out infinite;
+}
+.mfairy[data-mode="push"] .mfairy__arm--l { transform: rotate(-62deg); }
+.mfairy[data-mode="push"] .mfairy__arm--r { transform: rotate(-74deg); }
+.mfairy[data-mode="push"] .mfairy__leg--l { transform: rotate(20deg); }
+.mfairy[data-mode="push"] .mfairy__leg--r { transform: rotate(-14deg); }
+.mfairy[data-mode="push"] .mfairy__blush { opacity: 1; }
+.mfairy[data-mode="push"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="push"] .mfairy__mouth--open { visibility: visible; transform: scale(0.7); }
+@keyframes mfShove {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(10deg) translateX(0); }
+  45%      { transform: scaleX(var(--mf-face)) rotate(13deg) translateX(2.5px); }
+  55%      { transform: scaleX(var(--mf-face)) rotate(11deg) translateX(1px); }
+}
+
+/* paint — brush arm reaching down to the canvas, tongue-out focus */
+.mfairy[data-mode="paint"] .mfairy__arm--r { transform: rotate(-38deg); animation: mfBrush 0.8s ease-in-out infinite; }
+.mfairy[data-mode="paint"] .mfairy__arm--l { transform: rotate(16deg); }
+.mfairy[data-mode="paint"] .mfairy__leg { transform: rotate(10deg); }
+.mfairy[data-mode="paint"] .mfairy__head { transform: rotate(5deg) translateY(1px); }
+.mfairy[data-mode="paint"] .mfairy__mouth--small { visibility: visible; transform: translateX(2px) scale(0.85); }
+.mfairy[data-mode="paint"] .mfairy__shadow { opacity: 0.3; transform: scale(0.6); }
+@keyframes mfBrush {
+  0%, 100% { transform: rotate(-34deg); }
+  50%      { transform: rotate(-46deg); }
+}
+
+/* ── Shadow & speech bubble ──────────────────────────────────────── */
+.mfairy__shadow {
+  position: absolute;
+  bottom: -3px; left: 16px;
+  width: 32px;
+  height: 6px;
+  background: rgba(25, 50, 50, 0.16);
+  border-radius: 50%;
+  filter: blur(1px);
+  z-index: -1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.mfairy__bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.6);
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--ink, #2c2620);
+  background: rgba(255, 253, 250, 0.95);
+  border: 1px solid var(--rule, #d8d0c4);
+  border-radius: 11px;
+  padding: 4px 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 7;
+}
+.mfairy__bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  margin-left: -4px;
+  border: 4px solid transparent;
+  border-top-color: rgba(255, 253, 250, 0.95);
+}
+.mfairy__bubble.is-on {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ── Stolen words ────────────────────────────────────────────────── */
+/* The page keeps the word's gap (visibility, not display) while the
+   ghost rides in her hands, then settles wherever she set it down. */
+.mfword--gone { visibility: hidden; }
+.mfword-ghost {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 8195;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+  text-shadow: 0 2px 12px rgba(30, 50, 50, 0.14);
+}
+.mfword-ghost.is-carried { text-shadow: 0 6px 18px rgba(30, 50, 50, 0.22); }
+.mfword-ghost.is-drop,
+.mfword-ghost.is-return {
+  transition: transform 0.65s cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+/* The accent underline she draws beneath a headline */
+.mf-underline {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2.5px;
+  width: 0;
+  z-index: 8185;
+  background: linear-gradient(90deg, var(--accent, #c96442), color-mix(in oklab, var(--accent, #c96442) 60%, #39c5bb));
+  border-radius: 2px;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.mf-underline.is-done { animation: mfUnderlineGlow 1.1s ease-in-out 2; }
+.mf-underline.is-fade { opacity: 0; }
+@keyframes mfUnderlineGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(201, 100, 66, 0); }
+  50%      { box-shadow: 0 0 10px 1px color-mix(in oklab, var(--accent, #c96442) 70%, transparent); }
 }
 
 /* ── Effects layer ───────────────────────────────────────────────── */
@@ -441,6 +529,110 @@
 .mfx--zzz { color: #8a93a1; font-family: var(--font-mono, monospace); animation: mfxRise 2.4s ease-out forwards; }
 .mfx--rain { animation: mfxRain var(--d, 3s) linear forwards; opacity: 0.85; }
 .mfx--burst { color: var(--c, #39c5bb); font-size: 11px; animation: mfxBurst 0.95s ease-out forwards; }
+.mfx--tear { font-size: 9px; animation: mfxTear 0.9s ease-in forwards; }
+.mfx--puff { font-size: 16px; color: #e8657f; animation: mfxPuff 1s ease-out forwards; }
+.mfx--trail { color: #f0879a; font-size: 13px; animation: mfxTrail 2.2s ease-out forwards; }
+.mfx--flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  animation: mfxFlash 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes mfxTear {
+  0%   { transform: translateY(0) scale(0.8); opacity: 0.95; }
+  100% { transform: translateY(26px) scale(1.05); opacity: 0; }
+}
+@keyframes mfxPuff {
+  0%   { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+  25%  { transform: scale(1.2) rotate(0); opacity: 1; }
+  100% { transform: scale(1) rotate(8deg) translateY(-8px); opacity: 0; }
+}
+@keyframes mfxTrail {
+  0%       { transform: scale(0.6); opacity: 0; }
+  12%, 70% { transform: scale(1); opacity: 0.95; }
+  100%     { transform: scale(0.8); opacity: 0; }
+}
+@keyframes mfxFlash {
+  0%   { opacity: 0; }
+  18%  { opacity: 0.92; }
+  100% { opacity: 0; }
+}
+
+/* fishing line — persistent while she fishes; bobber rides the tip */
+.mfx-line {
+  position: fixed;
+  top: 0; left: 0;
+  width: 1.5px;
+  height: 90px;
+  background: linear-gradient(180deg, rgba(57, 197, 187, 0.7), rgba(57, 197, 187, 0.35));
+  transform-origin: 50% 0;
+  pointer-events: none;
+  z-index: 8190;
+  animation: mfLineSway 2.6s ease-in-out infinite;
+}
+.mfx-line::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: -3px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff9fae, #e8657f);
+  box-shadow: 0 0 0 1.5px #fffdfa;
+}
+@keyframes mfLineSway {
+  0%, 100% { rotate: -2deg; }
+  50%      { rotate: 2.5deg; }
+}
+
+/* ── Atelier easel — the canvas she paints onto ──────────────────── */
+.mfpaint {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 8185;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(60, 50, 30, 0.06) 1px, transparent 0) 0 0 / 14px 14px,
+    rgba(255, 253, 248, 0.96);
+  border: 2.5px solid var(--ink, #2c2620);
+  box-shadow: 5px 6px 0 rgba(40, 32, 22, 0.18);
+  pointer-events: none;
+  animation: mfPaintIn 0.5s cubic-bezier(0.3, 1.3, 0.4, 1) both;
+}
+.mfpaint.is-done { animation: mfPaintDone 0.6s ease both; }
+.mfpaint.is-fade { transition: opacity 0.6s ease, transform 0.6s ease; opacity: 0; transform: translateY(14px) scale(0.96); }
+@keyframes mfPaintIn {
+  from { opacity: 0; transform: scale(0.9) rotate(-2deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes mfPaintDone {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.04) rotate(1deg); }
+  100% { transform: scale(1); }
+}
+
+/* ── Hide-and-seek scoreboard ────────────────────────────────────── */
+.mfgame-score {
+  position: fixed;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8210;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--bg-elev, #f5f1eb);
+  background: var(--bg-ink, #2c2620);
+  border: 1px solid rgba(57, 197, 187, 0.6);
+  border-radius: 999px;
+  padding: 8px 20px;
+  pointer-events: none;
+  animation: mfPaintIn 0.4s cubic-bezier(0.3, 1.3, 0.4, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mfpaint, .mfgame-score { animation: none; }
+}
 
 @keyframes mfxRise {
   0%   { transform: translate(0, 0) scale(0.6); opacity: 0; }
@@ -471,6 +663,7 @@
 @media (prefers-reduced-motion: reduce) {
   .mfairy *, .mfx { animation: none !important; transition: none !important; }
   .mfairy-fx { display: none; }
+  .mfword-ghost { display: none; }
 }
 @media (max-width: 640px) {
   .mfairy__rig { transform: scaleX(var(--mf-face)) rotate(var(--mf-rot, 0deg)) scale(0.85); }

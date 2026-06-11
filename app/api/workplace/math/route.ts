@@ -20,6 +20,7 @@ import {
 import { augmentUserMessageForModel } from '@/lib/workplace/geogebra-chat';
 import { parseGgbBlock } from '@/lib/workplace/geogebra-commands';
 import { reorderByDependencies } from '@/lib/workplace/geometry-render/reorder';
+import { preflightFix } from '@/lib/workplace/geometry-render/preflight';
 import {
   parseStudioInput,
   isDrawingCommand,
@@ -347,6 +348,8 @@ export async function POST(req: NextRequest) {
     previousGgbCommands?: string[];
     commands?: string[];
     failures?: CommandFailure[];
+    /** live canvas snapshot lines ("A: point @ (1, 2)") for state-aware repair */
+    canvasState?: string[];
     provider: Provider;
     model?: string;
   };
@@ -409,16 +412,20 @@ export async function POST(req: NextRequest) {
       (body.problem ?? commands.join('\n')).trim(),
       drawingCommand,
     );
-    const messages: Message[] = [{ role: 'user', content: formatRepairUserContent(commands, failures) }];
+    const canvasState = Array.isArray(body.canvasState)
+      ? body.canvasState.filter((l) => typeof l === 'string' && l.trim()).slice(0, 48)
+      : undefined;
+    const messages: Message[] = [{ role: 'user', content: formatRepairUserContent(commands, failures, canvasState) }];
 
     return makeSseStream(async (send, sendEvent) => {
       sendEvent({ model: provider === 'coze' ? `coze:${cfg.botId}` : model, mode });
       sendEvent({ ggbLookup: { count: ggbContext.commandNames.length, commands: ggbContext.commandNames } });
       const fullText = await streamProvider(provider, messages, send, cfg, model, prompt);
-      // Reorder so every object is defined before use — the model still emits
-      // occasional forward references that GeoGebra would reject.
-      const fixed = reorderByDependencies(parseGgbBlock(fullText));
-      sendEvent({ ggbCommands: { count: fixed.length, commands: fixed } });
+      // Pre-flight (hallucinated names → real commands, bare pair names →
+      // segments), then reorder so every object is defined before use.
+      const pre = preflightFix(parseGgbBlock(fullText));
+      const fixed = reorderByDependencies(pre.commands);
+      sendEvent({ ggbCommands: { count: fixed.length, commands: fixed, preflightFixes: pre.fixes } });
     });
   }
 
@@ -457,9 +464,10 @@ export async function POST(req: NextRequest) {
       },
     });
     const fullText = await streamProvider(provider, messages, send, cfg, model, prompt);
-    // Reorder so every object is defined before use — fixes the forward-reference
-    // class of failures (e.g. `lineBD=Line(B,D)` emitted before `D=…`).
-    const commands = reorderByDependencies(parseGgbBlock(fullText));
-    sendEvent({ ggbCommands: { count: commands.length, commands } });
+    // Pre-flight (hallucinated names, bare pair names) + reorder so every
+    // object is defined before use — both classes fixed with zero LLM cost.
+    const pre = preflightFix(parseGgbBlock(fullText));
+    const commands = reorderByDependencies(pre.commands);
+    sendEvent({ ggbCommands: { count: commands.length, commands, preflightFixes: pre.fixes } });
   });
 }

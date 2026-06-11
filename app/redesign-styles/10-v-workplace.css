@@ -2475,3 +2475,381 @@ body.wp-studio-ggb-open {
   .wp-math__status--busy .wp-math__status-dot { animation: none; }
   .wp-math__pill--active { animation: none; }
 }
+
+/* ── Pure mode: the canvas takes the whole screen ─────────────────── */
+.wp-studio__stage { transition: none; }
+.wp-studio__stage.is-pure {
+  position: fixed !important;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg, #f5f1eb);
+  isolation: isolate;
+  animation: wpPureIn 0.25s ease both;
+}
+@keyframes wpPureIn {
+  from { opacity: 0.6; transform: scale(0.985); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* slimmer, quieter chrome while in pure mode — the figure is the page */
+.wp-studio__stage.is-pure .wp-studio__stage-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 2;
+  background: color-mix(in oklab, var(--bg, #f5f1eb) 82%, transparent);
+  backdrop-filter: blur(8px);
+  opacity: 0.35;
+  transition: opacity 0.25s ease;
+}
+.wp-studio__stage.is-pure .wp-studio__stage-bar:hover,
+.wp-studio__stage.is-pure .wp-studio__stage-bar:focus-within { opacity: 1; }
+.wp-studio__stage.is-pure .wp-studio__canvas {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+
+.wp-studio__pure-toggle,
+.wp-studio__steps-toggle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wp-studio__pure-toggle:hover,
+.wp-studio__steps-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.wp-studio__pure-toggle.is-on,
+.wp-studio__steps-toggle.is-on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.wp-studio__steps-toggle:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Construction protocol panel ─────────────────────────────────── */
+.wp-steps {
+  position: absolute;
+  top: 46px;
+  right: 10px;
+  bottom: 10px;
+  width: min(340px, calc(100% - 20px));
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in oklab, var(--bg, #f5f1eb) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 14px 38px -18px rgba(30, 25, 18, 0.4);
+  overflow: hidden;
+  animation: wpPureIn 0.2s ease both;
+}
+.wp-steps__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.wp-steps__title {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.wp-steps__copy,
+.wp-steps__close {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.wp-steps__copy:hover, .wp-steps__close:hover { border-color: var(--accent); color: var(--accent); }
+.wp-steps__list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+}
+.wp-steps__item {
+  display: flex;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+.wp-steps__item:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+.wp-steps__item.is-active {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+.wp-steps__item.is-future { opacity: 0.42; }
+.wp-steps__num {
+  flex: none;
+  width: 22px; height: 22px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 50%, transparent);
+  border-radius: 50%;
+}
+.wp-steps__text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.wp-steps__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rule);
+}
+.wp-steps__nav button {
+  font-size: 13px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.wp-steps__nav button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.wp-steps__nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+.wp-steps__pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  min-width: 72px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .wp-steps { top: 44px; right: 6px; bottom: 6px; width: calc(100% - 12px); }
+}
+
+/* steps panel v2 — command sub-line, autoplay, hints */
+.wp-steps__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wp-steps__cmd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-steps__item.is-active .wp-steps__cmd { color: var(--ink-2); }
+.wp-steps__play {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 12px !important;
+}
+.wp-steps__play.is-on {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--bg) !important;
+}
+.wp-steps__hint {
+  padding: 6px 12px 9px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  text-align: center;
+  border-top: 1px dashed var(--rule);
+}
+
+/* one-shot toast when entering pure mode */
+.wp-pure-hint {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+  background: color-mix(in oklab, var(--ink) 88%, transparent);
+  border-radius: 999px;
+  padding: 8px 18px;
+  pointer-events: none;
+  animation: wpPureHint 3.2s ease forwards;
+}
+@keyframes wpPureHint {
+  0%       { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  12%, 72% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100%     { opacity: 0; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── MATLAB Studio — LLM × official MathWorks MCP ─────────────────── */
+.wp-tile--matlab .wp-tile__status { letter-spacing: 0.08em; }
+
+.wp-matlab-studio.is-open {
+  display: grid;
+  grid-template-columns: clamp(300px, 26vw, 400px) minmax(0, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.wp-matlab__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-right: 1px solid var(--rule);
+  background: var(--bg-elev);
+  min-height: 0;
+}
+.wp-matlab__side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wp-matlab__logo {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+.wp-matlab__mcp {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.wp-matlab__mcp--up { border-color: #3e7c5f; color: #3e7c5f; }
+.wp-matlab__mcp--down { border-color: #b43e3e; color: #b43e3e; }
+
+.wp-matlab__chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px;
+}
+.wp-matlab__empty {
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--ink-soft);
+  border: 1px dashed var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.wp-matlab__msg {
+  font-size: 13px;
+  line-height: 1.65;
+  padding: 8px 11px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 95%;
+}
+.wp-matlab__msg--user {
+  align-self: flex-end;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--ink);
+}
+.wp-matlab__msg--assistant {
+  align-self: flex-start;
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.wp-matlab__error {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #b43e3e;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in oklab, #b43e3e 40%, transparent);
+  border-radius: 6px;
+}
+
+.wp-matlab__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.wp-matlab__panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1px;
+  background: var(--rule);
+}
+.wp-matlab__pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+}
+.wp-matlab__pane-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid var(--rule);
+}
+.wp-matlab__code {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 14px 16px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  tab-size: 4;
+}
+.wp-matlab__console {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(in oklab, var(--ink) 3%, transparent);
+}
+.wp-matlab__console.is-error { color: #b43e3e; }
+
+@media (max-width: 880px) {
+  .wp-matlab-studio.is-open { grid-template-columns: 1fr; grid-template-rows: minmax(0, 42%) minmax(0, 1fr); }
+  .wp-matlab__side { border-right: none; border-bottom: 1px solid var(--rule); }
+  .wp-matlab__panes { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+}

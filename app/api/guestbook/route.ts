@@ -4,6 +4,7 @@ import { checkRate, RATE_GUESTBOOK } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
 import { fmtRelative } from '@/lib/date';
 import { guestbookSchema } from '@/lib/validation';
+import { moderateMessage, moderateName } from '@/lib/moderation';
 import { validateOrigin } from '@/lib/origin';
 
 // GET /api/guestbook → { data: Guest[] }
@@ -48,6 +49,24 @@ export async function POST(req: NextRequest) {
   }
   const { name, message } = parsed.data;
 
+  // Moderation: block slurs/sensitive content/spam; mask mild profanity.
+  const nameCheck = moderateName(name);
+  if (!nameCheck.ok) {
+    return NextResponse.json(
+      { error: { code: 'moderated', message: nameCheck.reason } },
+      { status: 400 },
+    );
+  }
+  const messageCheck = moderateMessage(message);
+  if (!messageCheck.ok) {
+    return NextResponse.json(
+      { error: { code: 'moderated', message: messageCheck.reason } },
+      { status: 400 },
+    );
+  }
+  const cleanName = nameCheck.text;
+  const cleanMessage = messageCheck.text;
+
   const ip = await clientIp();
   const rate = await checkRate(`gb:${ip}`, RATE_GUESTBOOK.limit, RATE_GUESTBOOK.windowMs);
   if (!rate.allowed) {
@@ -67,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('guestbook')
-    .insert({ name, message })
+    .insert({ name: cleanName, message: cleanMessage })
     .select('name, message, created_at')
     .single();
 

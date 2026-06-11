@@ -21,9 +21,11 @@ export function formatGgbThrownError(err: unknown): string {
 // neither the boolean nor an existence check is meaningful for them.
 const SCRIPTING_CMD = /^\s*(Set|Show|Hide|Delete|Zoom|Pan|Start|Pause|Select|Update|Center|Turtle)\w*\s*\(/;
 
-/** The assignment target label, e.g. "D" in `D=Intersect(a,b)`. Null for void/auto-named. */
+/** The assignment target label, e.g. "D" in `D=Intersect(a,b)`. Null for void/auto-named.
+ *  Primes are part of GGB labels (`A'=Reflect(A,l)`) — without them in the
+ *  pattern, every primed assignment skipped existence-checking entirely. */
 function targetLabel(cmd: string): string | null {
-  const m = cmd.match(/^\s*([A-Za-z][\w]*)\s*=(?!=)/);
+  const m = cmd.match(/^\s*([A-Za-z][\w']*)\s*=(?!=)/);
   return m ? m[1] : null;
 }
 

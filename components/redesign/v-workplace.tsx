@@ -12,6 +12,7 @@ import WorkplaceActivity from './workplace-activity';
 import WorkplaceSettings from './workplace-settings';
 import { WorkplaceKanban } from './workplace-kanban';
 import { WorkplaceMath } from './workplace-math';
+import { WorkplaceMatlab } from './workplace-matlab';
 import { assetUrl } from '@/lib/asset-url';
 import type { BusMessage } from '@/lib/workplace/bus';
 
@@ -304,6 +305,8 @@ export function VWorkplace() {
           )}
           {/* Math (GeoGebra) sits in the workflows row, aligned with the others. */}
           <WorkplaceMath />
+          {/* MATLAB Studio — LLM scripts executed via the official MathWorks MCP. */}
+          <WorkplaceMatlab />
           <div className="wp-tile wp-tile--add" onClick={() => setShowDeploy(true)}>
             <span className="wp-tile__plus">+</span>
             <span className="wp-tile__add-label">Add workflow</span>
