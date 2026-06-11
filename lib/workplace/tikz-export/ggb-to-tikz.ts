@@ -182,6 +182,9 @@ interface DerivedLine {
   anchor?: string;
   /** base segment points (perpendicular/parallel/mediator) or A,B,C (bisector). */
   base: string[];
+  /** derived-on-derived: the base is itself a named (possibly derived) line,
+   *  resolved recursively when the line is materialised. */
+  baseLine?: string;
 }
 
 /** A circular arc: Semicircle(A,B) · CircularArc(C,A,B) · CircumcircularArc(A,B,C). */
@@ -242,10 +245,12 @@ function buildIndex(objects: GgbObject[]): Index {
       // Line(P, l) = parallel to l through P.
       const base = baseOf(args[1]);
       if (base) derived.set(o.name, { kind: 'parallel', anchor: args[0], base });
+      else if (derived.has(args[1])) derived.set(o.name, { kind: 'parallel', anchor: args[0], base: [], baseLine: args[1] });
     } else if ((fn === 'PerpendicularLine' || fn === 'OrthogonalLine')
       && args.length >= 2 && pts.has(args[0])) {
       const base = baseOf(args[1]);
       if (base) derived.set(o.name, { kind: 'perpendicular', anchor: args[0], base });
+      else if (derived.has(args[1])) derived.set(o.name, { kind: 'perpendicular', anchor: args[0], base: [], baseLine: args[1] });
     } else if ((fn === 'PerpendicularBisector' || fn === 'LineBisector') && args.length === 2
       && pts.has(args[0]) && pts.has(args[1])) {
       derived.set(o.name, { kind: 'mediator', base: [args[0], args[1]] });
@@ -359,15 +364,28 @@ function renderTkz(objects: GgbObject[], idx: Index): TikzExportResult {
 
   const N = (s: string) => nodeName(s);
 
-  const materializeDerived = (name: string): [string, string] | null => {
+  const materializeDerived = (name: string, visiting: Set<string> = new Set()): [string, string] | null => {
     const cached = derivedPair.get(name);
     if (cached) return cached;
+    if (visiting.has(name)) return null;   // defensive: cycles can't occur in valid GGB
+    visiting.add(name);
     const d = idx.derived.get(name);
     if (!d) return null;
     const aux = () => `${N(name)}p${auxSeq++}`;
     if (d.kind === 'perpendicular' || d.kind === 'parallel') {
+      // base is either two points, or — derived-on-derived — another line
+      // that we materialise first (its own aux pair becomes our base).
+      const basePair: [string, string] | null = d.base.length >= 2
+        ? [N(d.base[0]), N(d.base[1])]
+        : d.baseLine
+          ? (() => {
+              const simple = resolveLineArg(d.baseLine!, idx);
+              return simple ? [N(simple[0]), N(simple[1])] as [string, string] : materializeDerived(d.baseLine!, visiting);
+            })()
+          : null;
+      if (!basePair) return null;
       const p2 = aux();
-      defs.push(`    \\tkzDefLine[${d.kind}=through ${N(d.anchor!)}](${N(d.base[0])},${N(d.base[1])})\\tkzGetPoint{${p2}} %${d.kind === 'perpendicular' ? '垂线' : '平行线'}`);
+      defs.push(`    \\tkzDefLine[${d.kind}=through ${N(d.anchor!)}](${basePair[0]},${basePair[1]})\\tkzGetPoint{${p2}} %${d.kind === 'perpendicular' ? '垂线' : '平行线'}`);
       const pair: [string, string] = [N(d.anchor!), p2];
       derivedPair.set(name, pair);
       return pair;
@@ -585,6 +603,21 @@ function renderTkz(objects: GgbObject[], idx: Index): TikzExportResult {
     }
   }
 
+  // angle marks — Angle(A,B,C) measures at vertex B, exactly tkzMarkAngle's
+  // convention; a caption becomes the angle label.
+  const angleMarks: string[] = [];
+  for (const o of objects) {
+    if (!o.visible || o.type !== 'angle') continue;
+    const p = parseCommand(o.command);
+    if (p && p.fn === 'Angle' && p.args.length === 3 && p.args.every((a) => idx.pts.has(a))) {
+      const [a, b, c] = p.args.map(N);
+      angleMarks.push(`    \\tkzMarkAngle[size=0.6](${a},${b},${c})`);
+      if (o.caption?.trim()) angleMarks.push(`    \\tkzLabelAngle[pos=0.9](${a},${b},${c}){${o.caption.trim()}}`);
+    } else if (p?.fn === 'Angle') {
+      fallbacks.push('Angle');
+    }
+  }
+
   // labels grouped by position (centroid heuristic)
   const labelGroups = groupLabels(objects, idx, new Set(explicitLabels));
 
@@ -594,7 +627,7 @@ function renderTkz(objects: GgbObject[], idx: Index): TikzExportResult {
   if (dashedSegs.length) body.push(`    \\tkzDrawSegments[dashed](${dashedSegs.join(' ')})`);
   if (lineDraws.length) body.push(`    \\tkzDrawLines[add=0.3 and 0.3](${lineDraws.join(' ')})`);
   if (dashedLineDraws.length) body.push(`    \\tkzDrawLines[add=0.3 and 0.3,dashed](${dashedLineDraws.join(' ')})`);
-  body.push(...circleDraws, ...polygonDraws);
+  body.push(...circleDraws, ...polygonDraws, ...angleMarks);
   if (drawPoints.length) body.push(`    \\tkzDrawPoints(${drawPoints.join(',')})`);
   for (const [pos, names] of labelGroups) {
     if (names.length) body.push(`    \\tkzLabelPoints[${pos}](${names.join(',')})`);
@@ -641,12 +674,24 @@ function groupLabels(objects: GgbObject[], idx: Index, skip: Set<string>): Array
  * Numeric endpoints for a derived line (raw mode / sanity checks): perpendicular,
  * parallel, mediator and bisector all resolve from their base points' coords.
  */
-function derivedNumeric(name: string, idx: Index): { p: { x: number; y: number }; q: { x: number; y: number } } | null {
+function derivedNumeric(name: string, idx: Index, depth = 0): { p: { x: number; y: number }; q: { x: number; y: number } } | null {
+  if (depth > 6) return null;   // defensive: valid GGB derivations are shallow
   const d = idx.derived.get(name);
   if (!d) return null;
   const P = (n: string) => idx.pts.get(n);
   if (d.kind === 'perpendicular' || d.kind === 'parallel') {
-    const anchor = P(d.anchor!); const a = P(d.base[0]); const b = P(d.base[1]);
+    const anchor = P(d.anchor!);
+    let a = d.base.length >= 2 ? P(d.base[0]) : undefined;
+    let b = d.base.length >= 2 ? P(d.base[1]) : undefined;
+    if ((!a || !b) && d.baseLine) {
+      // derived-on-derived: take the parent line's numeric direction
+      const lp = idx.linePts.get(d.baseLine);
+      if (lp) { a = P(lp[0]); b = P(lp[1]); }
+      else {
+        const parent = derivedNumeric(d.baseLine, idx, depth + 1);
+        if (parent) { a = parent.p; b = parent.q; }
+      }
+    }
     if (!anchor || !a || !b) return null;
     const dx = b.x - a.x; const dy = b.y - a.y;
     const dir = d.kind === 'parallel' ? { x: dx, y: dy } : { x: -dy, y: dx };

@@ -44,7 +44,7 @@ export const dynamic = 'force-dynamic';
 
 type Provider = ProviderName;
 type Message = { role: 'user' | 'assistant'; content: string };
-type Mode = 'build' | 'repair';
+type Mode = 'build' | 'repair' | 'narrate';
 
 const MAX_TOKENS = 6144;
 const TIMEOUT_MS = 150_000;
@@ -347,6 +347,8 @@ export async function POST(req: NextRequest) {
     drawingCommand?: string;
     previousGgbCommands?: string[];
     commands?: string[];
+    /** construction-step protocol lines for narrate mode */
+    steps?: string[];
     failures?: CommandFailure[];
     /** live canvas snapshot lines ("A: point @ (1, 2)") for state-aware repair */
     canvasState?: string[];
@@ -359,7 +361,7 @@ export async function POST(req: NextRequest) {
     return new Response('invalid json', { status: 400 });
   }
 
-  const mode: Mode = body.mode === 'repair' ? 'repair' : 'build';
+  const mode: Mode = body.mode === 'repair' ? 'repair' : body.mode === 'narrate' ? 'narrate' : 'build';
 
   // Build is the user action (20/min). Repairs are bounded (≤2) follow-ups to a
   // build that already passed the limit, so they get a roomier separate bucket.
@@ -395,6 +397,29 @@ export async function POST(req: NextRequest) {
   }
 
   const history = Array.isArray(body.history) ? body.history : [];
+
+  // ── NARRATE: worded 讲解 of the construction protocol ────────────────────
+  if (mode === 'narrate') {
+    const steps = Array.isArray(body.steps)
+      ? body.steps.filter((x) => typeof x === 'string' && x.trim()).slice(0, 60)
+      : [];
+    const problem = (body.problem ?? '').trim();
+    if (steps.length === 0) return new Response('steps required', { status: 400 });
+
+    const narratePrompt =
+      'You are the Math Studio explainer. Given a geometry problem and the exact ' +
+      'compass-and-straightedge construction protocol that was used to draw its figure, write a clear, ' +
+      'rigorous walkthrough in Chinese (中文), formatted as Markdown with KaTeX math ($...$). Structure: ' +
+      '一、作图思路 (why the construction works, 2-4 sentences); 二、作图步骤 (each protocol step restated ' +
+      'precisely with the geometric fact it relies on); 三、关键结论 (what the figure now demonstrates, with ' +
+      'the relevant theorems named). Never output code blocks or GeoGebra commands — prose and math only.';
+    const content = `题目：\n${problem || '（未提供题面，按作图本身讲解）'}\n\n作图步骤：\n${steps.join('\n')}`;
+
+    return makeSseStream(async (send, sendEvent) => {
+      sendEvent({ model: provider === 'coze' ? `coze:${cfg.botId}` : model, mode });
+      await streamProvider(provider, [{ role: 'user', content }], send, cfg, model, narratePrompt);
+    });
+  }
 
   // ── REPAIR ───────────────────────────────────────────────────────────────
   if (mode === 'repair') {

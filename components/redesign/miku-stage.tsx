@@ -71,6 +71,7 @@ const SCENE_DUR: Record<SceneAction, number> = {
   stars: 13000,
   snow: 11000,
   confetti: 7000,
+  rhythm: 0, // owned by MikuRhythm, never opened here
 };
 
 function rnd(a: number, b: number) { return a + Math.random() * (b - a); }
@@ -94,6 +95,7 @@ export function MikuStage() {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const open = (s: SceneAction) => {
+      if (s === 'rhythm') return; // MikuRhythm owns this one
       if (reduced) { mascotSay(`✧ ${s} ✧`, 2600, 9); return; }
       setClosing(false);
       setScene(s);
@@ -317,7 +319,11 @@ export function MikuStage() {
       };
       startMusic();
 
-      every(1700, () => { if (summoned) playMotion('tap_body'); });
+      // metronome choreography only when no analyser — with live audio the
+      // beat detector below drives her instead.
+      every(1700, () => {
+        if (summoned && !(window as Window & { __molaAnalyser?: AnalyserNode }).__molaAnalyser) playMotion('tap_body');
+      });
       every(4100, () => { if (summoned) playExpression(); });
       every(3400, () => { if (summoned && !musicMode) mascotSay(pick(LYRICS), 2800, 11); });
     } else {
@@ -417,6 +423,12 @@ export function MikuStage() {
       }
     };
 
+    // Beat detection state (concert + live analyser from the music player).
+    let beatBuf: Uint8Array<ArrayBuffer> | null = null;
+    let beatAvg = 0.12;
+    let lastBeatAt = 0;
+    let lastBeatMotionAt = 0;
+
     // Render loop --------------------------------------------------------
     const t0 = performance.now();
     let lastNow = t0;
@@ -427,6 +439,40 @@ export function MikuStage() {
       const t = (now - t0) / 1000;
 
       ctx.clearRect(0, 0, Wv(), Hv());
+
+      // Beat-true visuals: read the music player's analyser tap, track bass
+      // energy against its running average, and publish --beat (0..1) on the
+      // root so the beams, floor glow and the Live2D drop-shadow all pulse
+      // with the actual waveform. Onsets surge the penlights and cue a pose.
+      if (scene === 'concert') {
+        const analyser = (window as Window & { __molaAnalyser?: AnalyserNode }).__molaAnalyser;
+        if (analyser) {
+          if (!beatBuf) beatBuf = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(beatBuf);
+          let bass = 0;
+          for (let i = 1; i <= 8; i++) bass += beatBuf[i];
+          bass /= 8 * 255;
+          beatAvg = beatAvg * 0.96 + bass * 0.04;
+          const beat = Math.max(0, Math.min(1, (bass - beatAvg) * 6 + bass * 0.35));
+          document.documentElement.style.setProperty('--beat', beat.toFixed(3));
+          if (bass > beatAvg * 1.32 && bass > 0.2 && now - lastBeatAt > 240) {
+            lastBeatAt = now;
+            for (let i = 0; i < 5; i++) {
+              add({
+                kind: 'glow', x: Math.random() * Wv(), y: Hv() + 8,
+                vx: rnd(-10, 10), vy: rnd(-260, -150),
+                life: 0, max: rnd(1, 1.8), size: rnd(3, 6),
+                color: pick(['#39c5bb', '#ff9fbe', '#fff7c2']),
+                rot: 0, vr: 0, sway: rnd(4, 14), phase: rnd(0, 7),
+              });
+            }
+            if (summoned && now - lastBeatMotionAt > 1400) {
+              lastBeatMotionAt = now;
+              playMotion('tap_body');
+            }
+          }
+        }
+      }
 
       // Concert lyric sync — follow the real audio clock through the LRC
       // lines: pop the stage lyric, bubble it on the model, burst per line.
@@ -597,6 +643,7 @@ export function MikuStage() {
       // Drop the stage but keep `mstage-on` (the transition rule) a beat
       // longer so the model glides back to its corner instead of snapping.
       document.body.classList.remove('mstage-live', `mstage-${scene}`);
+      document.documentElement.style.removeProperty('--beat');
       setTimeout(() => document.body.classList.remove('mstage-on'), 1200);
       window.removeEventListener('mola:now-playing', onSongState);
       setClosing(true);
@@ -634,6 +681,7 @@ export function MikuStage() {
         window.removeEventListener('resize', fit);
         window.removeEventListener('keydown', onKey);
         window.removeEventListener('mola:now-playing', onSongState);
+        document.documentElement.style.removeProperty('--beat');
         document.body.classList.remove('mstage-live', `mstage-${scene}`);
         setTimeout(() => document.body.classList.remove('mstage-on'), 1200);
       }

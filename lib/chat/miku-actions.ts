@@ -53,6 +53,8 @@ export const SCENE_ACTIONS = [
   'stars',
   'snow',
   'confetti',
+  // catch-the-notes rhythm game (handled by MikuRhythm, not MikuStage)
+  'rhythm',
 ] as const;
 
 export const MIKU_ACTIONS = [...SPRITE_ACTIONS, ...SCENE_ACTIONS] as const;
@@ -98,6 +100,7 @@ export function stripMikuTags(text: string): string {
 // are matched before small sprite moves.
 const USER_COMMANDS: Array<[RegExp, MikuAction]> = [
   [/concert|演唱会|开唱|开个?\s*live|live\s*show|舞台|stage\s*time/i, 'concert'],
+  [/rhythm|节奏游戏|接音符|打节奏|音游/i, 'rhythm'],
   [/firework|烟花|放个?烟火/i, 'fireworks'],
   [/sakura|樱花|花瓣|花吹雪/i, 'sakura'],
   [/meteor|流星|星空|shooting\s*star|银河|stars?\b/i, 'stars'],
@@ -151,7 +154,7 @@ export const MIKU_ACTIONS_PROMPT =
   'Fullscreen spectacles (use when the visitor asks for a show, a surprise, or the moment is big): ' +
   '[miku:concert] full stage-live with spotlights and penlights, [miku:fireworks] night-sky firework show, ' +
   '[miku:sakura] cherry-blossom petal storm, [miku:stars] starfield with shooting stars, ' +
-  '[miku:snow] gentle snowfall, [miku:confetti] confetti celebration. ' +
+  '[miku:snow] gentle snowfall, [miku:confetti] confetti celebration, [miku:rhythm] a 30-second catch-the-falling-notes rhythm game. ' +
   'Small gestures (everyday emotional beats): [miku:dance] [miku:spin] [miku:jump] [miku:wave] ' +
   '[miku:hearts] [miku:sing] [miku:hide] [miku:swim] [miku:sleep] [miku:zoom] [miku:bounce] [miku:chase] ' +
   '[miku:shy] [miku:cry] [miku:laugh] [miku:kiss] [miku:angry] [miku:think] [miku:cheer] [miku:dizzy] ' +
