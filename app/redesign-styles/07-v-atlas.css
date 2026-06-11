@@ -433,8 +433,10 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* Ghost "01" behind atlas hero — accent-tinted so the plate number
-   feels stamped rather than photocopied. */
-.v-atlas .atlas-hero { overflow: hidden; }
+   feels stamped rather than photocopied. position:relative is load-
+   bearing: without it the giant ::after positions against the whole
+   page and composites over later sections as a dark smear. */
+.v-atlas .atlas-hero { position: relative; overflow: hidden; }
 .v-atlas .atlas-hero::after {
   content: '01';
   position: absolute;
@@ -508,29 +510,31 @@
 .v-atlas .map:hover .zone:hover,
 .v-atlas .map:hover .zone.is-active { opacity: 1; }
 
-/* Companion strips — dark ink band with an inner hairline, and a
-   gentle lift per strip so the band reads as shelved cards. */
+/* Companion strips — shelved cards on paper, not a black band (the solid
+   --bg-ink fill read as an abnormal dark block on the page). The band keeps
+   its frame via a hairline + accent tab; each strip lifts gently. */
 .v-atlas .atlas-strips {
-  background: var(--bg-ink);
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-top: 2px solid color-mix(in oklab, var(--accent) 70%, var(--rule));
   border-radius: 6px;
   padding: 40px 36px;
-  box-shadow: inset 0 0 0 1px rgba(245,241,235,0.07);
 }
 .v-atlas .atlas-strips .strip {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.09);
+  background: color-mix(in oklab, var(--ink) 3%, transparent);
+  border-color: var(--rule);
   transition: background 240ms ease, transform 240ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 }
 .v-atlas .atlas-strips .strip:hover {
-  background: rgba(255,255,255,0.075);
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
   transform: translateY(-3px);
 }
-.v-atlas .atlas-strips .strip__head       { color: rgba(245,241,235,0.5); }
-.v-atlas .atlas-strips .strip__title      { color: rgba(245,241,235,0.92); }
-.v-atlas .atlas-strips .strip__body       { color: rgba(245,241,235,0.68); }
-.v-atlas .atlas-strips .strip ul li       { border-color: rgba(255,255,255,0.08); }
-.v-atlas .atlas-strips .strip ul li .k   { color: rgba(245,241,235,0.68); }
-.v-atlas .atlas-strips .strip ul li .v   { color: rgba(245,241,235,0.5); }
+.v-atlas .atlas-strips .strip__head       { color: var(--ink-soft); }
+.v-atlas .atlas-strips .strip__title      { color: var(--ink); }
+.v-atlas .atlas-strips .strip__body       { color: var(--ink-2); }
+.v-atlas .atlas-strips .strip ul li       { border-color: var(--rule); }
+.v-atlas .atlas-strips .strip ul li .k   { color: var(--ink-2); }
+.v-atlas .atlas-strips .strip ul li .v   { color: var(--ink-soft); }
 
 /* Scroll reveal: one dramatic entrance, shared ease with magazine */
 .v-atlas .reveal {
@@ -539,7 +543,7 @@
 
 /* Ink (dark) mode: the strips band needs separation from the page. */
 body.ink-mode .v-atlas .atlas-strips {
-  box-shadow: inset 0 0 0 1px rgba(245,241,235,0.12);
+  background: color-mix(in oklab, var(--bg-elev) 92%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

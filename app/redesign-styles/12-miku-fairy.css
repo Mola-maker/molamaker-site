@@ -379,6 +379,39 @@
 .mfairy[data-mode="fish"] .mfairy__arm--r { transform: rotate(-72deg); }
 .mfairy[data-mode="fish"] .mfairy__rig { animation: mfSitSway 4.4s ease-in-out infinite; }
 
+/* balance — tightrope walk along a headline's top edge: arms out, wobble */
+.mfairy[data-mode="balance"] .mfairy__arm--l { transform: rotate(78deg); }
+.mfairy[data-mode="balance"] .mfairy__arm--r { transform: rotate(-78deg); }
+.mfairy[data-mode="balance"] .mfairy__leg--l { animation: mfTiptoeA 0.9s ease-in-out infinite; }
+.mfairy[data-mode="balance"] .mfairy__leg--r { animation: mfTiptoeB 0.9s ease-in-out infinite; }
+.mfairy[data-mode="balance"] .mfairy__rig { animation: mfWobbleSoft 1.1s ease-in-out infinite; }
+.mfairy[data-mode="balance"] .mfairy__eyes--open { animation: none; }
+.mfairy[data-mode="balance"] .mfairy__mouth--small { transform: scale(0.8); }
+@keyframes mfTiptoeA { 0%,100% { transform: rotate(8deg); } 50% { transform: rotate(-8deg); } }
+@keyframes mfTiptoeB { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@keyframes mfWobbleSoft {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(-3.5deg); }
+  50%      { transform: scaleX(var(--mf-face)) rotate(3.5deg); }
+}
+
+/* push — bracing into a word block: lean, arms forward, digging feet */
+.mfairy[data-mode="push"] .mfairy__rig {
+  transform-origin: 50% 95%;
+  animation: mfShove 0.7s ease-in-out infinite;
+}
+.mfairy[data-mode="push"] .mfairy__arm--l { transform: rotate(-62deg); }
+.mfairy[data-mode="push"] .mfairy__arm--r { transform: rotate(-74deg); }
+.mfairy[data-mode="push"] .mfairy__leg--l { transform: rotate(20deg); }
+.mfairy[data-mode="push"] .mfairy__leg--r { transform: rotate(-14deg); }
+.mfairy[data-mode="push"] .mfairy__blush { opacity: 1; }
+.mfairy[data-mode="push"] .mfairy__mouth--small { visibility: hidden; }
+.mfairy[data-mode="push"] .mfairy__mouth--open { visibility: visible; transform: scale(0.7); }
+@keyframes mfShove {
+  0%, 100% { transform: scaleX(var(--mf-face)) rotate(10deg) translateX(0); }
+  45%      { transform: scaleX(var(--mf-face)) rotate(13deg) translateX(2.5px); }
+  55%      { transform: scaleX(var(--mf-face)) rotate(11deg) translateX(1px); }
+}
+
 /* paint — brush arm reaching down to the canvas, tongue-out focus */
 .mfairy[data-mode="paint"] .mfairy__arm--r { transform: rotate(-38deg); animation: mfBrush 0.8s ease-in-out infinite; }
 .mfairy[data-mode="paint"] .mfairy__arm--l { transform: rotate(16deg); }
@@ -453,6 +486,25 @@
 .mfword-ghost.is-drop,
 .mfword-ghost.is-return {
   transition: transform 0.65s cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+/* The accent underline she draws beneath a headline */
+.mf-underline {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2.5px;
+  width: 0;
+  z-index: 8185;
+  background: linear-gradient(90deg, var(--accent, #c96442), color-mix(in oklab, var(--accent, #c96442) 60%, #39c5bb));
+  border-radius: 2px;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.mf-underline.is-done { animation: mfUnderlineGlow 1.1s ease-in-out 2; }
+.mf-underline.is-fade { opacity: 0; }
+@keyframes mfUnderlineGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(201, 100, 66, 0); }
+  50%      { box-shadow: 0 0 10px 1px color-mix(in oklab, var(--accent, #c96442) 70%, transparent); }
 }
 
 /* ── Effects layer ───────────────────────────────────────────────── */

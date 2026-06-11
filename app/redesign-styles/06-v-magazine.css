@@ -645,17 +645,18 @@
    that keep their contrast. Drama from scale + restraint, not noise.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Dark ink masthead — newspaper front-page feel, finished with a
-   hairline accent rule so the band reads as set type, not a void. */
+/* Masthead — newspaper front-page weight WITHOUT the black band (the solid
+   --bg-ink fill read as a rendering glitch against the paper page). Double
+   rule on top, hairline accent below: set type, not a void. */
 .v-mag .masthead {
-  background: var(--bg-ink);
-  border-color: transparent;
-  border-bottom: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  background: var(--bg-elev);
+  border-top: 3px double var(--ink);
+  border-bottom: 1px solid color-mix(in oklab, var(--accent) 55%, var(--rule));
 }
 .v-mag .masthead__l,
-.v-mag .masthead__r { color: rgba(245,241,235,0.52); }
+.v-mag .masthead__r { color: var(--ink-soft); }
 .v-mag .masthead__c {
-  color: rgba(245,241,235,0.92);
+  color: var(--ink);
   font-size: 18px;
   letter-spacing: 0.04em;
 }
@@ -793,9 +794,8 @@
   opacity: 0.16;
 }
 
-/* Ink (dark) mode: the masthead band and inversions hold their own
-   contrast when the whole page is already dark. */
-body.ink-mode .v-mag .masthead { border-bottom-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+/* Ink (dark) mode: inversions hold their own contrast when the whole
+   page is already dark. */
 body.ink-mode .v-mag .index-table__row:hover,
 body.ink-mode .v-mag .index-table__row:focus-within { background: rgba(245, 241, 235, 0.07); }
 body.ink-mode .v-mag .index-table__row:hover .index-table__title,

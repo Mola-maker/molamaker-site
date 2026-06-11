@@ -39,12 +39,13 @@ type Mode =
   | 'carry' | 'cozy'
   | 'shy' | 'cry' | 'laugh' | 'kiss' | 'angry' | 'think' | 'cheer'
   | 'dizzy' | 'wink' | 'stretch' | 'magic' | 'vibe' | 'bounce' | 'fish'
-  | 'paint';
+  | 'paint' | 'balance' | 'push';
 
 type PlanKind =
   | 'wander' | 'bar' | 'hide' | 'swim' | 'chat' | 'nap' | 'perform' | 'steal'
   | 'chase' | 'fish' | 'doodle' | 'vibe' | 'bounce'
-  | 'paint' | 'game';
+  | 'paint' | 'game'
+  | 'rope' | 'nudge' | 'underline';
 
 interface Plan {
   kind: PlanKind;
@@ -352,7 +353,9 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       const dy = ty - S.y;
       const d = Math.hypot(dx, dy);
       if (d < 3) { S.x = tx; S.y = ty; return true; }
-      const step = Math.min(d, speed * dt);
+      // Ease-out arrival: full speed in open air, braking inside the last
+      // ~90px so she settles instead of stopping dead.
+      const step = Math.min(d, speed * dt * Math.min(1, 0.3 + d / 90));
       S.x += (dx / d) * step;
       S.y += (dy / d) * step;
       if (Math.abs(dx) > 4) face(dx > 0 ? 1 : -1);
@@ -550,6 +553,53 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       plan = { kind: 'swim', step: 0, until: 0, target: null, targets: findBlankPoints(3) };
       say(PHRASES.swim, 1800);
     };
+    // ── Word-block & line props ────────────────────────────────────
+    // She physically interacts with the page's text: tightrope-walks heading
+    // tops, shoves whole blocks (restored on every exit path), and underlines
+    // a headline by running beneath it.
+
+    let nudged: { el: HTMLElement; prevTransform: string; prevTransition: string } | null = null;
+    const restoreNudge = () => {
+      if (!nudged) return;
+      const { el, prevTransform, prevTransition } = nudged;
+      nudged = null;
+      el.style.transform = prevTransform;
+      after(450, () => { el.style.transition = prevTransition; });
+    };
+
+    let underlineEl: HTMLDivElement | null = null;
+    const removeUnderline = () => { underlineEl?.remove(); underlineEl = null; };
+
+    /** Wide, sturdy headings she can balance on / shove / underline. */
+    const blockTarget = (minWidth = 200): HTMLElement | null => {
+      const els = Array.from(document.querySelectorAll<HTMLElement>(
+        '.variant-stage h1, .variant-stage h2, .variant-stage h3',
+      )).filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top > 130 && r.bottom < window.innerHeight - 80 &&
+          r.width >= minWidth && r.height >= 22 &&
+          (el.textContent ?? '').trim().length > 2 && !el.closest('a, button') &&
+          !el.style.transform; // never stack interactions on one block
+      });
+      return els.length ? pick(els) : null;
+    };
+
+    const startRope = () => {
+      const el = blockTarget(240);
+      if (!el) return startWander();
+      plan = { kind: 'rope', step: 0, until: 0, target: null, el, frac: 0 };
+    };
+    const startNudge = () => {
+      const el = blockTarget(160);
+      if (!el) return startWander();
+      plan = { kind: 'nudge', step: 0, until: 0, target: null, el, cycles: 3 };
+    };
+    const startUnderline = () => {
+      const el = blockTarget(200);
+      if (!el) return startWander();
+      plan = { kind: 'underline', step: 0, until: 0, target: null, el };
+    };
+
     const startNap = () => {
       plan = {
         kind: 'nap', step: 0, until: 0,
@@ -616,6 +666,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (plan.kind === 'fish') removeFishLine();
       if (plan.kind === 'paint') removePaint();
       if (plan.kind === 'game') endGame();
+      if (plan.kind === 'nudge') restoreNudge();
+      if (plan.kind === 'underline') removeUnderline();
       plan = { kind: 'perform', step: 0, until: 0, target: null, queue, started: false };
     };
 
@@ -625,15 +677,18 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (S.music && Math.random() < 0.35) return startVibe();
       const roll = Math.random();
       if (roll < 0.04) startPaint();           // the muse strikes, occasionally
-      else if (roll < 0.18) startHide();
-      else if (roll < 0.31) startSwim();
-      else if (roll < 0.45) startSteal();
-      else if (roll < 0.62) startBar();
-      else if (roll < 0.7) startFish();
-      else if (roll < 0.76) startDoodle();
-      else if (roll < 0.81) startBounce();
-      else if (roll < 0.85) startChase();
-      else if (roll < 0.94) startWander();
+      else if (roll < 0.15) startHide();
+      else if (roll < 0.25) startSwim();
+      else if (roll < 0.37) startSteal();
+      else if (roll < 0.5) startBar();
+      else if (roll < 0.56) startFish();
+      else if (roll < 0.61) startDoodle();
+      else if (roll < 0.65) startBounce();
+      else if (roll < 0.69) startChase();
+      else if (roll < 0.76) startRope();
+      else if (roll < 0.82) startNudge();
+      else if (roll < 0.88) startUnderline();
+      else if (roll < 0.95) startWander();
       else startNap();
     };
 
@@ -646,7 +701,21 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
           plan.step = 1;
           plan.until = now + 1800 + Math.random() * 2400;
         }
-      } else if (now > plan.until) nextPlan();
+      } else {
+        // idle fidgets — she's alive even when she's doing nothing
+        S.fxClock += dt;
+        if (S.fxClock > 1.3 && Math.random() < 0.4) {
+          S.fxClock = 0;
+          const fidget: Mode = pick(['wink', 'think', 'stretch', 'idle', 'idle'] as Mode[]);
+          if (fidget !== 'idle') {
+            setMode(fidget);
+            after(fidget === 'stretch' ? 1900 : 900, () => {
+              if (plan.kind === 'wander' && plan.step === 1 && S.mode === fidget) setMode('idle');
+            });
+          }
+        }
+        if (now > plan.until) nextPlan();
+      }
     };
 
     const tickBar = (now: number, dt: number) => {
@@ -1052,6 +1121,114 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       plan.until = performance.now() + 1500;
     };
 
+    const tickRope = (now: number, dt: number) => {
+      const el = plan.el as HTMLElement | null;
+      if (!el?.isConnected) return nextPlan();
+      const r = el.getBoundingClientRect();
+      if (!inView(r) || r.top < 110) return nextPlan();
+      const y = r.top - H + 2;
+      if (plan.step === 0) {
+        setMode('fly');
+        if (move(r.left + 4, y, 240, dt)) {
+          plan.step = 1;
+          say(['看我走钢丝~', 'balance time ✧', 'とっとっと…'], 1800);
+        }
+      } else if (plan.step === 1) {
+        // tightrope: inch along the heading's top edge, arms out, wobbling
+        setMode('balance');
+        S.y = y;
+        if (move(r.right - W - 4, y, 44, dt)) {
+          setMode('jump');
+          plan.step = 2;
+          plan.until = now + 950;
+          sparkles(cx(), S.y + H, 3);
+        }
+      } else if (now > plan.until) {
+        setMode('happy');
+        plan.step = 3;
+        plan.until = now + 900;
+      }
+      if (plan.step === 3 && now > plan.until) nextPlan();
+    };
+
+    const tickNudge = (now: number, dt: number) => {
+      const el = plan.el as HTMLElement | null;
+      if (!el?.isConnected) { restoreNudge(); return nextPlan(); }
+      const r = el.getBoundingClientRect();
+      if (!inView(r)) { restoreNudge(); return nextPlan(); }
+      if (plan.step === 0) {
+        setMode('fly');
+        // brace against the block's left edge, feet level with its baseline
+        if (move(r.left - W + 12, r.bottom - H + 6, 240, dt)) {
+          face(1);
+          setMode('push');
+          nudged = { el, prevTransform: el.style.transform, prevTransition: el.style.transition };
+          el.style.transition = 'transform 0.3s cubic-bezier(0.3, 1.4, 0.4, 1)';
+          plan.step = 1;
+          plan.until = now + 600;
+        }
+      } else if (plan.step === 1) {
+        if (now > plan.until) {
+          const remaining = (plan.cycles ?? 0) - 1;
+          plan.cycles = remaining;
+          const shove = (3 - remaining) * 7;
+          el.style.transform = `translateX(${shove}px) rotate(${(shove * 0.06).toFixed(2)}deg)`;
+          S.x += 2; // she leans into it
+          fx('mfx--spark', r.left + 2, r.top + r.height / 2, '✦');
+          if (remaining <= 0) {
+            // the block springs back and bowls her over
+            restoreNudge();
+            setMode('startle');
+            say(['哇它弹回来了!', 'boing!?', '推不动…'], 2000);
+            S.x -= 14;
+            plan.step = 2;
+            plan.until = now + 1500;
+          } else {
+            plan.until = now + 700;
+          }
+        }
+      } else if (now > plan.until) nextPlan();
+    };
+
+    const tickUnderline = (now: number, dt: number) => {
+      const el = plan.el as HTMLElement | null;
+      if (!el?.isConnected) { removeUnderline(); return nextPlan(); }
+      const r = el.getBoundingClientRect();
+      if (!inView(r) || r.bottom > window.innerHeight - 40) { removeUnderline(); return nextPlan(); }
+      const y = r.bottom - H + 10;
+      if (plan.step === 0) {
+        setMode('fly');
+        if (move(r.left - 10, y, 240, dt)) {
+          underlineEl = document.createElement('div');
+          underlineEl.className = 'mf-underline';
+          fxHost.appendChild(underlineEl);
+          say(['给这行画个重点~', 'underline! ✎'], 1700);
+          plan.step = 1;
+        }
+      } else if (plan.step === 1) {
+        // sprint under the headline, the accent line growing behind her
+        setMode('walk');
+        S.y = y;
+        const arrived = move(r.right - W + 10, y, 150, dt);
+        if (underlineEl) {
+          const width = Math.max(0, Math.min(S.x + W / 2 - r.left, r.width));
+          underlineEl.style.transform = `translate(${r.left.toFixed(1)}px, ${(r.bottom + 3).toFixed(1)}px)`;
+          underlineEl.style.width = `${width.toFixed(1)}px`;
+        }
+        if (arrived) {
+          underlineEl?.classList.add('is-done');
+          setMode('happy');
+          sparkles(r.right - 10, r.bottom + 4, 4);
+          plan.step = 2;
+          plan.until = now + 2200;
+        }
+      } else if (now > plan.until) {
+        underlineEl?.classList.add('is-fade');
+        after(500, removeUnderline);
+        nextPlan();
+      }
+    };
+
     const tickChat = (now: number, dt: number) => {
       const panel = chatPanel();
       if (!panel) { setBehind(false); return nextPlan(); }
@@ -1212,6 +1389,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
           // Mid-heist? Put the word back before reporting for chat duty.
           if (plan.kind === 'steal') returnWord();
           if (plan.kind === 'fish') removeFishLine();
+          if (plan.kind === 'nudge') restoreNudge();
+          if (plan.kind === 'underline') removeUnderline();
           startChat();
         }
       }
@@ -1232,6 +1411,9 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         case 'bounce': tickBounce(now, dt); break;
         case 'paint': tickPaint(now, dt); break;
         case 'game': tickGame(now, dt); break;
+        case 'rope': tickRope(now, dt); break;
+        case 'nudge': tickNudge(now, dt); break;
+        case 'underline': tickUnderline(now, dt); break;
       }
 
       // Fast scrolling whips the wind around her — a brief dizzy stagger.
@@ -1374,6 +1556,8 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       removeFishLine();
       removePaint();
       endGame();
+      restoreNudge();
+      removeUnderline();
       window.removeEventListener('miku:paint', onPaintReq);
       window.removeEventListener('miku:game', onGameReq);
       window.removeEventListener('click', onSeekClick);
