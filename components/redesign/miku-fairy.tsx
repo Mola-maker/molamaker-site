@@ -1513,6 +1513,10 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       if (d && typeof d.playing === 'boolean') S.music = d.playing;
     };
     const onWheel = (e: WheelEvent) => { S.scrollGust += Math.abs(e.deltaY); };
+    const onGuestPosted = () => {
+      say(['有新留言! ✎', '留言板热闹起来了~'], 2200);
+      startPerform(['hearts']);
+    };
 
     window.addEventListener('mola:chat-update', onChatUpdate);
     window.addEventListener('miku:perform', onPerform);
@@ -1521,6 +1525,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     window.addEventListener('resize', onResize);
     window.addEventListener('mola:now-playing', onNowPlaying);
     window.addEventListener('wheel', onWheel, { passive: true });
+    window.addEventListener('mola:guest-posted', onGuestPosted);
     window.addEventListener('miku:paint', onPaintReq);
     window.addEventListener('miku:game', onGameReq);
     window.addEventListener('click', onSeekClick);
@@ -1568,6 +1573,7 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mola:now-playing', onNowPlaying);
       window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('mola:guest-posted', onGuestPosted);
       rig.removeEventListener('click', onClick);
       rig.removeEventListener('dblclick', onDblClick);
     };

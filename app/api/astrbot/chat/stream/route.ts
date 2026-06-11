@@ -34,6 +34,7 @@ async function anyConfigured(): Promise<boolean> {
 type Send = (token: string) => void;
 type ToolProgressFrame = { name: string; status: 'running' | 'done' | 'error'; summary?: string };
 type SendTool = (frame: ToolProgressFrame) => void;
+type SendMeta = (frame: Record<string, unknown>) => void;
 
 // ── Timeouts ───────────────────────────────────────────────────────
 // AstrBot MCP tools have a 120 s timeout each, and the agent may call
@@ -49,7 +50,7 @@ const IDLE_TIMEOUT_MS = 130_000;
 /** Overall connection timeout — safety net for truly hung connections. */
 const OVERALL_TIMEOUT_MS = 600_000;
 
-function makeSseStream(gen: (send: Send, sendTool: SendTool) => Promise<void>): Response {
+function makeSseStream(gen: (send: Send, sendTool: SendTool, sendMeta: SendMeta) => Promise<void>): Response {
   const enc = new TextEncoder();
   // Keep nginx (proxy_read_timeout 60 s default) and browser connections
   // alive while AstrBot runs MCP tools — tool_call frames are skipped by
@@ -66,12 +67,16 @@ function makeSseStream(gen: (send: Send, sendTool: SendTool) => Promise<void>): 
         try { controller.enqueue(enc.encode(`data: ${JSON.stringify({ tool: frame })}\n\n`)); }
         catch { /* client disconnected */ }
       };
+      const sendMeta: SendMeta = (frame) => {
+        try { controller.enqueue(enc.encode(`data: ${JSON.stringify(frame)}\n\n`)); }
+        catch { /* client disconnected */ }
+      };
       const hb = setInterval(() => {
         try { controller.enqueue(enc.encode(': heartbeat\n\n')); }
         catch { clearInterval(hb); }
       }, HEARTBEAT_MS);
       try {
-        await gen(send, sendTool);
+        await gen(send, sendTool, sendMeta);
       } finally {
         clearInterval(hb);
         try {
@@ -96,12 +101,19 @@ async function streamAstrBot(
   username: string,
   send: Send,
   sendTool: SendTool,
+  sendMeta: SendMeta,
   persona?: string,
 ): Promise<void> {
   const { url, key } = getAstrbotEnv();
   if (!url) throw new Error('astrbot: not configured');
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (key) headers['Authorization'] = `Bearer ${key}`;
+  // AstrBot Open API auth (api1.json + dashboard/routes source): the canonical
+  // scheme is the X-API-Key header; Bearer is accepted by newer builds only.
+  // Send both so every deployed version authenticates.
+  if (key) {
+    headers['X-API-Key'] = key;
+    headers['Authorization'] = `Bearer ${key}`;
+  }
   const text = persona ? `[Roleplay as: ${persona}]\n\n${message}` : message;
   const payload: Record<string, unknown> = { message: text, username, enable_streaming: true };
   if (sessionId) payload.session_id = sessionId;
@@ -110,18 +122,53 @@ async function streamAstrBot(
     method: 'POST', headers, body: JSON.stringify(payload),
     signal: AbortSignal.timeout(OVERALL_TIMEOUT_MS),
   });
-  if (!r.ok || !r.body) throw new Error(`astrbot: ${r.status}`);
+  if (!r.ok || !r.body) {
+    // auth/validation failures come back as JSON with the real reason
+    const detail = await r.text().then((t) => {
+      try { return String((JSON.parse(t) as { message?: string }).message ?? ''); } catch { return ''; }
+    }).catch(() => '');
+    throw new Error(`astrbot: ${r.status}${detail ? ` — ${detail}` : ''}`);
+  }
+
+  // CRITICAL (the "always errors" bug): AstrBot's open API reports rejected
+  // requests — bad username, session, config, scope — as HTTP 200 with a
+  // plain-JSON error envelope {status:"error", message}, NOT an SSE stream.
+  // Reading that body as SSE finds no data: lines, emits nothing, and the
+  // client only ever sees a generic failure. Detect the envelope and surface
+  // the real message.
+  const contentType = r.headers.get('Content-Type') ?? '';
+  if (!contentType.includes('text/event-stream')) {
+    const bodyText = await r.text();
+    try {
+      const j = JSON.parse(bodyText) as { status?: string; message?: string };
+      if (j.status === 'error') throw new Error(`astrbot: ${j.message ?? 'request rejected'}`);
+      // some builds return {status:"ok", data:{…}} for non-stream paths
+      const data = (j as { data?: { message?: string } }).data;
+      if (typeof data?.message === 'string') { send(cleanAstrBotText(data.message)); return; }
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('astrbot:')) throw e;
+    }
+    throw new Error('astrbot: unexpected non-SSE response');
+  }
 
   const reader = r.body.getReader();
   const dec = new TextDecoder();
   let buf = '';
   let sentText = '';
-  let plainBuf = '';
-  const emitText = (full: string) => {
+  let plainAcc = '';
+  /** Emit only the unseen suffix — the client appends tokens, so resending
+   *  the full text would duplicate it. */
+  const emitFull = (full: string) => {
     const clean = cleanAstrBotText(full);
     if (!clean || clean === sentText) return;
-    send(clean);
-    sentText = clean;
+    if (clean.startsWith(sentText)) {
+      send(clean.slice(sentText.length));
+      sentText = clean;
+    } else if (!sentText) {
+      send(clean);
+      sentText = clean;
+    }
+    // diverged mid-stream (cleaning collapsed earlier text): keep what we sent
   };
 
   // Per-read idle timeout: if AstrBot sends no data for IDLE_TIMEOUT_MS
@@ -153,6 +200,13 @@ async function streamAstrBot(
       let j: Record<string, unknown>;
       try { j = JSON.parse(raw) as Record<string, unknown>; } catch { continue; }
       if (j.status === 'error') throw new Error(`astrbot: ${j.message ?? 'error'}`);
+      // server may mint its own session (omitted/expired id) — let the client adopt it
+      if (j.type === 'session_id' && typeof j.session_id === 'string' && j.session_id) {
+        sendMeta({ session_id: j.session_id });
+        continue;
+      }
+      // stream finished — AstrBot closes with an explicit end frame
+      if (j.type === 'end') { if (!sentText && plainAcc) emitFull(plainAcc); return; }
       const toolMd = toolCallMarkdown(j);
       if (toolMd) {
         send(toolMd);
@@ -175,16 +229,20 @@ async function streamAstrBot(
           }
         } catch { /* malformed */ }
       } else if (j.type === 'plain' && typeof j.data === 'string' && j.data) {
-        plainBuf += j.data;
+        // live deltas: stream each plain chunk as it arrives instead of
+        // buffering the whole reply until `complete`
+        plainAcc += j.data;
+        emitFull(plainAcc);
       } else if (j.type === 'complete' && typeof j.data === 'string') {
-        emitText(j.data);
+        // authoritative full text — emit whatever suffix we haven't sent
+        emitFull(j.data);
       } else if (typeof j.type === 'string' && ATTACH_SEGMENT_TYPES.has(j.type)) {
         const md = attachmentMarkdown(j);
         if (md) send(md);
       }
     }
   }
-  if (!sentText && plainBuf) emitText(plainBuf);
+  if (!sentText && plainAcc) emitFull(plainAcc);
 }
 
 async function streamCoze(
@@ -322,14 +380,14 @@ export async function POST(req: NextRequest) {
     getEffectiveProvider('deepseek'),
   ]);
 
-  return makeSseStream(async (send, sendTool) => {
+  return makeSseStream(async (send, sendTool, sendMeta) => {
     let emitted = false;
     const wrap: Send = (t) => { emitted = true; send(t); };
     const wrapTool: SendTool = (f) => sendTool(f);
 
     const runners: Array<() => Promise<void>> = [];
     if (getAstrbotEnv().configured)
-      runners.push(() => streamAstrBot(message, sessionId, username, wrap, wrapTool, persona));
+      runners.push(() => streamAstrBot(message, sessionId, username, wrap, wrapTool, sendMeta, persona));
     if (!astrbotOnly) {
       if (cozeCfg.configured)
         runners.push(() => streamCoze(message, sessionId ?? username, wrap, () => {}, cozeCfg, persona));
@@ -338,9 +396,18 @@ export async function POST(req: NextRequest) {
     }
     if (runners.length === 0) { send('AstrBot is not connected yet — start the AstrBot service to chat here.'); return; }
 
+    // Surface the REAL upstream reason instead of a generic shrug — a wrong
+    // API key or rejected request was previously indistinguishable from an
+    // outage, which made AstrBot look permanently broken.
+    let lastError = '';
     for (const run of runners) {
-      try { await run(); if (emitted) return; } catch { if (emitted) return; }
+      try { await run(); if (emitted) return; }
+      catch (e) { if (emitted) return; lastError = e instanceof Error ? e.message : String(e); }
     }
-    if (!emitted) send('AI is temporarily unavailable — try again in a moment.');
+    if (!emitted) {
+      send(lastError
+        ? `⚠ ${lastError}`
+        : 'AI is temporarily unavailable — try again in a moment.');
+    }
   });
 }

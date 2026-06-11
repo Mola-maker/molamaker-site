@@ -413,3 +413,23 @@
   0%, 60%, 100% { opacity: .3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-2px); }
 }
+
+/* Miku's hostess reply under a freshly posted guestbook entry */
+.gb__miku {
+  margin-top: 7px;
+  padding: 6px 10px;
+  border-left: 2px solid #39c5bb;
+  background: color-mix(in oklab, #39c5bb 7%, transparent);
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  animation: bubIn 360ms var(--ease-out-quart);
+}
+.gb__miku-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #2fa7a4;
+  margin-right: 6px;
+  text-transform: uppercase;
+}

@@ -141,6 +141,8 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
       setVariant(next);
       setTweak('variant', next);
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      // the 看板娘 comments on the new spread (lib/live2d/interactions)
+      try { window.dispatchEvent(new CustomEvent('mola:variant', { detail: { variant: next } })); } catch { /* ignore */ }
     }, 550);
     setTimeout(() => {
       setTransitioning(false);

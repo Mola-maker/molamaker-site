@@ -28,6 +28,8 @@ export type Guest = {
   message: string;
   t: string;
   _new?: boolean;
+  /** Miku's hostess reply, shown under a freshly posted entry. */
+  _mikuReply?: string;
 };
 
 export type NowPlaying = {

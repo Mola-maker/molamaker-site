@@ -4,6 +4,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { I18nBlock, Locale, Guest, Post, Repo } from './data';
+import { mikuBoardReply } from '@/lib/miku/board-replies';
 import { molaData } from './data';
 import { HoverText, useReveal } from './atoms';
 
@@ -182,10 +183,11 @@ export function VTerminal({ t, locale, posts, repos, guestbook }: Props) {
     const name = gbName.trim();
     const message = gbMsg.trim();
     if (!name || !message) return;
-    // Optimistic update
-    setGb([{ name, message, t: 'just now', _new: true }, ...gb]);
+    // Optimistic update — Miku hosts the wall: her reply rides the new entry
+    setGb([{ name, message, t: 'just now', _new: true, _mikuReply: mikuBoardReply(message, name) }, ...gb]);
     setGbName('');
     setGbMsg('');
+    try { window.dispatchEvent(new CustomEvent('mola:guest-posted', { detail: { name, message } })); } catch { /* ignore */ }
     fetch('/api/guestbook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -339,6 +341,11 @@ export function VTerminal({ t, locale, posts, repos, guestbook }: Props) {
                       <span>{g.t}</span>
                     </div>
                     <div className="gb__msg">{g.message}</div>
+                    {g._mikuReply && (
+                      <div className="gb__miku">
+                        <span className="gb__miku-tag">Miku</span> {g._mikuReply}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
