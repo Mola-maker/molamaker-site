@@ -2644,3 +2644,57 @@ body.wp-studio-ggb-open {
 @media (max-width: 640px) {
   .wp-steps { top: 44px; right: 6px; bottom: 6px; width: calc(100% - 12px); }
 }
+
+/* steps panel v2 — command sub-line, autoplay, hints */
+.wp-steps__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wp-steps__cmd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-steps__item.is-active .wp-steps__cmd { color: var(--ink-2); }
+.wp-steps__play {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 12px !important;
+}
+.wp-steps__play.is-on {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--bg) !important;
+}
+.wp-steps__hint {
+  padding: 6px 12px 9px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  text-align: center;
+  border-top: 1px dashed var(--rule);
+}
+
+/* one-shot toast when entering pure mode */
+.wp-pure-hint {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+  background: color-mix(in oklab, var(--ink) 88%, transparent);
+  border-radius: 999px;
+  padding: 8px 18px;
+  pointer-events: none;
+  animation: wpPureHint 3.2s ease forwards;
+}
+@keyframes wpPureHint {
+  0%       { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  12%, 72% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100%     { opacity: 0; transform: translateX(-50%) translateY(0); }
+}
