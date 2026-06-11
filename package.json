@@ -48,7 +48,7 @@
     "jsdom": "^29.1.1",
     "playwright": "^1.60.0",
     "supabase": "^2.101.0",
-    "typescript": "^5.6.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.7"
   },
   "engines": {
