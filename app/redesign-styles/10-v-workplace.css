@@ -2698,3 +2698,158 @@ body.wp-studio-ggb-open {
   12%, 72% { opacity: 1; transform: translateX(-50%) translateY(0); }
   100%     { opacity: 0; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── MATLAB Studio — LLM × official MathWorks MCP ─────────────────── */
+.wp-tile--matlab .wp-tile__status { letter-spacing: 0.08em; }
+
+.wp-matlab-studio.is-open {
+  display: grid;
+  grid-template-columns: clamp(300px, 26vw, 400px) minmax(0, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.wp-matlab__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-right: 1px solid var(--rule);
+  background: var(--bg-elev);
+  min-height: 0;
+}
+.wp-matlab__side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wp-matlab__logo {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+.wp-matlab__mcp {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.wp-matlab__mcp--up { border-color: #3e7c5f; color: #3e7c5f; }
+.wp-matlab__mcp--down { border-color: #b43e3e; color: #b43e3e; }
+
+.wp-matlab__chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px;
+}
+.wp-matlab__empty {
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--ink-soft);
+  border: 1px dashed var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.wp-matlab__msg {
+  font-size: 13px;
+  line-height: 1.65;
+  padding: 8px 11px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 95%;
+}
+.wp-matlab__msg--user {
+  align-self: flex-end;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  color: var(--ink);
+}
+.wp-matlab__msg--assistant {
+  align-self: flex-start;
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.wp-matlab__error {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #b43e3e;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in oklab, #b43e3e 40%, transparent);
+  border-radius: 6px;
+}
+
+.wp-matlab__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.wp-matlab__panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1px;
+  background: var(--rule);
+}
+.wp-matlab__pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+}
+.wp-matlab__pane-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid var(--rule);
+}
+.wp-matlab__code {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 14px 16px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  tab-size: 4;
+}
+.wp-matlab__console {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(in oklab, var(--ink) 3%, transparent);
+}
+.wp-matlab__console.is-error { color: #b43e3e; }
+
+@media (max-width: 880px) {
+  .wp-matlab-studio.is-open { grid-template-columns: 1fr; grid-template-rows: minmax(0, 42%) minmax(0, 1fr); }
+  .wp-matlab__side { border-right: none; border-bottom: 1px solid var(--rule); }
+  .wp-matlab__panes { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+}
