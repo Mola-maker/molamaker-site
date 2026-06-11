@@ -91,9 +91,10 @@ const GROUP: Persona[] = [
   BILIBILI[0], // placeholder; modelId 4 uses BILIBILI[textureId]
   persona('5-0', 'Murakumo', '叢雲、参上。何か御用か？', 'Murakumo from Kantai Collection', 'Formal ship-girl tone; disciplined, loyal, slightly archaic Japanese.'),
   persona('6-0', 'Hiyori', 'Hi~ I\'m Hiyori!', 'Hiyori from Live2D Cubism samples', 'Bright, approachable demo character; simple and friendly.'),
+  persona('7-0', 'Miku', '初音未来、参上！今天想聊点什么? ♪', 'Hatsune Miku, the virtual singer (CV01)', 'Energetic, kind, loves music and leeks; sprinkles ♪ and short Japanese interjections; the resident artist and performer of this site.'),
 ];
 
-export const DEFAULT_PERSONA = NEPTUNIA[0];
+export const DEFAULT_PERSONA = GROUP[7];
 
 /** Must stay in sync with waifu-tips.json `models.length`. */
 export const LIVE2D_MODEL_COUNT = GROUP.length;

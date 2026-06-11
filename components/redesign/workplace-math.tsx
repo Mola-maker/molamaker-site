@@ -229,6 +229,7 @@ export function WorkplaceMath() {
   const [steps, setSteps] = useState<ConstructionStep[]>([]);
   const [stepIndex, setStepIndex] = useState<number | null>(null);
   const [protocolCopied, setProtocolCopied] = useState(false);
+  const [narrating, setNarrating] = useState(false);
   // Auto-play: advance one step every beat until the figure completes.
   const [stepsPlaying, setStepsPlaying] = useState(false);
   // Bumped whenever a new script lands on the canvas, so an open steps panel
@@ -780,6 +781,32 @@ export function WorkplaceMath() {
     if (ok) { setProtocolCopied(true); setTimeout(() => setProtocolCopied(false), 1500); }
   }, [steps]);
 
+  /** Stream a worded 讲解 of the protocol into the KaTeX panel. */
+  const narrateSteps = useCallback(async () => {
+    if (!steps.length || narrating) return;
+    setNarrating(true);
+    setKatexPanelOpen(true);
+    setKatexView('render');
+    setKatexDraft('*讲解生成中…*');
+    try {
+      await streamMath(
+        {
+          mode: 'narrate',
+          problem: lastRenderCtxRef.current.problem,
+          steps: steps.map((st) => `${st.n}. ${st.text}`),
+          provider,
+          model: selectedModel,
+        },
+        (txt) => setKatexDraft(txt),
+        false,
+      );
+    } catch (e) {
+      setKatexDraft(`讲解失败：${e instanceof Error ? e.message : 'unknown error'}`);
+    } finally {
+      setNarrating(false);
+    }
+  }, [steps, narrating, provider, selectedModel, streamMath]);
+
   // Auto-play: one step per beat, like watching the construction happen.
   // Starting from the full figure rewinds to step 1 first.
   useEffect(() => {
@@ -1212,6 +1239,10 @@ export function WorkplaceMath() {
               <aside className="wp-steps" aria-label="作图步骤">
                 <div className="wp-steps__bar">
                   <span className="wp-steps__title">作图步骤 · {steps.length}</span>
+                  <button type="button" className="wp-steps__copy" onClick={narrateSteps} disabled={!steps.length || narrating}
+                    title="让模型基于这些步骤生成一篇严谨讲解（显示在 KaTeX 面板）">
+                    {narrating ? '讲解中…' : '✎ 讲解'}
+                  </button>
                   <button type="button" className="wp-steps__copy" onClick={copyProtocol} disabled={!steps.length}>
                     {protocolCopied ? '已复制 ✓' : '复制'}
                   </button>

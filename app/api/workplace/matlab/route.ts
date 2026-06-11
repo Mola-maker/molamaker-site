@@ -36,7 +36,6 @@ import {
 import {
   MatlabMcpClient,
   MATLAB_MCP_TOOLS,
-  evaluateMatlabViaMcp,
 } from '@/lib/workplace/matlab/mcp-client';
 
 export const runtime = 'nodejs';
@@ -319,8 +318,24 @@ export async function POST(req: NextRequest) {
       if (!matlabCodeIsSafe(code)) {
         return json({ error: { code: 'unsafe', message: '脚本包含被禁用的系统/文件操作（system、delete、web…），已拦截' } }, 400);
       }
-      const result = await evaluateMatlabViaMcp(url, code, { token: MCP_TOKEN() });
-      return json({ data: { output: result.text, isError: result.isError } });
+      const client = new MatlabMcpClient(url, { token: MCP_TOKEN(), timeoutMs: 90_000 });
+      await client.initialize();
+      const result = await client.callTool(MATLAB_MCP_TOOLS.evaluate, { code });
+      // Inline figure retrieval: the prompt contract makes plotting scripts
+      // end with exportgraphics(gcf,"mola_fig.png"). Pull it back as base64
+      // through the same MCP session, then clean up. Internal command — not
+      // user code, so the delete here is ours and safe.
+      let figure: string | null = null;
+      if (!result.isError && /exportgraphics|saveas|print\s*\(/.test(code)) {
+        try {
+          const fig = await client.callTool(MATLAB_MCP_TOOLS.evaluate, {
+            code: "if exist('mola_fig.png','file'), fid=fopen('mola_fig.png','rb'); b=fread(fid,inf,'*uint8')'; fclose(fid); disp(['MOLAFIG:' matlab.net.base64encode(b)]); delete('mola_fig.png'); end",
+          });
+          const m = fig.text.match(/MOLAFIG:([A-Za-z0-9+/=\s]+)/);
+          if (m) figure = m[1].replace(/\s+/g, '');
+        } catch { /* no figure — text output stands alone */ }
+      }
+      return json({ data: { output: result.text, isError: result.isError, figure } });
     } catch (e) {
       return json({ error: { code: 'mcp_failed', message: e instanceof Error ? e.message : 'MCP bridge failed' } }, 502);
     }

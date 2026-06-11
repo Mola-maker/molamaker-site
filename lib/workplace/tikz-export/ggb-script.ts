@@ -44,7 +44,8 @@ function classify(expr: string): GgbObject['type'] | null {
   if (LINE_HEADS.has(h)) return 'line';
   if (CONIC_HEADS.has(h)) return 'conic';
   if (h === 'Polygon') return 'polygon';
-  return null;   // Distance/Length/Area/Angle/Vector/Text/Slider/… → not drawn
+  if (h === 'Angle') return 'angle';   // marked in tkz mode (\tkzMarkAngle)
+  return null;   // Distance/Length/Area/Vector/Text/Slider/… → not drawn
 }
 
 function parseLiteralPoint(expr: string): { x: number; y: number } | null {

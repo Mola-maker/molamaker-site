@@ -62,7 +62,10 @@ export const MATLAB_RULES = `═══ OUTPUT CONTRACT ═══
 - Print numeric answers with fprintf so the console output IS the result.
 - Use ONLY base MATLAB unless the user explicitly mentions a toolbox (Symbolic, Signal, Stats…). If a toolbox is essential, say so in the prose and still provide the closest base-MATLAB alternative in the script when feasible.
 - Never use \`clear all\`/\`close all force\`/\`system(...)\`/\`!cmd\`/\`delete(...)\`/\`rmdir\`/\`web(...)\` — scripts must be side-effect-free beyond figures and printed output.
-- Vectorise (x.^2, element-wise ops); avoid growing arrays in loops.`;
+- Vectorise (x.^2, element-wise ops); avoid growing arrays in loops.
+- If (and only if) the script creates any figure, its LAST line must be exactly:
+  exportgraphics(gcf, "mola_fig.png", "Resolution", 150)
+  (the workbench retrieves this file to display the plot inline — do not change the filename).`;
 
 export function buildMatlabSystemPrompt(): string {
   return [

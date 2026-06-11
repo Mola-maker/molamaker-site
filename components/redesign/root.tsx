@@ -21,6 +21,7 @@ import { MusicPlayer } from './music-player';
 import { MikuHub } from './miku-hub';
 import { MikuFairy } from './miku-fairy';
 import { MikuStage } from './miku-stage';
+import { MikuRhythm } from './miku-rhythm';
 import { Live2DChat } from './live2d-chat';
 import {
   TweaksPanel,
@@ -235,6 +236,7 @@ export default function RedesignRoot({ initialLocale }: RootProps) {
       {/* Fullscreen cinematic scenes (concert / fireworks / sakura / stars /
           snow / confetti) directed by the LLM or typed commands. */}
       {opened && <MikuStage />}
+      {opened && <MikuRhythm />}
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Composition">

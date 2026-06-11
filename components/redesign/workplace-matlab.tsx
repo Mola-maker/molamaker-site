@@ -60,6 +60,7 @@ export function WorkplaceMatlab() {
   const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
   const [outputIsError, setOutputIsError] = useState(false);
+  const [figure, setFigure] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -205,6 +206,7 @@ export function WorkplaceMatlab() {
     setRunning(true);
     setOutput('');
     setOutputIsError(false);
+    setFigure(null);
     try {
       const r = await fetch('/api/workplace/matlab', {
         method: 'POST',
@@ -212,15 +214,16 @@ export function WorkplaceMatlab() {
         body: JSON.stringify({ mode: 'run', code: src }),
       });
       const j = await r.json().catch(() => ({})) as {
-        data?: { output: string; isError: boolean };
+        data?: { output: string; isError: boolean; figure?: string | null };
         error?: { message?: string };
       };
       if (!r.ok || !j.data) {
         setOutput(j.error?.message ?? `HTTP ${r.status}`);
         setOutputIsError(true);
       } else {
-        setOutput(j.data.output || '(无输出)');
+        setOutput(j.data.output || (j.data.figure ? '' : '(无输出)'));
         setOutputIsError(j.data.isError);
+        if (j.data.figure) setFigure(j.data.figure);
       }
     } catch (e) {
       setOutput(e instanceof Error ? e.message : 'run failed');
@@ -418,8 +421,16 @@ export function WorkplaceMatlab() {
                   </div>
                   <div className="wp-matlab__pane">
                     <div className="wp-matlab__pane-label">
-                      console {outputIsError ? '· ⚠ 引擎报错' : ''}
+                      console {outputIsError ? '· ⚠ 引擎报错' : ''}{figure ? ' · 📈 图像' : ''}
                     </div>
+                    {figure && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        className="wp-matlab__figure"
+                        src={`data:image/png;base64,${figure}`}
+                        alt="MATLAB figure"
+                      />
+                    )}
                     <pre className={`wp-matlab__console${outputIsError ? ' is-error' : ''}`}>
                       {output || (canRun
                         ? '▶ 运行后，真实 MATLAB 引擎的输出会显示在这里。'

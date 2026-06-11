@@ -58,7 +58,9 @@ export function playMotion(group = 'tap_body'): void {
   const m = model();
   if (!m) return;
   try {
-    const groups = [group, 'tap_body', 'flick_head', 'shake', 'idle'];
+    // The Miku model files its expressive motions under the literal group
+    // "null" — it sits high in the chain so she actually performs.
+    const groups = [group, 'tap_body', 'null', 'flick_head', 'shake', 'idle'];
     for (const g of groups) {
       const n = m.modelSetting?.getMotionNum(g) ?? 0;
       if (n > 0) {

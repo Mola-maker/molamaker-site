@@ -40,9 +40,10 @@ function loadExternalResource(url, type) {
 	]);
 	initWidget({
 		waifuPath: live2d_path + 'waifu-tips.json',
-		// Default to a model with multiple outfits (see waifu-tips.json order).
-		// localStorage modelId overrides this after the first visit.
-		modelId: 0,
+		// Default to Miku — the site's resident artist (waifu-tips.json index 7,
+		// self-hosted under /live2d/models/miku). localStorage modelId overrides
+		// this after the first visit.
+		modelId: 7,
 		modelTexturesId: 0,
 		cubism2Path: live2d_path + 'live2d.min.js',
 		cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',

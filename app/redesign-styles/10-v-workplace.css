@@ -2853,3 +2853,12 @@ body.wp-studio-ggb-open {
   .wp-matlab__side { border-right: none; border-bottom: 1px solid var(--rule); }
   .wp-matlab__panes { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
 }
+
+/* MATLAB inline figure (retrieved as base64 via the MCP bridge) */
+.wp-matlab__figure {
+  max-width: 100%;
+  max-height: 52%;
+  object-fit: contain;
+  border-bottom: 1px solid var(--rule);
+  background: #fff;
+}

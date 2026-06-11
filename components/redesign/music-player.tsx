@@ -75,9 +75,32 @@ export function MusicPlayer({ hideTrigger = false }: { hideTrigger?: boolean } =
         },
       }));
     };
-    audio.addEventListener('play',  () => { setPlaying(true);  dispatchPlayState(true);  });
+    audio.addEventListener('play',  () => { setPlaying(true);  dispatchPlayState(true);  ensureAnalyser(); });
     audio.addEventListener('pause', () => { setPlaying(false); dispatchPlayState(false); });
     audio.addEventListener('ended', () => { setPlaying(false); dispatchPlayState(false); });
+
+    // WebAudio tap for beat-reactive visuals (the concert stage reads it from
+    // window.__molaAnalyser). Created lazily on first play — a user gesture —
+    // so the AudioContext is never blocked by autoplay policy. The audio src
+    // is the same-origin /api/music proxy, so the graph is never CORS-tainted.
+    let analyserWired = false;
+    const ensureAnalyser = () => {
+      if (analyserWired) return;
+      analyserWired = true;
+      try {
+        const Ctx = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const source = ctx.createMediaElementSource(audio);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.78;
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        (window as Window & { __molaAnalyser?: AnalyserNode }).__molaAnalyser = analyser;
+        if (ctx.state === 'suspended') void ctx.resume();
+      } catch { /* visuals degrade to the lyric clock */ }
+    };
     audio.addEventListener('timeupdate', () => {
       setCurrentTime(audio.currentTime);
       window.dispatchEvent(new CustomEvent('mola:time-update', { detail: { time: audio.currentTime, duration: audio.duration || 0 } }));
