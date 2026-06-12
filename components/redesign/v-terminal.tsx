@@ -178,23 +178,44 @@ export function VTerminal({ t, locale, posts, repos, guestbook }: Props) {
   }, [guestbook]);
   const [gbName, setGbName] = useState('');
   const [gbMsg, setGbMsg] = useState('');
+  const [gbError, setGbError] = useState('');
   const postGB = (e: React.FormEvent) => {
     e.preventDefault();
     const name = gbName.trim();
     const message = gbMsg.trim();
     if (!name || !message) return;
-    // Optimistic update — Miku hosts the wall: her reply rides the new entry
-    setGb([{ name, message, t: 'just now', _new: true, _mikuReply: mikuBoardReply(message, name) }, ...gb]);
+    // Optimistic entry; Miku's hostess reply and the celebration event wait
+    // for the server — moderation can reject with HTTP 400, and a censored
+    // post must not stay on the wall or earn a thank-you.
+    setGb([{ name, message, t: 'just now', _new: true }, ...gb]);
     setGbName('');
     setGbMsg('');
-    try { window.dispatchEvent(new CustomEvent('mola:guest-posted', { detail: { name, message } })); } catch { /* ignore */ }
+    setGbError('');
+    const rollback = () =>
+      setGb((prev) => prev.filter((g) => !(g._new && g.name === name && g.message === message)));
     fetch('/api/guestbook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, message }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        rollback();
+        const j = await res.json().catch(() => ({})) as { error?: { message?: string } };
+        setGbError(j.error?.message ?? (locale === 'zh' ? '发送失败，请稍后再试' : 'failed to post — try again'));
+        return;
+      }
+      // accepted: the server may have masked profanity — show the stored text
+      const j = await res.json().catch(() => ({})) as { data?: { message?: string } };
+      const storedMessage = j.data?.message ?? message;
+      setGb((prev) => prev.map((g) =>
+        g._new && g.name === name && g.message === message
+          ? { ...g, message: storedMessage, _mikuReply: mikuBoardReply(storedMessage, name) }
+          : g,
+      ));
+      try { window.dispatchEvent(new CustomEvent('mola:guest-posted', { detail: { name, message: storedMessage } })); } catch { /* ignore */ }
     }).catch(() => {
-      // Roll back optimistic entry on failure
-      setGb((prev) => prev.filter((g) => !(g._new && g.name === name && g.message === message)));
+      rollback();
+      setGbError(locale === 'zh' ? '网络错误，请重试' : 'network error — try again');
     });
   };
 
@@ -349,6 +370,7 @@ export function VTerminal({ t, locale, posts, repos, guestbook }: Props) {
                   </div>
                 ))}
               </div>
+              {gbError && <div className="gb__error">⚠ {gbError}</div>}
               <form className="gb__form" onSubmit={postGB}>
                 <input
                   value={gbName}

@@ -433,3 +433,14 @@
   margin-right: 6px;
   text-transform: uppercase;
 }
+
+/* guestbook moderation/network error line */
+.gb__error {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #b43e3e;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border: 1px solid color-mix(in oklab, #b43e3e 35%, transparent);
+  border-radius: 6px;
+}

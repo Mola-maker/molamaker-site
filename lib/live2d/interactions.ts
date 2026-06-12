@@ -88,9 +88,12 @@ export function initLive2dLife(): () => void {
   let petDist = 0;
   let petLast: { x: number; y: number } | null = null;
   let petCooldownUntil = 0;
+  // mousemove is a hot path — cache the canvas element and use the cheap
+  // contains() instead of a selector-parsing closest() on every event
+  let petZone: HTMLElement | null = null;
   const onPetMove = (e: MouseEvent) => {
-    const target = e.target as HTMLElement | null;
-    if (!target || !target.closest('#waifu-canvas')) { petLast = null; return; }
+    if (!petZone || !petZone.isConnected) petZone = document.getElementById('waifu-canvas');
+    if (!petZone || !petZone.contains(e.target as Node)) { petLast = null; return; }
     if (petLast) petDist += Math.hypot(e.clientX - petLast.x, e.clientY - petLast.y);
     petLast = { x: e.clientX, y: e.clientY };
     if (petDist > 650 && Date.now() > petCooldownUntil) {
@@ -133,8 +136,11 @@ export function initLive2dLife(): () => void {
   const onTime = (e: Event) => {
     if (!musicPlaying || quiet() || !lyrics.length) return;
     const t = ((e as CustomEvent).detail?.time as number) ?? 0;
-    let idx = -1;
-    for (let i = 0; i < lyrics.length && lyrics[i].time <= t; i++) idx = i;
+    // cursor scan: audio time only moves forward except on seek — start from
+    // the last known line instead of rescanning the whole LRC every ~250ms
+    let idx = lyricIdx;
+    if (idx >= 0 && (idx >= lyrics.length || lyrics[idx].time > t)) idx = -1;  // seek backwards
+    while (idx + 1 < lyrics.length && lyrics[idx + 1].time <= t) idx++;
     if (idx === lyricIdx || idx < 0) return;
     lyricIdx = idx;
     // she mouths every line; every third line gets a small lyric bubble

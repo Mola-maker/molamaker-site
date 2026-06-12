@@ -338,6 +338,21 @@ export function useAstrbotChat(options?: {
       ));
     };
 
+    /** Server-corrected full text (cleaning collapsed earlier deltas) —
+     *  replace the whole bot message instead of appending. */
+    const pushReplace = (full: string) => {
+      if (signal.aborted) return;
+      acc = full;
+      if (!started) {
+        if (pendingStart) { clearTimeout(pendingStart); pendingStart = null; }
+        flush();
+        return;
+      }
+      setMessages((m) => m.map((x) =>
+        x.id === botId ? { ...x, text: acc, mood: detectMood(acc) } : x
+      ));
+    };
+
     const pushToolFrame = (frame: { name: string; status: 'running' | 'done' | 'error'; summary?: string }) => {
       if (signal.aborted) return;
       const toolId = `tool-${botId}-${frame.name}`;
@@ -373,6 +388,10 @@ export function useAstrbotChat(options?: {
       const reader = r.body.getReader();
       const dec = new TextDecoder();
       let buf = '';
+      // sessionId is closure-captured at send() creation; track adoption
+      // locally so repeated frames don't re-write storage every time.
+      let adoptedSid = sessionId;
+      let chatError = '';
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -385,21 +404,37 @@ export function useAstrbotChat(options?: {
           const raw = line.slice(5).trim();
           if (raw === '[DONE]') { buf = ''; break; }
           try {
-            const j = JSON.parse(raw) as { token?: string; session_id?: string; tool?: { name: string; status: 'running' | 'done' | 'error'; summary?: string } };
+            const j = JSON.parse(raw) as {
+              token?: string;
+              replace?: string;
+              session_id?: string;
+              chat_error?: string;
+              tool?: { name: string; status: 'running' | 'done' | 'error'; summary?: string };
+            };
             if (j.token) pushToken(j.token);
+            else if (typeof j.replace === 'string') pushReplace(j.replace);
             else if (j.tool) pushToolFrame(j.tool);
+            else if (typeof j.chat_error === 'string') chatError = j.chat_error;
             // AstrBot mints a session when ours is missing/expired — adopt it
             // so the conversation keeps its memory across turns.
-            if (j.session_id && j.session_id !== sessionId) {
-              try { sessionStorage.setItem('mola:chat-sid', j.session_id); } catch { /* ignore */ }
-              setSessionId(j.session_id);
+            const sid = j.session_id?.trim();
+            if (sid && sid !== adoptedSid) {
+              adoptedSid = sid;
+              try { sessionStorage.setItem('mola:chat-sid', sid); } catch { /* ignore */ }
+              setSessionId(sid);
             }
           } catch { /* skip malformed frame */ }
         }
       }
       if (!started && !signal.aborted) {
         if (pendingStart) clearTimeout(pendingStart);
-        setMessages((m) => [...m, { id: uid(), role: 'bot', text: 'AI is temporarily unavailable — try again in a moment.', ts: Date.now() }]);
+        // Errors arrive on their own frame so they're shown but NOT treated
+        // as bot speech (no mood/tag parsing, no lip-sync trigger downstream).
+        setMessages((m) => [...m, {
+          id: uid(), role: 'bot',
+          text: chatError || 'AI is temporarily unavailable — try again in a moment.',
+          ts: Date.now(),
+        }]);
       } else if (started && acc) {
         setMessages((m) => m.map((x) => x.id === botId ? { ...x, mood: detectMood(acc) } : x));
       } else {

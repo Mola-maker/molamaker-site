@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRate } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
-import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+import { getAstrbotEnv, astrbotAuthHeaders } from '@/lib/chat/astrbot-env';
 import { workspaceRelativeFromPath } from '@/lib/sse-parser';
 
 export const runtime = 'nodejs';
@@ -69,11 +69,7 @@ export async function GET(req: NextRequest) {
 
   const base = url.replace(/\/+$/, '');
   const headers: Record<string, string> = {};
-  if (key) {
-    // canonical Open API scheme is X-API-Key; Bearer covers newer builds
-    headers['X-API-Key'] = key;
-    headers['Authorization'] = `Bearer ${key}`;
-  }
+  Object.assign(headers, astrbotAuthHeaders(key));
 
   // Try the public API first, then the dashboard webchat fallbacks. Different
   // AstrBot versions expose attachments under different paths, so we probe in

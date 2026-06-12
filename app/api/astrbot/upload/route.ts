@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateOrigin } from '@/lib/origin';
 import { checkRate } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
-import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+import { getAstrbotEnv, astrbotAuthHeaders } from '@/lib/chat/astrbot-env';
 
 export const runtime = 'nodejs';
 
@@ -58,11 +58,7 @@ export async function POST(req: NextRequest) {
   upstream.append('file', file, file.name || 'upload');
 
   const headers: Record<string, string> = {};
-  if (key) {
-    // canonical Open API scheme is X-API-Key; Bearer covers newer builds
-    headers['X-API-Key'] = key;
-    headers['Authorization'] = `Bearer ${key}`;
-  }
+  Object.assign(headers, astrbotAuthHeaders(key));
 
   try {
     const res = await fetch(`${url}/api/v1/file`, {

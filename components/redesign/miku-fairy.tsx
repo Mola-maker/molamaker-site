@@ -1515,6 +1515,12 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
     const onWheel = (e: WheelEvent) => { S.scrollGust += Math.abs(e.deltaY); };
     const onGuestPosted = () => {
       say(['有新留言! ✎', '留言板热闹起来了~'], 2200);
+      // never let a background event tear down an active game / painting /
+      // performance — startPerform cancels those by design
+      if (plan.kind === 'game' || plan.kind === 'paint' || plan.kind === 'perform') {
+        hearts(3);
+        return;
+      }
       startPerform(['hearts']);
     };
 
