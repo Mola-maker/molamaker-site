@@ -171,11 +171,15 @@ export function VStream({ t, locale }: Props) {
     const message = (form.elements.namedItem('message') as HTMLInputElement)?.value.trim();
     if (!name || !message) return;
     form.reset();
-    try { window.dispatchEvent(new CustomEvent('mola:guest-posted', { detail: { name, message } })); } catch { /* ignore */ }
     fetch('/api/guestbook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, message }),
+    }).then((res) => {
+      // celebrate only ACCEPTED posts — moderation rejects with HTTP 400
+      if (res.ok) {
+        try { window.dispatchEvent(new CustomEvent('mola:guest-posted', { detail: { name, message } })); } catch { /* ignore */ }
+      }
     }).catch(() => {});
   };
 

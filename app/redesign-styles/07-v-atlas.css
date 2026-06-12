@@ -552,3 +552,37 @@ body.ink-mode .v-atlas .atlas-strips {
   .v-atlas .atlas-strips .strip { transition: none; }
   .v-atlas .atlas-strips .strip:hover { transform: none; }
 }
+
+/* ── dynamics pack: pins drop onto the plate, then breathe ─────────── */
+.v-atlas .map.reveal.is-in .zone { animation: atlasPinDrop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.v-atlas .map.reveal.is-in .zone:nth-of-type(1) { animation-delay: 100ms; }
+.v-atlas .map.reveal.is-in .zone:nth-of-type(2) { animation-delay: 200ms; }
+.v-atlas .map.reveal.is-in .zone:nth-of-type(3) { animation-delay: 300ms; }
+.v-atlas .map.reveal.is-in .zone:nth-of-type(4) { animation-delay: 400ms; }
+.v-atlas .map.reveal.is-in .zone:nth-of-type(5) { animation-delay: 500ms; }
+.v-atlas .map.reveal.is-in .zone:nth-of-type(n+6) { animation-delay: 600ms; }
+@keyframes atlasPinDrop {
+  0%   { opacity: 0; transform: translateY(-26px) scale(0.7); }
+  70%  { opacity: 1; transform: translateY(2px) scale(1.04); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* idle: pins bob gently, out of phase */
+.v-atlas .zone__pin { animation: atlasPinBob 4.8s ease-in-out infinite; }
+.v-atlas .zone:nth-of-type(2n) .zone__pin { animation-delay: -1.6s; }
+.v-atlas .zone:nth-of-type(3n) .zone__pin { animation-delay: -3.2s; }
+@keyframes atlasPinBob {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -2.5px; }
+}
+/* companion strips shelve themselves */
+.v-atlas .atlas-strips.reveal.is-in .strip { animation: atlasShelf 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.v-atlas .atlas-strips.reveal.is-in .strip:nth-of-type(2) { animation-delay: 130ms; }
+.v-atlas .atlas-strips.reveal.is-in .strip:nth-of-type(3) { animation-delay: 260ms; }
+@keyframes atlasShelf {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v-atlas .map.reveal.is-in .zone, .v-atlas .zone__pin,
+  .v-atlas .atlas-strips.reveal.is-in .strip { animation: none; }
+}

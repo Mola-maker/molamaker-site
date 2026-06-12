@@ -4,7 +4,7 @@ import { chatMessageSchema } from '@/lib/validation';
 import { validateOrigin } from '@/lib/origin';
 import { checkRate, RATE_CHAT } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
-import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+import { getAstrbotEnv, astrbotAuthHeaders } from '@/lib/chat/astrbot-env';
 import { getEffectiveProvider, type EffectiveProvider } from '@/lib/workplace/settings';
 
 // ── Provider result type ──────────────────────────────────────────────────
@@ -33,11 +33,7 @@ async function tryAstrBot(
   if (!url) return { ok: false, reason: 'astrbot: not configured' };
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (key) {
-    // canonical Open API scheme is X-API-Key; Bearer covers newer builds
-    headers['X-API-Key'] = key;
-    headers['Authorization'] = `Bearer ${key}`;
-  }
+  Object.assign(headers, astrbotAuthHeaders(key));
 
   try {
     const payload: Record<string, unknown> = { message, username, enable_streaming: false };

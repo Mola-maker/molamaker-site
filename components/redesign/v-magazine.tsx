@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import type { I18nBlock, Locale, Post } from './data';
 import { molaData } from './data';
 import { HoverText, useReveal } from './atoms';
+import { FluidText } from './fluid-text';
 import { MagGallery } from './mag-gallery';
 
 type Props = { t: I18nBlock; locale: Locale; posts?: Post[] };
@@ -79,11 +80,11 @@ export function VMagazine({ t, locale, posts }: Props) {
             <span className="num-tag">{locale === 'zh' ? '本期' : 'This issue'}</span>
           </div>
           <h1 className="folio__h1" ref={h1Ref}>
-            <HoverText text={t.h1[0] + ' '} mode="wave" />
+            <FluidText text={t.h1[0] + ' '} />
             <em>
-              <HoverText text={t.h1[1]} mode="wave" />
+              <FluidText text={t.h1[1]} delay={3} />
             </em>
-            <HoverText text={' ' + t.h1.slice(2).join(' ')} mode="wave" />
+            <FluidText text={' ' + t.h1.slice(2).join(' ')} delay={5} />
           </h1>
           <p className="folio__body reveal">
             {t.lead}{' '}

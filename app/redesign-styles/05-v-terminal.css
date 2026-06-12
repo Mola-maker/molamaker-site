@@ -433,3 +433,46 @@
   margin-right: 6px;
   text-transform: uppercase;
 }
+
+/* guestbook moderation/network error line */
+.gb__error {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #b43e3e;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border: 1px solid color-mix(in oklab, #b43e3e 35%, transparent);
+  border-radius: 6px;
+}
+
+/* ── dynamics pack: panels boot in sequence like a real terminal ──── */
+.v-term .reveal { transition-delay: 0ms; }
+.v-term .panel.reveal.is-in,
+.v-term .reveal.is-in .panel { animation: termBoot 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.v-term .reveal.is-in .panel:nth-of-type(2) { animation-delay: 120ms; }
+.v-term .reveal.is-in .panel:nth-of-type(3) { animation-delay: 240ms; }
+@keyframes termBoot {
+  0%   { opacity: 0; transform: translateY(14px); clip-path: inset(0 0 100% 0); }
+  60%  { clip-path: inset(0 0 0 0); }
+  100% { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); }
+}
+/* system-bar values flicker alive on load */
+.v-term .system-bar > div { animation: termFlicker 0.9s steps(3, jump-none) both; }
+.v-term .system-bar > div:nth-child(2) { animation-delay: 150ms; }
+.v-term .system-bar > div:nth-child(3) { animation-delay: 300ms; }
+.v-term .system-bar > div:nth-child(4) { animation-delay: 450ms; }
+.v-term .system-bar > div:nth-child(5) { animation-delay: 600ms; }
+@keyframes termFlicker {
+  0% { opacity: 0; } 40% { opacity: 0.4; } 70% { opacity: 0.15; } 100% { opacity: 1; }
+}
+/* guestbook entries cascade in */
+.v-term .gb__list .gb__item { animation: bubIn 420ms var(--ease-out-quart) both; }
+.v-term .gb__list .gb__item:nth-child(1) { animation-delay: 60ms; }
+.v-term .gb__list .gb__item:nth-child(2) { animation-delay: 130ms; }
+.v-term .gb__list .gb__item:nth-child(3) { animation-delay: 200ms; }
+.v-term .gb__list .gb__item:nth-child(4) { animation-delay: 270ms; }
+.v-term .gb__list .gb__item:nth-child(n+5) { animation-delay: 340ms; }
+@media (prefers-reduced-motion: reduce) {
+  .v-term .panel.reveal.is-in, .v-term .reveal.is-in .panel,
+  .v-term .system-bar > div, .v-term .gb__list .gb__item { animation: none; }
+}

@@ -3,7 +3,7 @@ import { chatMessageSchema } from '@/lib/validation';
 import { validateOrigin } from '@/lib/origin';
 import { checkRate, RATE_CHAT } from '@/lib/rate-limit';
 import { clientIp } from '@/lib/client-ip';
-import { getAstrbotEnv } from '@/lib/chat/astrbot-env';
+import { getAstrbotEnv, astrbotAuthHeaders } from '@/lib/chat/astrbot-env';
 import { getEffectiveProvider, type EffectiveProvider } from '@/lib/workplace/settings';
 import { ATTACH_SEGMENT_TYPES, attachmentMarkdown, cleanAstrBotText, toolCallMarkdown } from '@/lib/sse-parser';
 
@@ -106,14 +106,7 @@ async function streamAstrBot(
 ): Promise<void> {
   const { url, key } = getAstrbotEnv();
   if (!url) throw new Error('astrbot: not configured');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  // AstrBot Open API auth (api1.json + dashboard/routes source): the canonical
-  // scheme is the X-API-Key header; Bearer is accepted by newer builds only.
-  // Send both so every deployed version authenticates.
-  if (key) {
-    headers['X-API-Key'] = key;
-    headers['Authorization'] = `Bearer ${key}`;
-  }
+  const headers = astrbotAuthHeaders(key, { 'Content-Type': 'application/json' });
   const text = persona ? `[Roleplay as: ${persona}]\n\n${message}` : message;
   const payload: Record<string, unknown> = { message: text, username, enable_streaming: true };
   if (sessionId) payload.session_id = sessionId;
@@ -157,18 +150,20 @@ async function streamAstrBot(
   let sentText = '';
   let plainAcc = '';
   /** Emit only the unseen suffix — the client appends tokens, so resending
-   *  the full text would duplicate it. */
+   *  the full text would duplicate it. When cleaning makes the new text
+   *  diverge from what we already sent (markers stripped, whitespace
+   *  collapsed), fall back to a REPLACE frame: the client swaps the whole
+   *  bot message for the corrected text instead of appending, so no part of
+   *  the reply is ever lost or duplicated. */
   const emitFull = (full: string) => {
     const clean = cleanAstrBotText(full);
     if (!clean || clean === sentText) return;
     if (clean.startsWith(sentText)) {
       send(clean.slice(sentText.length));
-      sentText = clean;
-    } else if (!sentText) {
-      send(clean);
-      sentText = clean;
+    } else {
+      sendMeta({ replace: clean });
     }
-    // diverged mid-stream (cleaning collapsed earlier text): keep what we sent
+    sentText = clean;
   };
 
   // Per-read idle timeout: if AstrBot sends no data for IDLE_TIMEOUT_MS
@@ -201,8 +196,8 @@ async function streamAstrBot(
       try { j = JSON.parse(raw) as Record<string, unknown>; } catch { continue; }
       if (j.status === 'error') throw new Error(`astrbot: ${j.message ?? 'error'}`);
       // server may mint its own session (omitted/expired id) — let the client adopt it
-      if (j.type === 'session_id' && typeof j.session_id === 'string' && j.session_id) {
-        sendMeta({ session_id: j.session_id });
+      if (j.type === 'session_id' && typeof j.session_id === 'string' && j.session_id.trim()) {
+        sendMeta({ session_id: j.session_id.trim() });
         continue;
       }
       // stream finished — AstrBot closes with an explicit end frame
@@ -398,16 +393,21 @@ export async function POST(req: NextRequest) {
 
     // Surface the REAL upstream reason instead of a generic shrug — a wrong
     // API key or rejected request was previously indistinguishable from an
-    // outage, which made AstrBot look permanently broken.
+    // outage, which made AstrBot look permanently broken. Errors travel on a
+    // dedicated meta frame (NOT the token channel) so the client can show
+    // them without persisting them as bot speech — token-channel errors were
+    // being mood-detected, tag-parsed and lip-synced like a real reply.
     let lastError = '';
     for (const run of runners) {
       try { await run(); if (emitted) return; }
       catch (e) { if (emitted) return; lastError = e instanceof Error ? e.message : String(e); }
     }
     if (!emitted) {
-      send(lastError
-        ? `⚠ ${lastError}`
-        : 'AI is temporarily unavailable — try again in a moment.');
+      sendMeta({
+        chat_error: lastError
+          ? `⚠ ${lastError}`
+          : 'AI is temporarily unavailable — try again in a moment.',
+      });
     }
   });
 }

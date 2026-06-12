@@ -64,6 +64,18 @@ const NOTES = ['♪', '♫', '♬', '♩'];
 const FESTIVAL = ['#39c5bb', '#ff9fbe', '#ffd166', '#7ab8f5', '#c8f7c5', '#e6a8f0'];
 const LYRICS = ['♪ み く み く ~', '♪ la la la~', '♪ 39!', '♪ sekai de ichiban~', '♪ ✦ ✦ ✦'];
 
+/** Title-card words per scene — the visitor's own trigger word replaces the
+ *  zh line when we know it ("放个烟花" slams the actual 烟花 on screen). */
+const SCENE_TITLES: Record<SceneAction, { zh: string; en: string }> = {
+  concert: { zh: '演唱会', en: 'STAGE LIVE' },
+  fireworks: { zh: '烟花', en: 'FIREWORKS' },
+  sakura: { zh: '樱花', en: 'SAKURA STORM' },
+  stars: { zh: '流星', en: 'STARFALL' },
+  snow: { zh: '初雪', en: 'FIRST SNOW' },
+  confetti: { zh: '庆祝', en: 'CELEBRATION' },
+  rhythm: { zh: '节奏', en: 'RHYTHM' },
+};
+
 const SCENE_DUR: Record<SceneAction, number> = {
   concert: 18000,
   fireworks: 13000,
@@ -80,6 +92,8 @@ function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 export function MikuStage() {
   const [scene, setScene] = useState<SceneAction | null>(null);
   const [closing, setClosing] = useState(false);
+  /** literal word that summoned the scene (typed keyword), for the title card */
+  const triggerRef = useRef<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lyricRef = useRef<HTMLDivElement>(null);
   const songRef = useRef<HTMLDivElement>(null);
@@ -94,17 +108,19 @@ export function MikuStage() {
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const open = (s: SceneAction) => {
+    const open = (s: SceneAction, trigger?: string) => {
       if (s === 'rhythm') return; // MikuRhythm owns this one
       if (reduced) { mascotSay(`✧ ${s} ✧`, 2600, 9); return; }
+      triggerRef.current = trigger?.trim() || null;
       setClosing(false);
       setScene(s);
     };
 
     const onPerform = (e: Event) => {
-      const actions = ((e as CustomEvent).detail?.actions ?? []) as string[];
+      const detail = (e as CustomEvent).detail as { actions?: string[]; trigger?: string } | undefined;
+      const actions = (detail?.actions ?? []) as string[];
       const sceneAction = actions.find(isSceneAction);
-      if (sceneAction) { open(sceneAction); return; }
+      if (sceneAction) { open(sceneAction, detail?.trigger); return; }
       // Small gestures: let the Live2D mascot act them out too, with real
       // motion + expression instead of just the sprite's pantomime.
       if (actions.some(isSpriteAction) && live2dVisible()) {
@@ -115,8 +131,8 @@ export function MikuStage() {
       }
     };
     const onScene = (e: Event) => {
-      const s = (e as CustomEvent).detail?.scene as string | undefined;
-      if (s && isSceneAction(s)) open(s);
+      const d = (e as CustomEvent).detail as { scene?: string; trigger?: string } | undefined;
+      if (d?.scene && isSceneAction(d.scene)) open(d.scene, d.trigger);
     };
 
     // Lip-sync + reaction motions driven by the shared chat transcript.
@@ -690,12 +706,27 @@ export function MikuStage() {
 
   if (!scene) return null;
 
+  const title = SCENE_TITLES[scene];
+  const titleWord = triggerRef.current || title.zh;
+
   return createPortal(
     <div
-      className={`mstage mstage--${scene}${closing ? ' is-closing' : ''}`}
+      className={`mstage mstage--${scene} is-slam${closing ? ' is-closing' : ''}`}
       onClick={() => (canvasRef.current as (HTMLCanvasElement & { __close?: () => void }) | null)?.__close?.()}
       role="presentation"
     >
+      {/* triggered-word title card: the summoning word slams in char by char,
+          shockwave behind it, then yields the stage to the scene */}
+      <div className="mstage-card" aria-hidden="true">
+        <span className="mstage-card__ring" />
+        <span className="mstage-card__flash" />
+        <div className="mstage-card__word">
+          {[...titleWord].slice(0, 10).map((ch, i) => (
+            <span key={i} className="mstage-card__ch" style={{ ['--ci' as string]: i }}>{ch}</span>
+          ))}
+        </div>
+        <div className="mstage-card__sub">{title.en}</div>
+      </div>
       {scene === 'concert' && (
         <div className="mstage__rig" aria-hidden="true">
           <span className="mstage__beam mstage__beam--1" />
