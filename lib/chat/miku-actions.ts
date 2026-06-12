@@ -140,11 +140,18 @@ const USER_COMMANDS: Array<[RegExp, MikuAction]> = [
   [/\bzoom\b|\bfly\b|飞一个|冲刺/i, 'zoom'],
 ];
 
-export function actionsFromUserText(text: string): MikuAction[] {
+/** First matching command WITH the literal word that triggered it — the
+ *  scene title cards slam the visitor's own word onto the screen. */
+export function commandsFromUserText(text: string): Array<{ action: MikuAction; word: string }> {
   for (const [re, action] of USER_COMMANDS) {
-    if (re.test(text)) return [action];
+    const m = text.match(re);
+    if (m) return [{ action, word: m[0].trim() }];
   }
   return [];
+}
+
+export function actionsFromUserText(text: string): MikuAction[] {
+  return commandsFromUserText(text).map((c) => c.action);
 }
 
 /** Appended to every Live2D persona system prompt so the model can direct the

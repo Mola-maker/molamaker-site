@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { I18nBlock, Locale, Post, Guest, Repo } from './data';
 import { molaData } from './data';
-import { AButton, HoverText, useReveal } from './atoms';
+import { AButton, useReveal } from './atoms';
+import { FluidText } from './fluid-text';
 import { assetUrl } from '@/lib/asset-url';
 
 type Props = {
@@ -217,20 +218,20 @@ export function VAtlas({ t, locale, bgOpacity = 0.18, bgSrc, posts, guestbook, r
             <h1>
               {locale === 'zh' ? (
                 <>
-                  <HoverText text="这里有几片" mode="italic" />
+                  <FluidText text="这里有几片" />
                   <em>
                     {' '}
-                    <HoverText text="安静" mode="italic" />{' '}
+                    <FluidText text="安静" delay={5} />{' '}
                   </em>
-                  <HoverText text="的领地。" mode="italic" />
+                  <FluidText text="的领地。" delay={7} />
                 </>
               ) : (
                 <>
-                  <HoverText text="A small " mode="italic" />
+                  <FluidText text="A small " />
                   <em>
-                    <HoverText text="atlas" mode="italic" />
+                    <FluidText text="atlas" delay={2} />
                   </em>
-                  <HoverText text=" of quiet territories." mode="italic" />
+                  <FluidText text=" of quiet territories." delay={3} />
                 </>
               )}
             </h1>

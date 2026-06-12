@@ -23,8 +23,9 @@
 import { useEffect, useRef } from 'react';
 import { prepareWithSegments, measureNaturalWidth } from '@chenglou/pretext';
 import {
-  actionsFromUserText,
+  commandsFromUserText,
   isSpriteAction,
+  isSceneAction,
   extractMikuActions,
   type SpriteAction,
 } from '@/lib/chat/miku-actions';
@@ -1457,9 +1458,20 @@ export function MikuFairy({ enabled = true }: { enabled?: boolean }) {
         const key = `${msgs.length}:${lastMsg.text}`;
         if (key === lastUserKey) return;
         lastUserKey = key;
-        const acts = actionsFromUserText(lastMsg.text);
-        if (acts.length) startPerform(acts);
-        else { say(PHRASES.chat, 1800); notesAround(1); }
+        const cmds = commandsFromUserText(lastMsg.text);
+        const sceneCmd = cmds.find((c) => isSceneAction(c.action));
+        if (sceneCmd) {
+          // scenes belong to MikuStage/MikuRhythm — route them out with the
+          // visitor's literal trigger word for the title card. (Previously
+          // typed scene keywords were filtered to nothing and never fired.)
+          try {
+            window.dispatchEvent(new CustomEvent('miku:perform', {
+              detail: { actions: [sceneCmd.action], trigger: sceneCmd.word },
+            }));
+          } catch { /* ignore */ }
+        } else if (cmds.length) {
+          startPerform(cmds.map((c) => c.action));
+        } else { say(PHRASES.chat, 1800); notesAround(1); }
       } else {
         // Streaming reply → "talking" until the text stops growing; then parse
         // any [miku:…] tags that reached storage (covers chat surfaces that

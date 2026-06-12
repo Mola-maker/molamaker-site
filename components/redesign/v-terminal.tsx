@@ -5,6 +5,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { I18nBlock, Locale, Guest, Post, Repo } from './data';
 import { mikuBoardReply } from '@/lib/miku/board-replies';
+import { FluidText } from './fluid-text';
 import { molaData } from './data';
 import { HoverText, useReveal } from './atoms';
 
@@ -254,11 +255,11 @@ export function VTerminal({ t, locale, posts, repos, guestbook }: Props) {
                 {t.eyebrow}
               </div>
               <h1 className="hero__h1" ref={h1Ref}>
-                <HoverText text={t.h1[0] + ' '} mode="glitch" />
+                <FluidText text={t.h1[0] + ' '} />
                 <em>
-                  <HoverText text={t.h1[1]} mode="glitch" />
+                  <FluidText text={t.h1[1]} delay={3} />
                 </em>
-                <HoverText text={' ' + t.h1.slice(2).join(' ')} mode="glitch" />
+                <FluidText text={' ' + t.h1.slice(2).join(' ')} delay={5} />
               </h1>
               <p className="hero__lead">
                 <span>{t.lead}</span>

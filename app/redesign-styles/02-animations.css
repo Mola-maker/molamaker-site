@@ -273,3 +273,34 @@ body[data-dyn="0"] .t-hover-italic::after { transform: scaleX(0) !important; }
   color: var(--accent);
   text-shadow: 0 0 18px rgba(201,100,66,0.4);
 }
+
+/* ── FluidText (chenglou/pretext) — fluid typography ─────────────────
+   Words know their line BEFORE render (pretext measures with the font
+   engine, no DOM thrash). --wi = word index, --li = pretext line index,
+   --lift = cursor ripple set per word from cached centers. */
+.ft { display: inline; }
+.ft--live .ft__w {
+  display: inline-block;
+  white-space: pre-wrap;
+  animation: ftEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--wi, 0) * 46ms + var(--li, 0) * 130ms);
+}
+.ft--live .ft__inner {
+  display: inline-block;
+  transform: translateY(calc(var(--lift, 0px) * -1));
+  transition: transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  animation: ftFlow 6.4s ease-in-out infinite;
+  animation-delay: calc(var(--wi, 0) * -460ms);
+}
+@keyframes ftEnter {
+  0%   { opacity: 0; transform: translateY(0.45em) rotate(1.2deg); filter: blur(7px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+@keyframes ftFlow {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -0.045em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ft--live .ft__w, .ft--live .ft__inner { animation: none; transform: none; }
+}

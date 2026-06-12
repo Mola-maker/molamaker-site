@@ -157,6 +157,16 @@ export function MikuRhythm() {
     <div className="mrhythm" role="application" aria-label="Rhythm game">
       {playing && (
         <>
+          <div className="mstage-card" aria-hidden="true">
+            <span className="mstage-card__ring" />
+            <span className="mstage-card__flash" />
+            <div className="mstage-card__word">
+              {[...'节奏'].map((ch, i) => (
+                <span key={i} className="mstage-card__ch" style={{ ['--ci' as string]: i }}>{ch}</span>
+              ))}
+            </div>
+            <div className="mstage-card__sub">RHYTHM · 30s</div>
+          </div>
           <div className="mrhythm__hud">
             <span className="mrhythm__score">★ {score}</span>
             {combo >= 3 && <span className="mrhythm__combo">{combo} combo!</span>}
